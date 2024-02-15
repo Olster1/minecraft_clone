@@ -8,6 +8,8 @@ struct InventoryItem {
     int count;
 };
 
+#define CHUNK_LIST_SIZE 4096
+
 struct GameState {
     bool inited;
     float dt;
@@ -49,8 +51,9 @@ struct GameState {
 
     PlayingSound *miningSoundPlaying;
 
-    //NOTE: linked hash map
-    Chunk *chunks[4096];
+    //NOTE: linked hash maps
+    Chunk *chunks[CHUNK_LIST_SIZE];
+    CloudChunk *cloudChunks[CHUNK_LIST_SIZE];
 
     Renderer *renderer;
 

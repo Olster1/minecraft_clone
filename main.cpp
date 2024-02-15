@@ -83,6 +83,15 @@ void updateGame(GameState *gameState) {
         }
     }
 
+    //NOTE: Draw the clouds
+    for(int z = -chunkRadiusXZ; z <= chunkRadiusXZ; ++z) {
+        for(int x = -chunkRadiusXZ; x <= chunkRadiusXZ; ++x) {
+            CloudChunk *chunk = getCloudChunk(gameState, chunkX + x, chunkZ + z);
+            assert(chunk);
+            drawCloudChunk(gameState, chunk);
+        }
+    }
+
     // pushCircleOutline(gameState->renderer, make_float3(0, 0, 1), 50, make_float4(1, 1, 1, 1));
     float16 rot = eulerAnglesToTransform(gameState->player.T.rotation.y, gameState->player.T.rotation.x, gameState->player.T.rotation.z);
     float3 lookingAxis = make_float3(rot.E_[2][0], rot.E_[2][1], rot.E_[2][2]);

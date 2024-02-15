@@ -9,5 +9,5 @@ Uses OpenGL 3.3 and SDL for platform layer.
 ## Building on Mac OS
 run ```./run.sh``` to build and run the program. 
 
-
+I haven't added any of the images so it won't run without them. 
 

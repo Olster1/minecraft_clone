@@ -185,5 +185,6 @@ static char *skyboxFragShader =
 "uniform samplerCube diffuse;"
 "out vec4 color;"
 "void main() {"
-"color = texture(diffuse, uv_frag);"
+"float value = dot(normalize(uv_frag), vec3(0, 1, 0));"
+"color = mix(vec4(0.678, 0.847, 0.901, 1), vec4(0.126, 0.162, 0.529, 1), value);"
 "}";

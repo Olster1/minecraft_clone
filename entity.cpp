@@ -9,6 +9,7 @@ enum BlockType {
     BLOCK_GRASS,
     BLOCK_SOIL,
     BLOCK_STONE,
+    BLOCK_CLOUD,
 };
 
 struct Block {
@@ -23,6 +24,12 @@ struct Block {
     bool exists;
 
     BlockType type;
+};
+
+struct CloudBlock {
+    //NOTE: Local to the Chunk they're in
+    int x;
+    int z;
 };
 
 enum EntityFlags {
@@ -82,6 +89,16 @@ struct Entity {
 
 #define CHUNK_DIM 16
 #define BLOCKS_PER_CHUNK CHUNK_DIM*CHUNK_DIM*CHUNK_DIM
+
+struct CloudChunk {
+    int x;
+    int z;
+
+    int cloudCount;
+    CloudBlock clouds[CHUNK_DIM*CHUNK_DIM];
+
+    CloudChunk *next;
+};
 
 struct Chunk {
     int x;

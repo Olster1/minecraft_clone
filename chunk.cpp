@@ -1,7 +1,16 @@
 uint32_t getHashForChunk(int x, int y, int z) {
     int values[3] = {x, y, z};
     uint32_t hash = get_crc32((char *)values, arrayCount(values)*sizeof(int));
-    hash = hash & (BLOCKS_PER_CHUNK - 1);
+    hash = hash & (CHUNK_LIST_SIZE - 1);
+    assert(hash < CHUNK_LIST_SIZE);
+    return hash;
+}
+
+uint32_t getHashForCloudChunk(int x, int z) {
+    int values[2] = {x, z};
+    uint32_t hash = get_crc32((char *)values, arrayCount(values)*sizeof(int));
+    hash = hash & (CHUNK_LIST_SIZE - 1);
+    assert(hash < CHUNK_LIST_SIZE);
     return hash;
 }
 
@@ -37,6 +46,68 @@ int getBlockIndex(int x, int y, int z) {
     return result;
 }
 
+CloudBlock initCloudBlock(int x, int z) {
+    CloudBlock result = {};
+    result.x = x;
+    result.z = z;
+    return result;
+}
+
+CloudChunk *generateCloudChunk(GameState *gameState, int x, int z, uint32_t hash) {
+    CloudChunk *chunk = (CloudChunk *)malloc(sizeof(CloudChunk));
+    memset(chunk, 0, sizeof(CloudChunk));
+
+    chunk->x = x;
+    chunk->z = z;
+
+    chunk->cloudCount = 0;
+
+    //NOTE: Generate the clouds
+    float cloudThreshold = 0.4f;
+    for(int localz = 0; localz < CHUNK_DIM; ++localz) {
+        for(int localx = 0; localx < CHUNK_DIM; ++localx) {
+            if(perlin2d(x*CHUNK_DIM + localx, z*CHUNK_DIM + localz, 0.1f, 20) < cloudThreshold) 
+            {
+                assert(chunk->cloudCount < arrayCount(chunk->clouds));
+                if(chunk->cloudCount < arrayCount(chunk->clouds)) {
+                    chunk->clouds[chunk->cloudCount++] = initCloudBlock(localx, localz);
+                }
+            }
+        }
+    }
+
+    CloudChunk **chunkPtr = &gameState->cloudChunks[hash];
+
+    if(*chunkPtr) {
+        chunkPtr = &((*chunkPtr)->next);
+    }
+
+    *chunkPtr = chunk;
+
+    return chunk;
+}
+
+CloudChunk *getCloudChunk(GameState *gameState, int x, int z) {
+    uint32_t hash = getHashForCloudChunk(x, z);
+
+    CloudChunk *chunk = gameState->cloudChunks[hash];
+
+    bool found = false;
+
+    while(chunk && !found) {
+        if(chunk->x == x && chunk->z == z) {
+            found = true;
+            break;
+        }
+        chunk = chunk->next;
+    }
+
+    if(!chunk) {
+        chunk = generateCloudChunk(gameState, x, z, hash);
+    }
+
+    return chunk;
+}
 
 Chunk *generateChunk(GameState *gameState, int x, int y, int z, uint32_t hash) {
     Chunk *chunk = (Chunk *)malloc(sizeof(Chunk));
@@ -50,7 +121,7 @@ Chunk *generateChunk(GameState *gameState, int x, int y, int z, uint32_t hash) {
     int subSoilDepth = 5; //NOTE: 5 blocks to bedrock //TODO: could be random
 
     // chunk->blocks[chunk->blockCount++] = spawnBlock(8, 8, 0, BLOCK_SOIL);
-    
+
     for(int z = 0; z < CHUNK_DIM; ++z) {
         for(int x = 0; x < CHUNK_DIM; ++x) {
             int worldX = x + chunk->x*CHUNK_DIM;
@@ -102,7 +173,7 @@ Chunk *generateChunk(GameState *gameState, int x, int y, int z, uint32_t hash) {
 
 Chunk *getChunk_(GameState *gameState, int x, int y, int z, bool shouldGenerateChunk) {
     uint32_t hash = getHashForChunk(x, y, z);
-
+    
     Chunk *chunk = gameState->chunks[hash];
 
     bool found = false;
@@ -121,7 +192,6 @@ Chunk *getChunk_(GameState *gameState, int x, int y, int z, bool shouldGenerateC
 
     return chunk;
 }
-
 bool blockExistsReadOnly(GameState *gameState, int worldx, int worldy, int worldz) {
     int chunkX = worldx / CHUNK_DIM;
     int chunkY = worldy / CHUNK_DIM;
@@ -166,6 +236,18 @@ void drawChunk(GameState *gameState, Chunk *c) {
             
             c->blocks[i].hitBlock = false;
         }
+    }
+
+}
+
+void drawCloudChunk(GameState *gameState, CloudChunk *c) {
+    int cloudElevation = 80;
+    
+    for(int i = 0; i < c->cloudCount; ++i) {
+        CloudBlock cloud = c->clouds[i];
+        float3 worldP = make_float3(c->x*CHUNK_DIM + cloud.x, cloudElevation, c->z*CHUNK_DIM + cloud.z);
+        //NOTE: Push the cloud blocks
+        pushCube(gameState->renderer, worldP, BLOCK_SOIL, make_float4(1, 1, 1, 1));
     }
 }
 

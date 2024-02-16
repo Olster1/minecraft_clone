@@ -6,16 +6,16 @@ Uses OpenGL 3.3 and SDL for platform layer.
 
 ## Goals
 - [x] Collision & physics
-- [x] Block mining with paticle efffects
+- [x] Block mining (with paticle efffects & animation)
 - [x] Clouds & Sky 
-- [] Tree & grasses generation
-- [] Basic cave generation
-- [] Basic Coal & Ore generation 
-- [] Cows & Sheep Mobs
-- [] Health, Stamina & Item Hotbar
-- [] Water generation with alpha 
-- [] Day & Night cycle
-- [] Skeletal Animation of player & mobs
+- [ ] Tree & grasses generation
+- [ ] Basic cave generation
+- [ ] Basic Coal & Ore generation 
+- [ ] Cows & Sheep Mobs
+- [ ] Health, Stamina & Item Hotbar
+- [ ] Water generation with alpha 
+- [ ] Day & Night cycle
+- [ ] Skeletal Animation of player & mobs
 
 ## WHY's
 - [x] Fun & Challenging to program

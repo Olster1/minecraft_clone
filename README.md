@@ -16,6 +16,8 @@ Uses OpenGL 3.3 and SDL for platform layer.
 - [ ] Water generation with alpha 
 - [ ] Day & Night cycle
 - [ ] Skeletal Animation of player & mobs
+- [ ] Ambient Occulsion of blocks
+- [ ] Release game on itch.io as professional as possible - just exe & asset bundle 
 
 ## WHY's
 - [x] Fun & Challenging to program

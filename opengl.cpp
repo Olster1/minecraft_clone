@@ -441,11 +441,19 @@ void rendererFinish(Renderer *renderer, float16 projectionTransform, float16 mod
 
         renderer->blockItemsCount = 0;
     }
-
+    
     //NOTE: Draw the skybox here
     glDepthMask(GL_FALSE); //NOTE: Disable WRITING to the depth buffer
     drawModels(&renderer->blockModel, &renderer->skyboxShader, renderer->skyboxTextureHandle, 1, projectionTransform, cameraTransformWithoutTranslation, lookingAxis, SHADER_CUBE_MAP);
     glDepthMask(GL_TRUE);
+
+    if(renderer->alphaBlockCount > 0) {
+        //NOTE: Draw Cubes
+        updateInstanceData(renderer->blockModel.instanceBufferhandle, renderer->alphaBlockData, renderer->alphaBlockCount*sizeof(InstanceData));
+        drawModels(&renderer->blockModel, &renderer->blockColorShader, renderer->terrainTextureHandle, renderer->alphaBlockCount, projectionTransform, modelViewTransform, lookingAxis);
+
+        renderer->alphaBlockCount = 0;
+    }
 
     if(renderer->filledCircleCount > 0) {
         //NOTE: Draw filled circles

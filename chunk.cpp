@@ -247,7 +247,7 @@ void drawCloudChunk(GameState *gameState, CloudChunk *c) {
         CloudBlock cloud = c->clouds[i];
         float3 worldP = make_float3(c->x*CHUNK_DIM + cloud.x, cloudElevation, c->z*CHUNK_DIM + cloud.z);
         //NOTE: Push the cloud blocks
-        pushCube(gameState->renderer, worldP, BLOCK_SOIL, make_float4(1, 1, 1, 1));
+        pushAlphaCube(gameState->renderer, worldP, BLOCK_SOIL, make_float4(1, 1, 1, 1.0f));
     }
 }
 

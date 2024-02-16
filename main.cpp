@@ -20,7 +20,7 @@ Renderer *initRenderer(Texture grassTexture, Texture circleTexture, Texture circ
     renderer->skyboxShader = loadShader(skyboxVertexShader, skyboxFragShader);
     renderer->quadShader = loadShader(quadVertexShader, quadFragShader);
     renderer->blockPickupShader = loadShader(blockPickupVertexShader, blockPickupFragShader);
-    
+    renderer->blockColorShader = loadShader(blockVertexShader, blockColorShader);
     
     renderer->blockModel = generateVertexBuffer(global_cubeData, 24, global_cubeIndices, 36);
     renderer->quadModel = generateVertexBuffer(global_quadData, 4, global_quadIndices, 6);
@@ -96,7 +96,7 @@ void updateGame(GameState *gameState) {
     float16 rot = eulerAnglesToTransform(gameState->player.T.rotation.y, gameState->player.T.rotation.x, gameState->player.T.rotation.z);
     float3 lookingAxis = make_float3(rot.E_[2][0], rot.E_[2][1], rot.E_[2][2]);
 
-    pushTriangle(gameState->renderer, make_float3(1000, 60, 1000), make_float4(1, 0, 1, 1));
+    // pushTriangle(gameState->renderer, make_float3(1000, 60, 1000), make_float4(1, 0, 1, 1));
     
     rendererFinish(gameState->renderer, screenT, cameraT, screenGuiT, lookingAxis, cameraTWithoutTranslation);
 

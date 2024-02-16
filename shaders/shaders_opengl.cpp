@@ -72,14 +72,19 @@ static char *blockVertexShader =
 "out vec2 uv_frag;"
 "out vec3 fragPosInViewSpace;"
 "out vec3 sunAngle;"
+"out vec3 normalInModelSpace;"
+"out float distanceFromEye;"
 
 "void main() {"
     "mat4 MV = V;"
-    "gl_Position = projection * MV * vec4((vertex + pos), 1);"
+    "vec4 cameraSpace = MV * vec4((vertex + pos), 1);"
+    "distanceFromEye = cameraSpace.z;"
+    "gl_Position = projection * cameraSpace;"
     "color_frag = color;"
     "normal_frag_view_space = mat3(transpose(inverse(MV))) * normal;"
     "sunAngle = mat3(transpose(inverse(MV))) * vec3(0.7071, 0, 0.7071);"
     "fragPosInViewSpace = vec3(MV * vec4(vertex, 1));"
+    "normalInModelSpace = normal;"
 
    " uv_frag = vec2(texUV.x, mix(uvAtlas.x, uvAtlas.y, texUV.y));"
 "}";
@@ -91,6 +96,7 @@ static char *blockFragShader =
 "in vec2 uv_frag; "
 "in vec3 sunAngle;"
 "in vec3 fragPosInViewSpace;" //view space
+"in float distanceFromEye;"
 "uniform sampler2D diffuse;"
 "uniform vec3 lookingAxis;"
 
@@ -105,9 +111,22 @@ static char *blockFragShader =
     "} else {"
         "c = mix(vec4(darkness, darkness, darkness, 1), color_frag, mixValue);"
     "}"
+    "vec4 fogFactor = mix(diffSample*c, vec4(0.7, 0.7, 0.7, 1), (distanceFromEye - 10) / 50);"
     
+    "color = fogFactor;"
+"}";
 
-    "color = diffSample*c;"
+static char *blockColorShader = 
+"#version 330\n"
+"in vec4 color_frag;" 
+"in vec3 normalInModelSpace;"
+"out vec4 color;"
+"float factors[2] = float[](1, 0.7f);"
+"void main() {"
+    "float d = dot(vec3(0, -1, 0), normalInModelSpace);"
+    "int index = int(clamp(d, 0, 1));"
+    "float factor = factors[index];"
+    "color = vec4(color_frag.x*factor, color_frag.y*factor, color_frag.z*factor, color_frag.w);"
 "}";
 
 

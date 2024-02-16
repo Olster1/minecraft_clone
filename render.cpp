@@ -119,11 +119,15 @@ struct Renderer {
     int blockItemsCount; //NOTE: The blocks that are rotating
     InstanceDataWithRotation blockItemsData[MAX_WORLD_ITEMS_PER_INSTANCE];
 
+    int alphaBlockCount; //NOTE: The blocks that are rotating
+    InstanceData alphaBlockData[MAX_WORLD_ITEMS_PER_INSTANCE];
+
     Shader blockShader;
     Shader blockPickupShader;
     Shader quadShader;
     Shader quadTextureShader;
     Shader skyboxShader;
+    Shader blockColorShader;
     
     ModelBuffer blockModel;
     ModelBuffer blockModelWithInstancedT;
@@ -177,6 +181,17 @@ void pushCube(Renderer *renderer, float3 worldP, BlockType type, float4 color) {
             cube->uv.x = 0.5f;
             cube->uv.y = 0.75f;
         }
+        cube->color = color;
+    } else {
+        assert(false);
+    }
+}
+
+void pushAlphaCube(Renderer *renderer, float3 worldP, BlockType type, float4 color) {
+    if(renderer->alphaBlockCount < arrayCount(renderer->alphaBlockData)) {
+        InstanceData *cube = &renderer->alphaBlockData[renderer->alphaBlockCount++];
+
+        cube->pos = worldP;
         cube->color = color;
     } else {
         assert(false);

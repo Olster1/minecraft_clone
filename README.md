@@ -6,8 +6,9 @@ Uses OpenGL 3.3 and SDL for platform layer.
 
 ## Goals
 - [x] Collision & physics
-- [x] Block mining (with paticle efffects & animation)
+- [x] Block mining (need to add paticle efffects & animation)
 - [x] Clouds & Sky 
+- [x] Ambient Occulsion of blocks - need to speed up
 - [ ] Tree & grasses generation
 - [ ] Basic cave generation
 - [ ] Basic Coal & Ore generation 
@@ -16,7 +17,7 @@ Uses OpenGL 3.3 and SDL for platform layer.
 - [ ] Water generation with alpha 
 - [ ] Day & Night cycle
 - [ ] Skeletal Animation of player & mobs
-- [ ] Ambient Occulsion of blocks
+- [ ] Greedy meshing
 - [ ] Release game on itch.io as professional as possible - just exe & asset bundle 
 
 ## WHY's

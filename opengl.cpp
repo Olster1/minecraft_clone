@@ -11,7 +11,8 @@
 #define UVATLAS_ATTRIB_LOCATION 4
 #define COLOR_ATTRIB_LOCATION 5
 #define SCALE_ATTRIB_LOCATION 6
-#define MODEL_TRANSFORM_ATTRIB_LOCATION 7
+#define AO_MASK_ATTRIB_LOCATION 7
+#define MODEL_TRANSFORM_ATTRIB_LOCATION 8
 
 
 #define renderCheckError() renderCheckError_(__LINE__, (char *)__FILE__)
@@ -68,6 +69,8 @@ Shader loadShader(char *vertexShader, char *fragShader) {
     glBindAttribLocation(result.handle, COLOR_ATTRIB_LOCATION, "color");
     renderCheckError();
     glBindAttribLocation(result.handle, SCALE_ATTRIB_LOCATION, "scale");
+    renderCheckError();
+    glBindAttribLocation(result.handle, AO_MASK_ATTRIB_LOCATION, "AOMask");
     renderCheckError();
     glBindAttribLocation(result.handle, MODEL_TRANSFORM_ATTRIB_LOCATION, "M");
     renderCheckError();
@@ -139,6 +142,17 @@ static inline void addInstancingAttrib (GLuint attribLoc, int numOfFloats, size_
     }
 }
 
+void addInstancingAttrib_int32(GLuint attribLoc, int numOfInt32s, size_t offsetForStruct, size_t offsetInStruct) {
+    glEnableVertexAttribArray(attribLoc);  
+    renderCheckError();
+    
+    glVertexAttribIPointer(attribLoc, numOfInt32s, GL_UNSIGNED_INT, offsetForStruct, ((char *)0) + offsetInStruct);
+    renderCheckError();
+
+    glVertexAttribDivisor(attribLoc, 1);
+    renderCheckError();
+}
+
 enum AttribInstancingType {
     ATTRIB_INSTANCE_TYPE_DEFAULT,
     ATTRIB_INSTANCE_TYPE_MODEL_MATRIX,
@@ -156,6 +170,9 @@ void addInstancingAttribsForShader(AttribInstancingType type) {
         renderCheckError();
         unsigned int scaleOffset = (intptr_t)(&(((InstanceData *)0)->scale));
         addInstancingAttrib (SCALE_ATTRIB_LOCATION, 3, offsetForStruct, scaleOffset);
+        renderCheckError();
+        unsigned int maskOffset = (intptr_t)(&(((InstanceData *)0)->AOMask));
+        addInstancingAttrib_int32(AO_MASK_ATTRIB_LOCATION, 2, offsetForStruct, maskOffset);
         renderCheckError();
     } else if(type == ATTRIB_INSTANCE_TYPE_MODEL_MATRIX) {
         size_t offsetForStruct = sizeof(InstanceDataWithRotation); 

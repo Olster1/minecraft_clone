@@ -8,6 +8,10 @@ struct InventoryItem {
     int count;
 };
 
+struct AOOffset {
+    float3 offsets[3];
+};
+
 #define CHUNK_LIST_SIZE 4096
 
 struct GameState {
@@ -74,7 +78,36 @@ struct GameState {
     int entitiesToDelete[MAX_ENTITY_COUNT];
 
     KeyStates keys;
+
+    AOOffset aoOffsets[24];
 };
+
+void createAOOffsets(GameState *gameState) {
+    for(int i = 0; i < arrayCount(global_cubeData); ++i) {
+        assert(i < arrayCount(gameState->aoOffsets));
+
+        Vertex v = global_cubeData[i];
+        float3 normal = v.normal;
+        float3 sizedOffset = scale_float3(2, v.pos);
+
+        float3 masks[2] = {};
+        int maskCount = 0;
+
+        for(int k = 0; k < 3; k++) {
+            if(normal.E[k] == 0) {
+                assert(maskCount < arrayCount(masks));
+                float3 m = make_float3(0, 0, 0);
+                m.E[k] = -sizedOffset.E[k];
+
+                masks[maskCount++] = m;
+            }
+        }
+
+        gameState->aoOffsets[i].offsets[0] = plus_float3(sizedOffset, masks[0]);
+        gameState->aoOffsets[i].offsets[1] = sizedOffset; 
+        gameState->aoOffsets[i].offsets[2] = plus_float3(sizedOffset, masks[1]);
+    }
+}
 
 void initGameState(GameState *gameState) {
     gameState->camera.fov = 60;
@@ -124,6 +157,8 @@ void initGameState(GameState *gameState) {
     playSound(&gameState->bgMusic);
 
     gameState->randomStartUpID = rand();
+
+    createAOOffsets(gameState);
 
     // loadGLTF("./models/cesiumMan/CesiumMan.gltf");
     // loadGLTF("./models/boxAnimated/BoxAnimated.gltf");

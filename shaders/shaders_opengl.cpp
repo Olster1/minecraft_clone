@@ -57,6 +57,8 @@ static char *blockVertexShader =
 "in vec3 normal;"
 "in vec2 texUV;	"
 
+"in uvec2 AOMask;"
+
 //per instanced variables
 "in vec3 pos;"
 "in vec2 uvAtlas;"
@@ -74,17 +76,26 @@ static char *blockVertexShader =
 "out vec3 sunAngle;"
 "out vec3 normalInModelSpace;"
 "out float distanceFromEye;"
+"out float AOValue;"
+"float aoFactors[4] = float[4](1, 0.9, 0.8, 0.7);"
 
 "void main() {"
     "mat4 MV = V;"
     "vec4 cameraSpace = MV * vec4((vertex + pos), 1);"
     "distanceFromEye = cameraSpace.z;"
     "gl_Position = projection * cameraSpace;"
-    "color_frag = color;"
     "normal_frag_view_space = mat3(transpose(inverse(MV))) * normal;"
     "sunAngle = mat3(transpose(inverse(MV))) * vec3(0.7071, 0, 0.7071);"
     "fragPosInViewSpace = vec3(MV * vec4(vertex, 1));"
     "normalInModelSpace = normal;"
+    "uint aoIndex = uint(3);"
+    "uint aoMask = AOMask.x >> uint(gl_VertexID*2);"
+    "if(gl_VertexID >= 16) {"
+        "aoMask = AOMask.y >> (uint(2*(gl_VertexID - 16)));"
+    "}"
+    "AOValue = aoFactors[aoMask & aoIndex];"
+    // "color_frag = vec4(AOValue, 0, 0, 1);"//color;"
+    "color_frag = color;"
 
    " uv_frag = vec2(texUV.x, mix(uvAtlas.x, uvAtlas.y, texUV.y));"
 "}";
@@ -96,6 +107,7 @@ static char *blockFragShader =
 "in vec2 uv_frag; "
 "in vec3 sunAngle;"
 "in vec3 fragPosInViewSpace;" //view space
+"in float AOValue;"
 "in float distanceFromEye;"
 "uniform sampler2D diffuse;"
 "uniform vec3 lookingAxis;"
@@ -105,15 +117,16 @@ static char *blockFragShader =
     "vec4 diffSample = texture(diffuse, uv_frag);"
     "float mixValue = max(dot(normal_frag_view_space, sunAngle), 0);"
     "vec4 c = color_frag;"
-    "float darkness = 0.5;"
+    "float darkness = 0.9;"
     "if(color_frag.x == 1) {"
-        "c = color_frag;"
+        "c = color_frag*1.5;"
     "} else {"
-        "c = mix(vec4(darkness, darkness, darkness, 1), color_frag, mixValue);"
+        "c = mix(vec4(darkness, darkness, darkness, 1), 1.5*color_frag, mixValue);"
     "}"
+    "c = vec4(AOValue*c.xyz, c.w);"
     "vec4 fogFactor = mix(diffSample*c, vec4(0.7, 0.7, 0.7, 1), (distanceFromEye - 10) / 50);"
     
-    "color = fogFactor;"
+    "color = vec4((AOValue*fogFactor).xyz, 1);"//fogFactor
 "}";
 
 static char *blockColorShader = 

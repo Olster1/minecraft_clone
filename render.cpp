@@ -33,10 +33,10 @@ static unsigned int global_quadIndices[] = {
 
 static Vertex global_cubeData[] = {
     // Top face (y = 1.0f)
-    makeVertex(make_float3(0.5f, 0.5f, -0.5f), make_float2(0.25f, 0), make_float3(0, 1, 0)),
     makeVertex(make_float3(-0.5f, 0.5f, -0.5f), make_float2(0.25f,1), make_float3(0, 1, 0)),
-    makeVertex(make_float3(-0.5f, 0.5f,  0.5f), make_float2(0.5f, 1), make_float3(0, 1, 0)),
+    makeVertex(make_float3(0.5f, 0.5f, -0.5f), make_float2(0.25f, 0), make_float3(0, 1, 0)),
     makeVertex(make_float3(0.5f, 0.5f,  0.5f), make_float2(0.5f, 0), make_float3(0, 1, 0)),
+    makeVertex(make_float3(-0.5f, 0.5f,  0.5f), make_float2(0.5f, 1), make_float3(0, 1, 0)),
     // Bottom face (y = -1.0f)
     makeVertex(make_float3(0.5f, -0.5f, -0.5f), make_float2(0.75f, 0), make_float3(0, -1, 0)),
     makeVertex(make_float3(-0.5f, -0.5f, -0.5f), make_float2(0.75f, 1), make_float3(0, -1, 0)),
@@ -90,6 +90,7 @@ struct InstanceData {
     float2 uv;
     float4 color;
     float3 scale;
+    uint32_t AOMask[2];
 };
 
 struct InstanceDataWithRotation {
@@ -165,7 +166,7 @@ void pushFillCircle(Renderer *renderer, float3 worldP, float radius, float4 colo
     pushCircle_(renderer, worldP, true, radius, color);
 }
 
-void pushCube(Renderer *renderer, float3 worldP, BlockType type, float4 color) {
+void pushCube(Renderer *renderer, float3 worldP, BlockType type, float4 color, uint64_t AOMask) {
     if(renderer->cubeCount < arrayCount(renderer->cubeData)) {
         InstanceData *cube = &renderer->cubeData[renderer->cubeCount++];
 
@@ -182,6 +183,10 @@ void pushCube(Renderer *renderer, float3 worldP, BlockType type, float4 color) {
             cube->uv.y = 0.75f;
         }
         cube->color = color;
+        
+        //NOTE: Convert the AO mask into two integers since openGL doesn't support uint64 in the shader attributes
+        cube->AOMask[0] = (uint32_t)(AOMask);
+        cube->AOMask[1] = (uint32_t)(AOMask >> 32);
     } else {
         assert(false);
     }

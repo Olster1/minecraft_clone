@@ -214,6 +214,53 @@ bool blockExistsReadOnly(GameState *gameState, int worldx, int worldy, int world
     return found;
 }
 
+uint64_t getAOMask(GameState *gameState, const float3 worldP) {
+    uint64_t result = 0;
+
+    for(int i = 0; i < arrayCount(global_cubeData); ++i) {
+        Vertex v = global_cubeData[i];
+
+        bool blockValues[3] = {false, false, false};
+        
+        for(int j = 0; j < arrayCount(blockValues); j++) {
+            float3 p = plus_float3(worldP,gameState->aoOffsets[i].offsets[j]);
+            if(blockExistsReadOnly(gameState, p.x, p.y, p.z)) {
+                blockValues[j] = true; 
+            }
+        }
+
+        //NOTE: Get the ambient occulusion level
+        uint64_t value = 0;
+        //SPEED: Somehow make this not into if statments
+        if(blockValues[0] && blockValues[2])  {
+            value = 3;
+        } else if((blockValues[0] && blockValues[1])) {
+            assert(!blockValues[2]);
+            value = 2;
+        } else if((blockValues[1] && blockValues[2])) {
+            assert(!blockValues[0]);
+            value = 2;
+        } else if(blockValues[0]) {
+            assert(!blockValues[1]);
+            assert(!blockValues[2]);
+            value = 1;
+        } else if(blockValues[1]) {
+            assert(!blockValues[0]);
+            assert(!blockValues[2]);
+            value = 1;
+        } else if(blockValues[2]) {
+            assert(!blockValues[0]);
+            assert(!blockValues[1]);
+            value = 1;
+        } 
+
+        result |= (value << (uint64_t)(i*2)); //NOTE: Add the mask value
+    }
+
+    return result;
+
+}
+
 void drawChunk(GameState *gameState, Chunk *c) {
     
     for(int i = 0; i < arrayCount(c->blocks); ++i) {
@@ -231,8 +278,10 @@ void drawChunk(GameState *gameState, Chunk *c) {
                 // t = BLOCK_SOIL;
                 color = make_float4(1, 1, 1, 1);
             }
+
+            uint64_t AOMask = getAOMask(gameState, worldP);
             
-            pushCube(gameState->renderer, worldP, t, color);
+            pushCube(gameState->renderer, worldP, t, color, AOMask);
             
             c->blocks[i].hitBlock = false;
         }

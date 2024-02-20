@@ -282,6 +282,7 @@ void drawChunk(GameState *gameState, Chunk *c) {
             uint64_t AOMask = getAOMask(gameState, worldP);
             
             pushCube(gameState->renderer, worldP, t, color, AOMask);
+            // pushAlphaItem(gameState->renderer, worldP, make_float3(1, 1, 1), color);
             
             c->blocks[i].hitBlock = false;
         }

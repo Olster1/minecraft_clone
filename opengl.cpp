@@ -472,6 +472,14 @@ void rendererFinish(Renderer *renderer, float16 projectionTransform, float16 mod
         renderer->alphaBlockCount = 0;
     }
 
+    if(renderer->alphaItemCount > 0) {
+        //NOTE: Draw Cubes
+        updateInstanceData(renderer->blockModelSameTexture.instanceBufferhandle, renderer->alphaItemData, renderer->alphaItemCount*sizeof(InstanceDataWithRotation));
+        drawModels(&renderer->blockModelSameTexture, &renderer->blockSameTextureShader, renderer->breakBlockTexture, renderer->alphaItemCount, projectionTransform, modelViewTransform, lookingAxis);
+
+        renderer->alphaItemCount = 0;
+    }
+
     if(renderer->filledCircleCount > 0) {
         //NOTE: Draw filled circles
         updateInstanceData(renderer->quadModel.instanceBufferhandle, renderer->filledCircleData, renderer->filledCircleCount*sizeof(InstanceData));

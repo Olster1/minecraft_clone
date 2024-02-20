@@ -283,6 +283,8 @@ void mineBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
             //NOTE: Show progress on mining the block
             float percent = 1.0f - fmax(0, b.block->timeLeft / b.block->maxTime);
 
+            pushAlphaItem(gameState->renderer, getBlockWorldPos(b), make_float3(1.001f, 1.001f, 1.001f), make_float4(1, 1, 1, 0.7f), percent);
+
             gameState->showCircleTimer = 0;
             pushFillCircle(gameState->renderer, make_float3(0, 0, 0), CIRCLE_RADIUS_MAX*percent, make_float4(1, 1, 1, 1));
             

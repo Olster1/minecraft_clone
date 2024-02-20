@@ -33,6 +33,40 @@ static char *blockPickupVertexShader =
    " uv_frag = vec2(texUV.x, mix(uvAtlas.x, uvAtlas.y, texUV.y));"
 "}";
 
+static char *blockSameTextureVertexShader = 
+"#version 330\n"
+//per vertex variables
+"in vec3 vertex;"
+"in vec3 normal;"
+"in vec2 texUV;	"
+
+//per instanced variables
+"in mat4 M;"
+"in vec2 uvAtlas;"
+"in vec4 color;"
+
+//uniform variables
+"uniform mat4 V;"
+"uniform mat4 projection;"
+
+//outgoing variables
+"out vec4 color_frag;"
+"out vec3 normal_frag_view_space;"
+"out vec2 uv_frag;"
+"out vec3 fragPosInViewSpace;"
+"out vec3 sunAngle;"
+
+"void main() {"
+    "mat4 MV = V * M;"
+    "gl_Position = projection * MV * vec4((vertex), 1);"
+    "color_frag = color;"
+    "normal_frag_view_space = mat3(transpose(inverse(MV))) * normal;"
+    "sunAngle = mat3(transpose(inverse(MV))) * vec3(0.7071, 0, 0.7071);"
+    "fragPosInViewSpace = vec3(MV * vec4(vertex, 1));"
+
+   " uv_frag = vec2(mix(uvAtlas.x, uvAtlas.y, texUV.x), texUV.y);"
+"}";
+
 static char *blockPickupFragShader = 
 "#version 330\n"
 "in vec4 color_frag;" 

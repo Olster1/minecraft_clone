@@ -19,7 +19,6 @@ Vertex makeVertex(float3 pos, float2 texUV, float3 normal) {
     return v;
 }
 
-
 static Vertex global_quadData[] = {
     makeVertex(make_float3(0.5f, -0.5f, 0.5f), make_float2(0, 0), make_float3(0, 0, 1)),
     makeVertex(make_float3(-0.5f, -0.5f, 0.5f), make_float2(0, 1), make_float3(0, 0, 1)),
@@ -64,6 +63,40 @@ static Vertex global_cubeData[] = {
     makeVertex(make_float3(0.5f, -0.5f, 0.5f), make_float2(0, 1), make_float3(1, 0, 0)),
 };
 
+
+static Vertex global_cubeData_sameTexture[] = {
+    // Top face (y = 1.0f)
+    makeVertex(make_float3(-0.5f, 0.5f, -0.5f), make_float2(0,1), make_float3(0, 1, 0)),
+    makeVertex(make_float3(0.5f, 0.5f, -0.5f), make_float2(0, 0), make_float3(0, 1, 0)),
+    makeVertex(make_float3(0.5f, 0.5f,  0.5f), make_float2(1, 0), make_float3(0, 1, 0)),
+    makeVertex(make_float3(-0.5f, 0.5f,  0.5f), make_float2(1, 1), make_float3(0, 1, 0)),
+    // Bottom face (y = -1.0f)
+    makeVertex(make_float3(0.5f, -0.5f, -0.5f), make_float2(1, 0), make_float3(0, -1, 0)),
+    makeVertex(make_float3(-0.5f, -0.5f, -0.5f), make_float2(1, 1), make_float3(0, -1, 0)),
+    makeVertex(make_float3(-0.5f, -0.5f,  0.5f), make_float2(0, 1), make_float3(0, -1, 0)),
+    makeVertex(make_float3(0.5f, -0.5f,  0.5f), make_float2(0, 0), make_float3(0, -1, 0)),
+    // Front face  (z = 1.0f)
+    makeVertex(make_float3(-0.5f, -0.5f, 0.5f), make_float2(0, 1), make_float3(0, 0, 1)),
+    makeVertex(make_float3(0.5f, -0.5f, 0.5f), make_float2(1,1), make_float3(0, 0, 1)),
+    makeVertex(make_float3(0.5f, 0.5f, 0.5f), make_float2(1,0), make_float3(0, 0, 1)),
+    makeVertex(make_float3(-0.5f, 0.5f, 0.5f), make_float2(0, 0), make_float3(0, 0, 1)),
+    // Back face (z = -1.0f)
+    makeVertex(make_float3(0.5f, -0.5f, -0.5f), make_float2(0,1), make_float3(0, 0, -1)),
+    makeVertex(make_float3(-0.5f, -0.5f, -0.5f), make_float2(1,1), make_float3(0, 0, -1)),
+    makeVertex(make_float3(-0.5f, 0.5f, -0.5f), make_float2(1,0), make_float3(0, 0, -1)),
+    makeVertex(make_float3(0.5f, 0.5f, -0.5f), make_float2(0,0), make_float3(0, 0, -1)),
+    // Left face (x = -1.0f)
+    makeVertex(make_float3(-0.5f, 0.5f, -0.5f), make_float2(0, 0), make_float3(-1, 0, 0)),
+    makeVertex(make_float3(-0.5f, -0.5f, -0.5f), make_float2(0, 1), make_float3(-1, 0, 0)),
+    makeVertex(make_float3(-0.5f, -0.5f, 0.5f), make_float2(1,1), make_float3(-1, 0, 0)),
+    makeVertex(make_float3(-0.5f, 0.5f, 0.5f), make_float2(1,0), make_float3(-1, 0, 0)),
+    // Right face (x = 1.0f)
+    makeVertex(make_float3(0.5f, -0.5f, -0.5f), make_float2(1,1), make_float3(1, 0, 0)),
+    makeVertex(make_float3(0.5f, 0.5f, -0.5f), make_float2(1,0), make_float3(1, 0, 0)),
+    makeVertex(make_float3(0.5f, 0.5f, 0.5f), make_float2(0, 0), make_float3(1, 0, 0)),
+    makeVertex(make_float3(0.5f, -0.5f, 0.5f), make_float2(0, 1), make_float3(1, 0, 0)),
+};
+
 static unsigned int global_cubeIndices[] = {
     0, 1, 2, 0, 2, 3,
     4, 5, 6, 4, 6, 7,
@@ -104,6 +137,7 @@ struct Renderer {
     uint32_t circleHandle;
     uint32_t circleOutlineHandle;
     uint32_t skyboxTextureHandle;
+    uint32_t breakBlockTexture;
 
     int cubeCount;
     InstanceData cubeData[MAX_CUBES_PER_RENDER];
@@ -123,18 +157,23 @@ struct Renderer {
     int alphaBlockCount; //NOTE: The blocks that are rotating
     InstanceData alphaBlockData[MAX_WORLD_ITEMS_PER_INSTANCE];
 
+    int alphaItemCount; //NOTE: The blocks that are rotating
+    InstanceDataWithRotation alphaItemData[MAX_WORLD_ITEMS_PER_INSTANCE];
+
     Shader blockShader;
     Shader blockPickupShader;
     Shader quadShader;
     Shader quadTextureShader;
     Shader skyboxShader;
     Shader blockColorShader;
+    Shader blockSameTextureShader;
     
     ModelBuffer blockModel;
     ModelBuffer blockModelWithInstancedT;
     ModelBuffer quadModel;
     ModelBuffer triangleModel;
     ModelBuffer avocadoModel;
+    ModelBuffer blockModelSameTexture;
 };
 
 
@@ -198,6 +237,27 @@ void pushAlphaCube(Renderer *renderer, float3 worldP, BlockType type, float4 col
 
         cube->pos = worldP;
         cube->color = color;
+    } else {
+        assert(false);
+    }
+}
+
+void pushAlphaItem(Renderer *renderer, float3 worldP, float3 scale, float4 color, float breakPercent) {
+    if(renderer->alphaItemCount < arrayCount(renderer->alphaItemData)) {
+        InstanceDataWithRotation *cube = &renderer->alphaItemData[renderer->alphaItemCount++];
+
+        cube->M = float16_set_pos(float16_scale(float16_identity(), scale), worldP);
+        cube->color = color;
+
+        float numOfPics = 8;
+        int indexAt = (int)(breakPercent * numOfPics);
+
+        if(indexAt >= numOfPics) {
+            indexAt = numOfPics - 1;
+        }
+
+        cube->uv.x = indexAt / numOfPics;
+        cube->uv.y = (indexAt + 1) / numOfPics;
     } else {
         assert(false);
     }

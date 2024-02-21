@@ -124,6 +124,7 @@ struct InstanceData {
     float4 color;
     float3 scale;
     uint32_t AOMask[2];
+    uint32_t samplerIndex;
 };
 
 struct InstanceDataWithRotation {
@@ -138,6 +139,9 @@ struct Renderer {
     uint32_t circleOutlineHandle;
     uint32_t skyboxTextureHandle;
     uint32_t breakBlockTexture;
+    uint32_t woodBlockTexture;
+    uint32_t hotBarTexture;
+    uint32_t leavesTexture;
 
     int cubeCount;
     InstanceData cubeData[MAX_CUBES_PER_RENDER];
@@ -205,22 +209,38 @@ void pushFillCircle(Renderer *renderer, float3 worldP, float radius, float4 colo
     pushCircle_(renderer, worldP, true, radius, color);
 }
 
+float2 getUVCoordForBlock(BlockType type) {
+    float2 uv = make_float2(0, 0);
+     if(type == BLOCK_GRASS) {
+        uv.x = 0;
+        uv.y = 0.2f;
+    } else if(type == BLOCK_SOIL) {
+        uv.x = 0.2f;
+        uv.y = 0.4f;
+    } else if(type == BLOCK_STONE) {
+        uv.x = 0.4f;
+        uv.y = 0.6f;
+    } else if(type == BLOCK_TREE_LEAVES) {
+        uv.x = 0.6f;
+        uv.y = 0.8f;
+    } else if(type == BLOCK_TREE_WOOD) {
+        uv.x = 0.8f;
+        uv.y = 1.0f;
+    }
+    return uv;
+}
+
 void pushCube(Renderer *renderer, float3 worldP, BlockType type, float4 color, uint64_t AOMask) {
     if(renderer->cubeCount < arrayCount(renderer->cubeData)) {
         InstanceData *cube = &renderer->cubeData[renderer->cubeCount++];
 
         cube->pos = worldP;
+        uint32_t samplerIndex = 0;
 
-         if(type == BLOCK_GRASS) {
-            cube->uv.x = 0;
-            cube->uv.y = 0.25f;
-        } else if(type == BLOCK_SOIL) {
-            cube->uv.x = 0.25f;
-            cube->uv.y = 0.5f;
-        } else if(type == BLOCK_STONE) {
-            cube->uv.x = 0.5f;
-            cube->uv.y = 0.75f;
-        }
+        cube->uv = getUVCoordForBlock(type);
+
+        cube->samplerIndex = samplerIndex;
+
         cube->color = color;
         
         //NOTE: Convert the AO mask into two integers since openGL doesn't support uint64 in the shader attributes
@@ -263,23 +283,15 @@ void pushAlphaItem(Renderer *renderer, float3 worldP, float3 scale, float4 color
     }
 }
 
+
 void pushBlockItem(Renderer *renderer, float16 T, BlockType type, float4 color) {
     if(renderer->blockItemsCount < arrayCount(renderer->blockItemsData)) {
         InstanceDataWithRotation *cube = &renderer->blockItemsData[renderer->blockItemsCount++];
 
         cube->M = T;
-
-         if(type == BLOCK_GRASS) {
-            cube->uv.x = 0;
-            cube->uv.y = 0.25f;
-        } else if(type == BLOCK_SOIL) {
-            cube->uv.x = 0.25f;
-            cube->uv.y = 0.5f;
-        } else if(type == BLOCK_STONE) {
-            cube->uv.x = 0.5f;
-            cube->uv.y = 0.75f;
-        }
+        cube->uv = getUVCoordForBlock(type);
         cube->color = color;
+
     } else {
         assert(false);
     }

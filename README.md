@@ -6,7 +6,7 @@ Uses OpenGL 3.3 and SDL for platform layer.
 
 ## Goals
 - [x] Collision & physics
-- [x] Block mining (need to add paticle efffects & animation)
+- [x] Block mining (need to add paticle efffects)
 - [x] Clouds & Sky 
 - [x] Ambient Occulsion of blocks - need to speed up
 - [ ] Tree & grasses generation

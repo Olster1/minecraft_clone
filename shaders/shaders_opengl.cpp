@@ -97,6 +97,7 @@ static char *blockVertexShader =
 "in vec3 pos;"
 "in vec2 uvAtlas;"
 "in vec4 color;"
+"in uint samplerIndex;"
 
 //uniform variables
 "uniform mat4 V;"
@@ -111,6 +112,7 @@ static char *blockVertexShader =
 "out vec3 normalInModelSpace;"
 "out float distanceFromEye;"
 "out float AOValue;"
+
 "float aoFactors[4] = float[4](1, 0.9, 0.8, 0.7);"
 
 "void main() {"
@@ -131,7 +133,8 @@ static char *blockVertexShader =
     // "color_frag = vec4(AOValue, 0, 0, 1);"//color;"
     "color_frag = color;"
 
-   " uv_frag = vec2(texUV.x, mix(uvAtlas.x, uvAtlas.y, texUV.y));"
+   "uv_frag = vec2(texUV.x, mix(uvAtlas.x, uvAtlas.y, texUV.y));"
+//    "samplerIndexOut = float(samplerIndex);"
 "}";
 
 static char *blockFragShader = 

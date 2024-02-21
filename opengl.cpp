@@ -12,7 +12,8 @@
 #define COLOR_ATTRIB_LOCATION 5
 #define SCALE_ATTRIB_LOCATION 6
 #define AO_MASK_ATTRIB_LOCATION 7
-#define MODEL_TRANSFORM_ATTRIB_LOCATION 8
+#define SAMPLER_INDEX_ATTRIB_LOCATION 8
+#define MODEL_TRANSFORM_ATTRIB_LOCATION 9
 
 
 #define renderCheckError() renderCheckError_(__LINE__, (char *)__FILE__)
@@ -71,6 +72,8 @@ Shader loadShader(char *vertexShader, char *fragShader) {
     glBindAttribLocation(result.handle, SCALE_ATTRIB_LOCATION, "scale");
     renderCheckError();
     glBindAttribLocation(result.handle, AO_MASK_ATTRIB_LOCATION, "AOMask");
+    renderCheckError();
+    glBindAttribLocation(result.handle, SAMPLER_INDEX_ATTRIB_LOCATION, "samplerIndex");
     renderCheckError();
     glBindAttribLocation(result.handle, MODEL_TRANSFORM_ATTRIB_LOCATION, "M");
     renderCheckError();
@@ -173,6 +176,9 @@ void addInstancingAttribsForShader(AttribInstancingType type) {
         renderCheckError();
         unsigned int maskOffset = (intptr_t)(&(((InstanceData *)0)->AOMask));
         addInstancingAttrib_int32(AO_MASK_ATTRIB_LOCATION, 2, offsetForStruct, maskOffset);
+        renderCheckError();
+        unsigned int samplerIndexOffset = (intptr_t)(&(((InstanceData *)0)->samplerIndex));
+        addInstancingAttrib_int32(SAMPLER_INDEX_ATTRIB_LOCATION, 1, offsetForStruct, samplerIndexOffset);
         renderCheckError();
     } else if(type == ATTRIB_INSTANCE_TYPE_MODEL_MATRIX) {
         size_t offsetForStruct = sizeof(InstanceDataWithRotation); 
@@ -326,6 +332,58 @@ Texture loadCubeMapTextureToGPU(char *folderName) {
     return result;
 }
 
+Texture loadTextureArrayToGPU(char *fileName, int fileNameCount) {
+    Texture t = {};
+
+    unsigned char **imageDatas = (unsigned char **)malloc(sizeof(unsigned char *)*fileNameCount);
+
+    for(int i = 0; i < fileNameCount; ++i) {
+        imageDatas[i] = (unsigned char *)stbi_load(fileName, &t.w, &t.h, 0, STBI_rgb_alpha);
+
+        if(imageDatas[i]) {
+        // assert(result.comp == 4);
+        } else {
+            printf("%s\n", fileName);
+            assert(!"no image found");
+        }
+    }
+
+    GLuint resultId;
+    glGenTextures(1, &resultId);
+    renderCheckError();
+    
+    glBindTexture(GL_TEXTURE_2D_ARRAY, resultId);
+    renderCheckError();
+    
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    renderCheckError();
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    renderCheckError();
+
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    renderCheckError();
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    renderCheckError();
+
+    glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGB8, t.w, t.h, fileNameCount, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    renderCheckError();
+
+    for(int i = 0; i < fileNameCount; ++i) {
+        glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, t.w, t.h, 1, GL_RGB, GL_UNSIGNED_BYTE, imageDatas[i]);
+        stbi_image_free(imageDatas[i]);
+    }
+
+    glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
+    renderCheckError();
+    
+    glBindTexture(GL_TEXTURE_2D, 0);
+    renderCheckError();
+
+    t.handle = resultId;
+
+    return t;
+}
+
 Texture loadTextureToGPU(char *fileName) {
     Texture t = {};
 
@@ -411,6 +469,11 @@ void bindTexture(char *uniformName, int slotId, GLint textureId, Shader *shader,
     }
 }
 
+
+void bindTextureArray(char *uniformName, GLint textureId, Shader *shader, uint32_t flags) {
+
+}
+
 void drawModels(ModelBuffer *model, Shader *shader, uint32_t textureId, int instanceCount, float16 projectionTransform, float16 modelViewTransform, float3 lookingAxis, uint32_t flags = 0) {
     // printf("%d\n", instanceCount);
     glUseProgram(shader->handle);
@@ -428,8 +491,14 @@ void drawModels(ModelBuffer *model, Shader *shader, uint32_t textureId, int inst
     glUniform3f(glGetUniformLocation(shader->handle, "lookingAxis"), lookingAxis.x, lookingAxis.y, lookingAxis.z);
     renderCheckError();
 
-    bindTexture("diffuse", 1, textureId, shader, flags);
-    renderCheckError();
+    // if(!isArrayTexture) {
+        bindTexture("diffuse", 1, textureId, shader, flags);
+        renderCheckError();
+    // } else {
+    //     bindTextureArray("diffuse", textureId, shader, flags);
+    //     renderCheckError();
+    // }
+
 
     glDrawElementsInstanced(GL_TRIANGLES, model->indexCount, GL_UNSIGNED_INT, 0, instanceCount); 
     renderCheckError();

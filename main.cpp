@@ -4,7 +4,7 @@
 #include "./opengl.cpp"
 #include "./animation.cpp"
 
-Renderer *initRenderer(Texture grassTexture, Texture circleTexture, Texture circleOutlineTexture, Texture skyboxTexture, Texture breakBlockTexture) {
+Renderer *initRenderer(Texture grassTexture, Texture circleTexture, Texture circleOutlineTexture, Texture skyboxTexture, Texture breakBlockTexture, Texture woodBlockTexture, Texture hotBarTexture, Texture leavesTexture) {
     Renderer *renderer = (Renderer *)malloc(sizeof(Renderer));
     
     renderer->cubeCount = 0;
@@ -15,6 +15,9 @@ Renderer *initRenderer(Texture grassTexture, Texture circleTexture, Texture circ
     renderer->circleHandle = circleTexture.handle;
     renderer->breakBlockTexture = breakBlockTexture.handle;
     renderer->circleOutlineHandle = circleOutlineTexture.handle;
+    renderer->woodBlockTexture = woodBlockTexture.handle;
+    renderer->hotBarTexture = hotBarTexture.handle;
+    renderer->leavesTexture = leavesTexture.handle;
 
     renderer->blockShader = loadShader(blockVertexShader, blockFragShader);
     renderer->quadTextureShader = loadShader(quadVertexShader, quadTextureFragShader);
@@ -22,8 +25,8 @@ Renderer *initRenderer(Texture grassTexture, Texture circleTexture, Texture circ
     renderer->quadShader = loadShader(quadVertexShader, quadFragShader);
     renderer->blockPickupShader = loadShader(blockPickupVertexShader, blockPickupFragShader);
     renderer->blockSameTextureShader = loadShader(blockSameTextureVertexShader, blockPickupFragShader);
-    
     renderer->blockColorShader = loadShader(blockVertexShader, blockColorShader);
+    
     
     renderer->blockModel = generateVertexBuffer(global_cubeData, 24, global_cubeIndices, 36);
     renderer->quadModel = generateVertexBuffer(global_quadData, 4, global_quadIndices, 6);

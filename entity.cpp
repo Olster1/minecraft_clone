@@ -10,6 +10,8 @@ enum BlockType {
     BLOCK_SOIL,
     BLOCK_STONE,
     BLOCK_CLOUD,
+    BLOCK_TREE_WOOD,
+    BLOCK_TREE_LEAVES,
 };
 
 struct Block {

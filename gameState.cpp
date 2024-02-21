@@ -129,7 +129,7 @@ void initGameState(GameState *gameState) {
     loadWavFile(&gameState->fallBigSound, "./sounds/fallbig.wav", &gameState->audioSpec);
     loadWavFile(&gameState->pickupSound, "./sounds/pop.wav", &gameState->audioSpec);
     
-    loadWavFile(&gameState->bgMusic, "./sounds/sweeden.wav", &gameState->audioSpec);
+    // loadWavFile(&gameState->bgMusic, "./sounds/sweeden.wav", &gameState->audioSpec);
 
     gameState->gravityOn = true;
 
@@ -139,7 +139,9 @@ void initGameState(GameState *gameState) {
     gameState->soilTexture = loadTextureToGPU("./images/soil_block.png");
     Texture skyboxTexture = loadCubeMapTextureToGPU("./images/skybox/");
     Texture breakBlockTexture = loadTextureToGPU("./images/break_block.png");
-    
+    Texture woodBlockTexture = loadTextureToGPU("./images/woodBlock.png");
+    Texture hotBarTexture = loadTextureToGPU("./images/hotBar.png");
+    Texture leavesTexture = loadTextureToGPU("./images/leaves.png");
 
     gameState->circleOutlineTexture = loadTextureToGPU("./images/circleOutline.png");
     // gameState->circleOutlineTexture = loadTextureToGPU("./models/avocado/Avocado_baseColor.png");
@@ -147,7 +149,7 @@ void initGameState(GameState *gameState) {
 
     gameState->currentMiningBlock = 0;
 
-    gameState->renderer = initRenderer(gameState->grassTexture, gameState->circleTexture, gameState->circleOutlineTexture, skyboxTexture, breakBlockTexture);
+    gameState->renderer = initRenderer(gameState->grassTexture, gameState->circleTexture, gameState->circleOutlineTexture, skyboxTexture, breakBlockTexture, woodBlockTexture, hotBarTexture, leavesTexture);
 
     gameState->placeBlockTimer = -1;
     gameState->mineBlockTimer = -1;

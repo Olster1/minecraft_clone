@@ -246,7 +246,7 @@ void placeBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
 
                     int blockIndex = getBlockIndex(localX, localY, localZ);
                     if(blockIndex < arrayCount(nxtBlock.chunk->blocks)) {
-                        nxtBlock.chunk->blocks[blockIndex] = spawnBlock(localX, localY, localZ, BLOCK_GRASS);
+                        nxtBlock.chunk->blocks[blockIndex] = spawnBlock(localX, localY, localZ, BLOCK_TREE_WOOD);
                     } else {
                         assert(false);
                     }
@@ -283,7 +283,10 @@ void mineBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
             //NOTE: Show progress on mining the block
             float percent = 1.0f - fmax(0, b.block->timeLeft / b.block->maxTime);
 
-            pushAlphaItem(gameState->renderer, getBlockWorldPos(b), make_float3(1.001f, 1.001f, 1.001f), make_float4(1, 1, 1, 0.7f), percent);
+            if(b.block->type != BLOCK_TREE_LEAVES) {
+                pushAlphaItem(gameState->renderer, getBlockWorldPos(b), make_float3(1.001f, 1.001f, 1.001f), make_float4(1, 1, 1, 0.7f), percent);
+            }
+            
 
             gameState->showCircleTimer = 0;
             pushFillCircle(gameState->renderer, make_float3(0, 0, 0), CIRCLE_RADIUS_MAX*percent, make_float4(1, 1, 1, 1));

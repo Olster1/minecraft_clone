@@ -78,8 +78,8 @@ void updateGame(GameState *gameState) {
     // drawChunk(gameState, chunk);
     // printf("%d %d %d\n", chunkX, chunkY, chunkZ);
 
-    int chunkRadiusY = 0;
-    int chunkRadiusXZ = 0;
+    int chunkRadiusY = 1;
+    int chunkRadiusXZ = 3;
     
     for(int z = -chunkRadiusXZ; z <= chunkRadiusXZ; ++z) {
         for(int x = -chunkRadiusXZ; x <= chunkRadiusXZ; ++x) {

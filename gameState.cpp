@@ -129,7 +129,7 @@ void initGameState(GameState *gameState) {
     loadWavFile(&gameState->fallBigSound, "./sounds/fallbig.wav", &gameState->audioSpec);
     loadWavFile(&gameState->pickupSound, "./sounds/pop.wav", &gameState->audioSpec);
     
-    // loadWavFile(&gameState->bgMusic, "./sounds/sweeden.wav", &gameState->audioSpec);
+    loadWavFile(&gameState->bgMusic, "./sounds/sweeden.wav", &gameState->audioSpec);
 
     gameState->gravityOn = true;
 

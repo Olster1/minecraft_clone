@@ -159,7 +159,7 @@ struct Renderer {
     InstanceDataWithRotation blockItemsData[MAX_WORLD_ITEMS_PER_INSTANCE];
 
     int alphaBlockCount; //NOTE: The blocks that are rotating
-    InstanceData alphaBlockData[MAX_WORLD_ITEMS_PER_INSTANCE];
+    InstanceData alphaBlockData[MAX_CUBES_PER_RENDER];
 
     int alphaItemCount; //NOTE: The blocks that are rotating
     InstanceDataWithRotation alphaItemData[MAX_WORLD_ITEMS_PER_INSTANCE];

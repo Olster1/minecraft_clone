@@ -107,6 +107,8 @@ struct Chunk {
     int y;
     int z;
 
+    bool isGenerated; //NOTE: Chunk might not be generated, so check first when you get one
+
     //NOTE: 16 x 16 x 16
     //NOTE: Z Y X
     Block blocks[BLOCKS_PER_CHUNK];

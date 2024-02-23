@@ -119,44 +119,24 @@ CloudChunk *getCloudChunk(GameState *gameState, int x, int z) {
     return chunk;
 }
 
-#define getChunk(gameState, x, y, z) getChunk_(gameState, x, y, z, true)
-#define getChunkReadOnly(gameState, x, y, z) getChunk_(gameState, x, y, z, false)
+#define getChunkNoGenerate(gameState, x, y, z) getChunk_(gameState, x, y, z, true, false)
+#define getChunk(gameState, x, y, z) getChunk_(gameState, x, y, z, true, true)
+#define getChunkReadOnly(gameState, x, y, z) getChunk_(gameState, x, y, z, false, false)
 
 Chunk *generateChunk(GameState *gameState, int x, int y, int z, uint32_t hash);
+Chunk *getChunk_(GameState *gameState, int x, int y, int z, bool shouldGenerateChunk, bool shouldGenerateFully);
 
-Chunk *getChunk_(GameState *gameState, int x, int y, int z, bool shouldGenerateChunk) {
-    uint32_t hash = getHashForChunk(x, y, z);
-    
-    Chunk *chunk = gameState->chunks[hash];
 
-    bool found = false;
-
-    while(chunk && !found) {
-        if(chunk->x == x && chunk->y == y && chunk->z == z) {
-            found = true;
-            break;
-        }
-        chunk = chunk->next;
-    }
-
-    if(!chunk && shouldGenerateChunk) {
-        chunk = generateChunk(gameState, x, y, z, hash);
-    }
-
-    return chunk;
-}
-
-void addBlock(GameState *gameState, Chunk *chunk, float3 worldP, BlockType type) {
+void addBlock(GameState *gameState, float3 worldP, BlockType type) {
     int chunkX = (int)worldP.x / CHUNK_DIM;
     int chunkY = (int)worldP.y / CHUNK_DIM;
     int chunkZ = (int)worldP.z / CHUNK_DIM;
 
     //NOTE: entity swapped chunk, so move it to the new chunk
-    Chunk *c = 0;
-    if(chunk->x == chunkX && chunk->y == chunkY && chunk->z == chunkZ) {
-        c = chunk;
-    }
+    Chunk *c = getChunkNoGenerate(gameState, chunkX, chunkY, chunkZ);
 
+    assert(c);
+   
     if(c) {
         int localX = worldP.x - (CHUNK_DIM*chunkX); 
         int localY = worldP.y - (CHUNK_DIM*chunkY); 
@@ -177,14 +157,14 @@ void generateTree(GameState *gameState, Chunk *chunk, float3 worldP) {
     for(int i = 0; i < treeHeight; ++i) {
         float3 p = plus_float3(worldP, make_float3(0, i, 0));
         //NOTE: Add block
-        addBlock(gameState, chunk, p, BLOCK_TREE_WOOD);
+        addBlock(gameState, p, BLOCK_TREE_WOOD);
     }
 
     int z = 0;
     int x = 0;
 
     float3 p = plus_float3(worldP, make_float3(x, (treeHeight + 1), z));
-    addBlock(gameState, chunk, p, BLOCK_TREE_LEAVES);
+    addBlock(gameState, p, BLOCK_TREE_LEAVES);
 
     float3 offsets[] = {make_float3(1, treeHeight, 0), make_float3(1, treeHeight, 1), 
                         make_float3(-1, treeHeight, -1), make_float3(1, treeHeight, -1), 
@@ -197,7 +177,7 @@ void generateTree(GameState *gameState, Chunk *chunk, float3 worldP) {
             float3 o = offsets[i];
             o.y -= j;
             float3 p = plus_float3(worldP, o);
-            addBlock(gameState, chunk, p, BLOCK_TREE_LEAVES);
+            addBlock(gameState, p, BLOCK_TREE_LEAVES);
         }
     }
     treeHeight -=1;
@@ -214,23 +194,13 @@ void generateTree(GameState *gameState, Chunk *chunk, float3 worldP) {
 
     for(int i = 0; i < arrayCount(offsets2); ++i) {
         float3 p = plus_float3(worldP, offsets2[i]);
-        addBlock(gameState, chunk, p, BLOCK_TREE_LEAVES);
+        addBlock(gameState, p, BLOCK_TREE_LEAVES);
     }
 
 }
 
-Chunk *generateChunk(GameState *gameState, int x, int y, int z, uint32_t hash) {
-    Chunk *chunk = (Chunk *)malloc(sizeof(Chunk));
-    memset(chunk, 0, sizeof(Chunk));
-
-    chunk->x = x;
-    chunk->y = y;
-    chunk->z = z;
-
-    chunk->next = 0;
+void fillChunk(GameState *gameState, Chunk *chunk) {
     int subSoilDepth = 5; //NOTE: 5 blocks to bedrock //TODO: could be random
-
-    // chunk->blocks[chunk->blockCount++] = spawnBlock(8, 8, 0, BLOCK_SOIL);
 
     for(int z = 0; z < CHUNK_DIM; ++z) {
         for(int x = 0; x < CHUNK_DIM; ++x) {
@@ -274,9 +244,50 @@ Chunk *generateChunk(GameState *gameState, int x, int y, int z, uint32_t hash) {
                     
                 }
             }
-            
         }
     }
+
+    chunk->isGenerated = true;
+}
+
+Chunk *getChunk_(GameState *gameState, int x, int y, int z, bool shouldGenerateChunk, bool shouldGenerateFully) {
+    uint32_t hash = getHashForChunk(x, y, z);
+    
+    Chunk *chunk = gameState->chunks[hash];
+
+    bool found = false;
+
+    while(chunk && !found) {
+        if(chunk->x == x && chunk->y == y && chunk->z == z) {
+            found = true;
+            break;
+        }
+        chunk = chunk->next;
+    }
+
+    if((!chunk && shouldGenerateChunk)) {
+        chunk = generateChunk(gameState, x, y, z, hash);
+    }
+
+    if(chunk && shouldGenerateFully && !chunk->isGenerated) {
+        fillChunk(gameState, chunk);
+    } 
+
+    return chunk;
+}
+
+
+Chunk *generateChunk(GameState *gameState, int x, int y, int z, uint32_t hash) {
+    Chunk *chunk = (Chunk *)malloc(sizeof(Chunk));
+    memset(chunk, 0, sizeof(Chunk));
+
+    chunk->x = x;
+    chunk->y = y;
+    chunk->z = z;
+    chunk->isGenerated = false;
+    chunk->entityCount = 0;
+
+    chunk->next = 0;
 
     Chunk **chunkPtr = &gameState->chunks[hash];
 
@@ -377,7 +388,7 @@ void drawChunk(GameState *gameState, Chunk *c) {
                 color = make_float4(1, 1, 1, 1);
             }
 
-            uint64_t AOMask = getAOMask(gameState, worldP);
+            uint64_t AOMask = 0;//getAOMask(gameState, worldP);
             
             pushCube(gameState->renderer, worldP, t, color, AOMask);
             // pushAlphaItem(gameState->renderer, worldP, make_float3(1, 1, 1), color);

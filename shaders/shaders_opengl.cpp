@@ -161,7 +161,7 @@ static char *blockFragShader =
         "c = mix(vec4(darkness, darkness, darkness, 1), 1.5*color_frag, mixValue);"
     "}"
     "c = vec4(AOValue*c.xyz, c.w);"
-    "vec4 fogFactor = mix(diffSample*c, vec4(0.7, 0.7, 0.7, 1), (distanceFromEye - 10) / 50);"
+    "vec4 fogFactor = mix(diffSample*c, vec4(0.7, 0.7, 0.7, 1), (distanceFromEye - 20) / 50);"
     
     "color = vec4((AOValue*fogFactor).xyz, 1);"//fogFactor
 "}";
@@ -170,13 +170,15 @@ static char *blockColorShader =
 "#version 330\n"
 "in vec4 color_frag;" 
 "in vec3 normalInModelSpace;"
+"in float distanceFromEye;"
 "out vec4 color;"
 "float factors[2] = float[](1, 0.7f);"
 "void main() {"
     "float d = dot(vec3(0, -1, 0), normalInModelSpace);"
     "int index = int(clamp(d, 0, 1));"
     "float factor = factors[index];"
-    "color = vec4(color_frag.x*factor, color_frag.y*factor, color_frag.z*factor, color_frag.w);"
+    "vec4 c = vec4(color_frag.x*factor, color_frag.y*factor, color_frag.z*factor, color_frag.w);"
+    "color = mix(c, vec4(0.8, 0.8, 0.8, 1), (distanceFromEye - 10) / 50);"
 "}";
 
 

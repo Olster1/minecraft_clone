@@ -4,20 +4,17 @@
 #include "./opengl.cpp"
 #include "./animation.cpp"
 
-Renderer *initRenderer(Texture grassTexture, Texture circleTexture, Texture circleOutlineTexture, Texture skyboxTexture, Texture breakBlockTexture, Texture woodBlockTexture, Texture hotBarTexture, Texture leavesTexture) {
+Renderer *initRenderer(Texture grassTexture, Texture circleTexture, Texture circleOutlineTexture, Texture skyboxTexture, Texture breakBlockTexture, Texture atlasTexture) {
     Renderer *renderer = (Renderer *)malloc(sizeof(Renderer));
     
     renderer->cubeCount = 0;
-    renderer->circleCount = 0;
-    renderer->filledCircleCount = 0;
+    renderer->atlasQuadCount = 0;
     renderer->terrainTextureHandle = grassTexture.handle;
     renderer->skyboxTextureHandle = skyboxTexture.handle;
     renderer->circleHandle = circleTexture.handle;
     renderer->breakBlockTexture = breakBlockTexture.handle;
     renderer->circleOutlineHandle = circleOutlineTexture.handle;
-    renderer->woodBlockTexture = woodBlockTexture.handle;
-    renderer->hotBarTexture = hotBarTexture.handle;
-    renderer->leavesTexture = leavesTexture.handle;
+    renderer->atlasTexture = atlasTexture.handle;
 
     renderer->blockShader = loadShader(blockVertexShader, blockFragShader);
     renderer->quadTextureShader = loadShader(quadVertexShader, quadTextureFragShader);
@@ -27,12 +24,10 @@ Renderer *initRenderer(Texture grassTexture, Texture circleTexture, Texture circ
     renderer->blockSameTextureShader = loadShader(blockSameTextureVertexShader, blockPickupFragShader);
     renderer->blockColorShader = loadShader(blockVertexShader, blockColorShader);
     
-    
     renderer->blockModel = generateVertexBuffer(global_cubeData, 24, global_cubeIndices, 36);
-    renderer->quadModel = generateVertexBuffer(global_quadData, 4, global_quadIndices, 6);
+    renderer->quadModel = generateVertexBuffer(global_quadData, 4, global_quadIndices, 6, ATTRIB_INSTANCE_TYPE_MODEL_MATRIX);
     renderer->blockModelWithInstancedT = generateVertexBuffer(global_cubeData, 24, global_cubeIndices, 36, ATTRIB_INSTANCE_TYPE_MODEL_MATRIX);
     renderer->blockModelSameTexture = generateVertexBuffer(global_cubeData_sameTexture, 24, global_cubeIndices, 36, ATTRIB_INSTANCE_TYPE_MODEL_MATRIX);
-    
     
     renderer->triangleModel = loadGLTF("./models/sparse.gltf").modelBuffer;
     renderer->avocadoModel = loadGLTF("./models/avocado/Avocado.gltf").modelBuffer;

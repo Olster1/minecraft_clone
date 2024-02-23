@@ -8,7 +8,7 @@ static char *blockPickupVertexShader =
 
 //per instanced variables
 "in mat4 M;"
-"in vec2 uvAtlas;"
+"in vec4 uvAtlas;"
 "in vec4 color;"
 
 //uniform variables
@@ -42,7 +42,7 @@ static char *blockSameTextureVertexShader =
 
 //per instanced variables
 "in mat4 M;"
-"in vec2 uvAtlas;"
+"in vec4 uvAtlas;"
 "in vec4 color;"
 
 //uniform variables
@@ -190,10 +190,9 @@ static char *quadVertexShader =
 "in vec2 texUV;	"
 
 //per instanced variables
-"in vec3 pos;"
-"in vec2 uvAtlas;"
+"in mat4 M;"
+"in vec4 uvAtlas;"
 "in vec4 color;"
-"in vec3 scale;"
 
 //uniform variables
 "uniform mat4 V;"
@@ -204,10 +203,11 @@ static char *quadVertexShader =
 "out vec2 uv_frag;"
 
 "void main() {"
-    "gl_Position = projection * V * vec4((vertex*scale + pos), 1);"
+    "mat4 MV = V * M;"
+    "gl_Position = projection * MV * vec4((vertex), 1);"
     "color_frag = color;"
 
-   " uv_frag = texUV;"
+   "uv_frag = vec2(mix(uvAtlas.x, uvAtlas.y, texUV.x), mix(uvAtlas.z, uvAtlas.w, texUV.y));"
 "}";
 
 static char *quadTextureFragShader = 

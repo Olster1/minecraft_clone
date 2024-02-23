@@ -184,7 +184,7 @@ void addInstancingAttribsForShader(AttribInstancingType type) {
         size_t offsetForStruct = sizeof(InstanceDataWithRotation); 
 
         unsigned int uvOffset = (intptr_t)(&(((InstanceDataWithRotation *)0)->uv));
-        addInstancingAttrib (UVATLAS_ATTRIB_LOCATION, 2, offsetForStruct, uvOffset);
+        addInstancingAttrib (UVATLAS_ATTRIB_LOCATION, 4, offsetForStruct, uvOffset);
         unsigned int colorOffset = (intptr_t)(&(((InstanceDataWithRotation *)0)->color));
         addInstancingAttrib (COLOR_ATTRIB_LOCATION, 4, offsetForStruct, colorOffset);
         renderCheckError();
@@ -549,21 +549,22 @@ void rendererFinish(Renderer *renderer, float16 projectionTransform, float16 mod
         renderer->alphaItemCount = 0;
     }
 
-    if(renderer->filledCircleCount > 0) {
-        //NOTE: Draw filled circles
-        updateInstanceData(renderer->quadModel.instanceBufferhandle, renderer->filledCircleData, renderer->filledCircleCount*sizeof(InstanceData));
-        drawModels(&renderer->quadModel, &renderer->quadTextureShader, renderer->circleHandle, renderer->filledCircleCount, projectionScreenTransform, float16_identity(), lookingAxis);
-
-        renderer->filledCircleCount = 0;
-    }
-    
-    if(renderer->circleCount > 0) {
+    if(renderer->atlasQuadCount > 0) {
         //NOTE: Draw circle oultines
-        updateInstanceData(renderer->quadModel.instanceBufferhandle, renderer->circleData, renderer->circleCount*sizeof(InstanceData));
-        drawModels(&renderer->quadModel, &renderer->quadTextureShader, renderer->circleOutlineHandle, renderer->circleCount, projectionScreenTransform, float16_identity(), lookingAxis);
+        updateInstanceData(renderer->quadModel.instanceBufferhandle, renderer->atlasQuads, renderer->atlasQuadCount*sizeof(InstanceDataWithRotation));
+        drawModels(&renderer->quadModel, &renderer->quadTextureShader, renderer->atlasTexture, renderer->atlasQuadCount, projectionTransform, modelViewTransform, lookingAxis);
 
-        renderer->circleCount = 0;
+        renderer->atlasQuadCount = 0;
     }
+
+    if(renderer->atlasQuadHUDCount > 0) {
+        //NOTE: Draw circle oultines
+        updateInstanceData(renderer->quadModel.instanceBufferhandle, renderer->atlasHUDQuads, renderer->atlasQuadHUDCount*sizeof(InstanceDataWithRotation));
+        drawModels(&renderer->quadModel, &renderer->quadTextureShader, renderer->atlasTexture, renderer->atlasQuadHUDCount, projectionScreenTransform, float16_identity(), lookingAxis);
+
+        renderer->atlasQuadHUDCount = 0;
+    }
+
 
     if(renderer->triangleCount > 0) {
         //NOTE: Draw circle oultines

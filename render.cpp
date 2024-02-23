@@ -130,7 +130,7 @@ struct InstanceData {
 struct InstanceDataWithRotation {
     float16 M;
     float4 color;
-    float2 uv;
+    float4 uv;
 };
 
 struct Renderer {
@@ -139,18 +139,16 @@ struct Renderer {
     uint32_t circleOutlineHandle;
     uint32_t skyboxTextureHandle;
     uint32_t breakBlockTexture;
-    uint32_t woodBlockTexture;
-    uint32_t hotBarTexture;
-    uint32_t leavesTexture;
+    uint32_t atlasTexture;
 
     int cubeCount;
     InstanceData cubeData[MAX_CUBES_PER_RENDER];
 
-    int circleCount;
-    InstanceData circleData[MAX_CIRCLES_PER_RENDER];
+    int atlasQuadCount;
+    InstanceDataWithRotation atlasQuads[MAX_WORLD_ITEMS_PER_INSTANCE];
 
-    int filledCircleCount;
-    InstanceData filledCircleData[MAX_CIRCLES_PER_RENDER];
+    int atlasQuadHUDCount;
+    InstanceDataWithRotation atlasHUDQuads[MAX_CIRCLES_PER_RENDER];
 
     int triangleCount;
     InstanceData triangleData[MAX_RENDER_ITEMS_PER_INSTANCE];
@@ -181,32 +179,35 @@ struct Renderer {
 };
 
 
-void pushCircle_(Renderer *renderer, float3 worldP, bool fill, float radius, float4 color) {
-    InstanceData *c = 0;
-    if(fill) {
-        if(renderer->filledCircleCount < arrayCount(renderer->filledCircleData)) {
-            c = &renderer->filledCircleData[renderer->filledCircleCount++];
+void pushAtlasQuad_(Renderer *renderer, float3 worldP, float3 scale, float4 uvs, float4 color, bool isHUD) {
+    InstanceDataWithRotation *c = 0;
+    if(isHUD) {
+        if(renderer->atlasQuadHUDCount < arrayCount(renderer->atlasHUDQuads)) {
+            c = &renderer->atlasHUDQuads[renderer->atlasQuadHUDCount++];
         }   
     } else {
-        if(renderer->circleCount < arrayCount(renderer->circleData)) {
-            c = &renderer->circleData[renderer->circleCount++];
+        if(renderer->atlasQuadCount < arrayCount(renderer->atlasQuads)) {
+            c = &renderer->atlasQuads[renderer->atlasQuadCount++];
         }
     }
-
+    
     if(c) {
-        c->pos = worldP;
-        c->scale = make_float3(radius, radius, 1);
+        c->M = float16_set_pos(float16_scale(float16_identity(), scale), worldP);
         c->color = color;
-        // c->uv = make_float4(0, 0, 1, 1);
+        c->uv = uvs;
     }
+}
+
+void pushGrassQuad(Renderer *renderer, float3 worldP, float radius, float4 color) {
+    pushAtlasQuad_(renderer, worldP, make_float3(radius, radius, 1), make_float4(0.5f, 1.0f, 0, 0.5f), color, true);
 }
 
 void pushCircleOutline(Renderer *renderer, float3 worldP, float radius, float4 color) {
-    pushCircle_(renderer, worldP, false, radius, color);
+    pushAtlasQuad_(renderer, worldP, make_float3(radius, radius, 1), make_float4(0.5f, 1.0f, 0, 0.5f), color, true);
 }
 
 void pushFillCircle(Renderer *renderer, float3 worldP, float radius, float4 color) {
-    pushCircle_(renderer, worldP, true, radius, color);
+    pushAtlasQuad_(renderer, worldP, make_float3(radius, radius, 1), make_float4(0, 0.5f, 0.5f, 1.0f), color, true);
 }
 
 float2 getUVCoordForBlock(BlockType type) {
@@ -236,7 +237,6 @@ void pushCube(Renderer *renderer, float3 worldP, BlockType type, float4 color, u
 
         cube->pos = worldP;
         uint32_t samplerIndex = 0;
-
         cube->uv = getUVCoordForBlock(type);
 
         cube->samplerIndex = samplerIndex;
@@ -289,7 +289,8 @@ void pushBlockItem(Renderer *renderer, float16 T, BlockType type, float4 color) 
         InstanceDataWithRotation *cube = &renderer->blockItemsData[renderer->blockItemsCount++];
 
         cube->M = T;
-        cube->uv = getUVCoordForBlock(type);
+        float2 uvs = getUVCoordForBlock(type);
+        cube->uv = make_float4(uvs.x, uvs.y, 0, 1);
         cube->color = color;
 
     } else {

@@ -2,7 +2,9 @@
 
 enum EntityType {
     ENTITY_PLAYER,
-    ENTITY_PICKUP_ITEM
+    ENTITY_PICKUP_ITEM,
+    ENTITY_GRASS_SHORT,
+    ENTITY_GRASS_LONG,
 };
 
 enum BlockType {
@@ -153,6 +155,17 @@ Entity *initPlayer(Entity *e, int randomStartUpID) {
     e->grounded = false;
     e->flags = 0;
     return e;
+}
+
+void initGrassEntity(Chunk *chunk, float3 pos, EntityType type, int randomStartUpID) {
+    if(chunk->entityCount < arrayCount(chunk->entities)) {
+        Entity *e = chunk->entities + chunk->entityCount++;
+        initBaseEntity(e, randomStartUpID);
+        e->type = type;
+        e->T.pos = pos;
+        e->T.scale = make_float3(1, 1, 1);
+        e->offset = make_float3(0, 0, 0);
+    }
 }
 
 void initPickupItem(Chunk *chunk, float3 pos, BlockType itemType, int randomStartUpID) {

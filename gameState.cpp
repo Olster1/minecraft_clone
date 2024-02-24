@@ -42,8 +42,10 @@ struct GameState {
 
     WavFile cardFlipSound[2];
 
+    int currentInventoryHotIndex;
+
     int inventoryCount;
-    InventoryItem playerInventory[64];
+    InventoryItem playerInventory[8];
 
     float3 cameraOffset;
 
@@ -115,6 +117,8 @@ void initGameState(GameState *gameState) {
     gameState->camera.followingPlayer = true;
     gameState->cameraOffset = CAMERA_OFFSET;
     gameState->camera.shakeTimer = -1;
+
+    gameState->currentInventoryHotIndex = 0;
 
     srand(time(NULL));
 

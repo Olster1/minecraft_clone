@@ -386,9 +386,9 @@ Texture loadTextureArrayToGPU(char *fileName, int fileNameCount) {
 
 Texture loadTextureToGPU(char *fileName) {
     Texture t = {};
-
+    // stbi_set_flip_vertically_on_load(true);
     unsigned char *imageData = (unsigned char *)stbi_load(fileName, &t.w, &t.h, 0, STBI_rgb_alpha);
-
+    
     if(imageData) {
         // assert(result.comp == 4);
     } else {

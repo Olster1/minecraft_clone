@@ -20,10 +20,10 @@ Vertex makeVertex(float3 pos, float2 texUV, float3 normal) {
 }
 
 static Vertex global_quadData[] = {
-    makeVertex(make_float3(0.5f, -0.5f, 0.5f), make_float2(0, 0), make_float3(0, 0, 1)),
-    makeVertex(make_float3(-0.5f, -0.5f, 0.5f), make_float2(0, 1), make_float3(0, 0, 1)),
-    makeVertex(make_float3(-0.5f,  0.5f, 0.5f), make_float2(1, 1), make_float3(0, 0, 1)),
-    makeVertex(make_float3(0.5f, 0.5f, 0.5f), make_float2(1, 0), make_float3(0, 0, 1)),
+    makeVertex(make_float3(0.5f, -0.5f, 0), make_float2(1, 1), make_float3(0, 0, 1)),
+    makeVertex(make_float3(-0.5f, -0.5f, 0), make_float2(0, 1), make_float3(0, 0, 1)),
+    makeVertex(make_float3(-0.5f,  0.5f, 0), make_float2(0, 0), make_float3(0, 0, 1)),
+    makeVertex(make_float3(0.5f, 0.5f, 0), make_float2(1, 0), make_float3(0, 0, 1)),
 };
 
 static unsigned int global_quadIndices[] = {
@@ -179,7 +179,7 @@ struct Renderer {
 };
 
 
-void pushAtlasQuad_(Renderer *renderer, float3 worldP, float3 scale, float4 uvs, float4 color, bool isHUD) {
+InstanceDataWithRotation *pushAtlasQuad_(Renderer *renderer, float3 worldP, float3 scale, float4 uvs, float4 color, bool isHUD) {
     InstanceDataWithRotation *c = 0;
     if(isHUD) {
         if(renderer->atlasQuadHUDCount < arrayCount(renderer->atlasHUDQuads)) {
@@ -196,10 +196,16 @@ void pushAtlasQuad_(Renderer *renderer, float3 worldP, float3 scale, float4 uvs,
         c->color = color;
         c->uv = uvs;
     }
+
+    return c;
 }
 
-void pushGrassQuad(Renderer *renderer, float3 worldP, float radius, float4 color) {
-    pushAtlasQuad_(renderer, worldP, make_float3(radius, radius, 1), make_float4(0.5f, 1.0f, 0, 0.5f), color, true);
+void pushGrassQuad(Renderer *renderer, float3 worldP, float height, float4 color) {
+    pushAtlasQuad_(renderer, worldP, make_float3(1, height, 1), make_float4(0, 0.25f, 0, 0.25f), color, false);
+}
+
+void pushHUDOutline(Renderer *renderer, float3 worldP, float2 scale, float4 color) {
+    pushAtlasQuad_(renderer, worldP, make_float3(scale.x, scale.y, 1), make_float4(0.0, 0.25f, 0.25f, 0.5f), color, true);
 }
 
 void pushCircleOutline(Renderer *renderer, float3 worldP, float radius, float4 color) {

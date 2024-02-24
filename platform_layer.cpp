@@ -20,6 +20,13 @@ enum KeyTypes {
   KEY_RIGHT,
   KEY_SPACE,
   KEY_1,
+  KEY_2,
+  KEY_3,
+  KEY_4,
+  KEY_5,
+  KEY_6,
+  KEY_7,
+  KEY_8,
 
   ///////////
   KEY_COUNTS
@@ -155,6 +162,13 @@ int main(int argc, char **argv) {
     updateKeyState(gameState, KEY_RIGHT, currentKeyStates[SDL_SCANCODE_RIGHT] == 1 || currentKeyStates[SDL_SCANCODE_D] == 1);
     updateKeyState(gameState, KEY_SPACE, currentKeyStates[SDL_SCANCODE_SPACE] == 1);
     updateKeyState(gameState, KEY_1, currentKeyStates[SDL_SCANCODE_1] == 1);
+    updateKeyState(gameState, KEY_2, currentKeyStates[SDL_SCANCODE_2] == 1);
+    updateKeyState(gameState, KEY_3, currentKeyStates[SDL_SCANCODE_3] == 1);
+    updateKeyState(gameState, KEY_4, currentKeyStates[SDL_SCANCODE_4] == 1);
+    updateKeyState(gameState, KEY_5, currentKeyStates[SDL_SCANCODE_5] == 1);
+    updateKeyState(gameState, KEY_6, currentKeyStates[SDL_SCANCODE_6] == 1);
+    updateKeyState(gameState, KEY_7, currentKeyStates[SDL_SCANCODE_7] == 1);
+    updateKeyState(gameState, KEY_8, currentKeyStates[SDL_SCANCODE_8] == 1);
     int w; 
     int h;
     // if(SDL_GetRendererOutputSize(renderer, &w, &h) == 0) {

@@ -240,6 +240,30 @@ void fillChunk(GameState *gameState, Chunk *chunk) {
 
                     if(isTop && !(worldX % 4 - treeProb) && !(worldZ % 4 - treeProb) && prob > 0.5f) {
                         generateTree(gameState, chunk, make_float3(worldX, worldY + 1, worldZ));
+                    } else {
+                        int grassProb = (int)(2*((float)rand() / (float)RAND_MAX));
+                        prob = (float)rand() / (float)RAND_MAX;
+                        if(isTop && !(worldX % 2 - grassProb) && !(worldZ % 2 - grassProb) && prob > 0.5f) {
+                            EntityType grassType = ENTITY_GRASS_LONG;
+                            prob = (float)rand() / (float)RAND_MAX;
+                            if(prob < 0.5f) {
+                                grassType = ENTITY_GRASS_SHORT;
+                            }
+
+                            int chunkX = worldX / CHUNK_DIM;
+                            int chunkY = (worldY + 1) / CHUNK_DIM;
+                            int chunkZ = worldZ / CHUNK_DIM;
+
+                            Chunk *c = chunk;
+
+                            if(c->x == chunkX && c->z == chunkZ && c->y == chunkY) {
+
+                            } else {
+                                c = getChunkNoGenerate(gameState, chunkX, chunkY, chunkZ);
+                            }
+                            
+                            initGrassEntity(c, make_float3(worldX, worldY + 1, worldZ), grassType, gameState->randomStartUpID);
+                        }
                     }
                     
                 }
@@ -383,17 +407,20 @@ void drawChunk(GameState *gameState, Chunk *c) {
             float4 color = make_float4(maxColor, maxColor, maxColor, 1);
 
             BlockType t = b.type;
-            if(b.hitBlock) {
-                // t = BLOCK_SOIL;
-                color = make_float4(1, 1, 1, 1);
-            }
 
-            uint64_t AOMask = 0;//getAOMask(gameState, worldP);
-            
-            pushCube(gameState->renderer, worldP, t, color, AOMask);
-            // pushAlphaItem(gameState->renderer, worldP, make_float3(1, 1, 1), color);
-            
-            c->blocks[i].hitBlock = false;
+            {
+                if(b.hitBlock) {
+                    // t = BLOCK_SOIL;
+                    color = make_float4(1, 1, 1, 1);
+                }
+
+                uint64_t AOMask = 0;//getAOMask(gameState, worldP);
+                
+                pushCube(gameState->renderer, worldP, t, color, AOMask);
+                // pushAlphaItem(gameState->renderer, worldP, make_float3(1, 1, 1), color);
+                
+                c->blocks[i].hitBlock = false;
+            }
         }
     }
 
@@ -536,12 +563,21 @@ void updateEntities(GameState *gameState) {
             }
         }
 
-        //NOTE: Draw the entity now
-        float16 T = eulerAnglesToTransform(e->T.rotation.y, e->T.rotation.x, e->T.rotation.z);
-        T = float16_scale(T, e->T.scale);
-        T = float16_set_pos(T, plus_float3(e->offset, e->T.pos));
+        if(e->type == ENTITY_GRASS_SHORT || e->type == ENTITY_GRASS_LONG) {
+            float height = 1;
+            if(e->type == ENTITY_GRASS_LONG) {
+                height = 2;
+            }
+            pushGrassQuad(gameState->renderer, plus_float3(e->offset, e->T.pos), height, make_float4(1, 1, 1, 1));
+            // pushGrassQuad(gameState->renderer, plus_float3(e->offset, e->T.pos), height, make_float4(1, 1, 1, 1));
+        } else {
+            //NOTE: Draw the entity now
+            float16 T = eulerAnglesToTransform(e->T.rotation.y, e->T.rotation.x, e->T.rotation.z);
+            T = float16_scale(T, e->T.scale);
+            T = float16_set_pos(T, plus_float3(e->offset, e->T.pos));
 
-        pushBlockItem(gameState->renderer, T, e->itemType, make_float4(1, 1, 1, 1));
+            pushBlockItem(gameState->renderer, T, e->itemType, make_float4(1, 1, 1, 1));   
+        }
     }
 
     //NOTE: Delete entities that should be deleted

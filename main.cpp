@@ -44,6 +44,19 @@ Renderer *initRenderer(Texture grassTexture, Texture circleTexture, Texture circ
 #include "./player.cpp"
 #include "./camera.cpp"
 
+void drawHUD(GameState *gameState) {
+    for(int i = 0; i < arrayCount(gameState->playerInventory); ++i) {
+        float3 screenP = make_float3((10 + 10*i) - 50, (10 - 50), 1);
+
+        float2 scale = make_float2(10, 10);
+
+        if(i == gameState->currentInventoryHotIndex) {
+            scale = scale_float2(1.2f, scale);
+        }
+
+        pushHUDOutline(gameState->renderer, screenP, scale, make_float4(1, 1, 1, 1));
+    }
+}
 
 void updateGame(GameState *gameState) {
     if(!gameState->inited) {
@@ -100,6 +113,8 @@ void updateGame(GameState *gameState) {
     float3 lookingAxis = make_float3(rot.E_[2][0], rot.E_[2][1], rot.E_[2][2]);
 
     // pushTriangle(gameState->renderer, make_float3(1000, 60, 1000), make_float4(1, 0, 1, 1));
+
+    drawHUD(gameState);
     
     rendererFinish(gameState->renderer, screenT, cameraT, screenGuiT, lookingAxis, cameraTWithoutTranslation);
 
@@ -110,5 +125,27 @@ void updateGame(GameState *gameState) {
 
     if(gameState->keys.keys[KEY_1] == MOUSE_BUTTON_PRESSED) {
         gameState->camera.followingPlayer = !gameState->camera.followingPlayer;
+        gameState->currentInventoryHotIndex = 0;
+    }
+    if(gameState->keys.keys[KEY_2] == MOUSE_BUTTON_PRESSED) {
+        gameState->currentInventoryHotIndex = 1;
+    }
+    if(gameState->keys.keys[KEY_3] == MOUSE_BUTTON_PRESSED) {
+        gameState->currentInventoryHotIndex = 2;
+    }
+    if(gameState->keys.keys[KEY_4] == MOUSE_BUTTON_PRESSED) {
+        gameState->currentInventoryHotIndex = 3;
+    }
+    if(gameState->keys.keys[KEY_5] == MOUSE_BUTTON_PRESSED) {
+        gameState->currentInventoryHotIndex = 4;
+    }
+    if(gameState->keys.keys[KEY_6] == MOUSE_BUTTON_PRESSED) {
+        gameState->currentInventoryHotIndex = 5;
+    }
+    if(gameState->keys.keys[KEY_7] == MOUSE_BUTTON_PRESSED) {
+        gameState->currentInventoryHotIndex = 6;
+    }
+    if(gameState->keys.keys[KEY_8] == MOUSE_BUTTON_PRESSED) {
+        gameState->currentInventoryHotIndex = 7;
     }
 }

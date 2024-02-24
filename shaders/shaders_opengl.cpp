@@ -218,6 +218,9 @@ static char *quadTextureFragShader =
 "out vec4 color;"
 "void main() {"
     "vec4 diffSample = texture(diffuse, uv_frag);"
+    "if(diffSample.w == 0) {"
+        "discard;"
+    "}"
     "color = diffSample*color_frag;"
 "}";
 

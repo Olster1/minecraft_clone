@@ -179,7 +179,7 @@ struct Renderer {
 };
 
 
-InstanceDataWithRotation *pushAtlasQuad_(Renderer *renderer, float3 worldP, float3 scale, float4 uvs, float4 color, bool isHUD) {
+InstanceDataWithRotation *pushAtlasQuad_(Renderer *renderer, float3 worldP, float3 scale, float3 rotation, float4 uvs, float4 color, bool isHUD) {
     InstanceDataWithRotation *c = 0;
     if(isHUD) {
         if(renderer->atlasQuadHUDCount < arrayCount(renderer->atlasHUDQuads)) {
@@ -192,7 +192,8 @@ InstanceDataWithRotation *pushAtlasQuad_(Renderer *renderer, float3 worldP, floa
     }
     
     if(c) {
-        c->M = float16_set_pos(float16_scale(float16_identity(), scale), worldP);
+        float16 T = eulerAnglesToTransform(rotation.y, rotation.x, rotation.z);
+        c->M = float16_set_pos(float16_scale(T, scale), worldP);
         c->color = color;
         c->uv = uvs;
     }
@@ -201,19 +202,20 @@ InstanceDataWithRotation *pushAtlasQuad_(Renderer *renderer, float3 worldP, floa
 }
 
 void pushGrassQuad(Renderer *renderer, float3 worldP, float height, float4 color) {
-    pushAtlasQuad_(renderer, worldP, make_float3(1, height, 1), make_float4(0, 0.25f, 0, 0.25f), color, false);
+    pushAtlasQuad_(renderer, worldP, make_float3(1, height, 1), make_float3(0, 0, 0), make_float4(0, 0.25f, 0, 0.25f), color, false);
+    pushAtlasQuad_(renderer, worldP, make_float3(1, height, 1), make_float3(0, 90, 0), make_float4(0, 0.25f, 0, 0.25f), color, false);
 }
 
 void pushHUDOutline(Renderer *renderer, float3 worldP, float2 scale, float4 color) {
-    pushAtlasQuad_(renderer, worldP, make_float3(scale.x, scale.y, 1), make_float4(0.0, 0.25f, 0.25f, 0.5f), color, true);
+    pushAtlasQuad_(renderer, worldP, make_float3(scale.x, scale.y, 1), make_float3(0, 0, 0), make_float4(0.0, 0.25f, 0.25f, 0.5f), color, true);
 }
 
 void pushCircleOutline(Renderer *renderer, float3 worldP, float radius, float4 color) {
-    pushAtlasQuad_(renderer, worldP, make_float3(radius, radius, 1), make_float4(0.5f, 1.0f, 0, 0.5f), color, true);
+    pushAtlasQuad_(renderer, worldP, make_float3(radius, radius, 1), make_float3(0, 0, 0), make_float4(0.5f, 1.0f, 0, 0.5f), color, true);
 }
 
 void pushFillCircle(Renderer *renderer, float3 worldP, float radius, float4 color) {
-    pushAtlasQuad_(renderer, worldP, make_float3(radius, radius, 1), make_float4(0, 0.5f, 0.5f, 1.0f), color, true);
+    pushAtlasQuad_(renderer, worldP, make_float3(radius, radius, 1), make_float3(0, 0, 0), make_float4(0, 0.5f, 0.5f, 1.0f), color, true);
 }
 
 float2 getUVCoordForBlock(BlockType type) {

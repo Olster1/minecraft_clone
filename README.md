@@ -9,12 +9,12 @@ Uses OpenGL 3.3 and SDL for platform layer.
 - [x] Block mining (need to add paticle efffects)
 - [x] Clouds & Sky 
 - [x] Ambient Occulsion of blocks - need to speed up
-- [ ] Tree & grasses generation
+- [x] Tree & grasses generation
+- [ ] Health, Stamina & Item Hotbar
+- [ ] Water generation with alpha 
 - [ ] Basic cave generation
 - [ ] Basic Coal & Ore generation 
 - [ ] Cows & Sheep Mobs
-- [ ] Health, Stamina & Item Hotbar
-- [ ] Water generation with alpha 
 - [ ] Day & Night cycle
 - [ ] Skeletal Animation of player & mobs
 - [ ] Greedy meshing

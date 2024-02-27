@@ -6,18 +6,19 @@ Uses OpenGL 3.3 and SDL for platform layer.
 
 ## Goals
 - [x] Collision & physics
-- [x] Block mining (need to add paticle efffects)
+- [x] Block mining (need to add paticle efffects & gravity affected pickup blocks)
 - [x] Clouds & Sky 
 - [x] Ambient Occulsion of blocks - need to speed up
 - [x] Tree & grasses generation
-- [ ] Health, Stamina & Item Hotbar
 - [ ] Water generation with alpha 
-- [ ] Basic cave generation
-- [ ] Basic Coal & Ore generation 
 - [ ] Cows & Sheep Mobs
-- [ ] Day & Night cycle
 - [ ] Skeletal Animation of player & mobs
+- [ ] Health, Stamina & Item Hotbar
+- [ ] Cave generation
+- [ ] Coal & Ore generation 
+- [ ] Day & Night cycle
 - [ ] Greedy meshing
+- [ ] GJK with EPA when collision penetration
 - [ ] Release game on itch.io as professional as possible - just exe & asset bundle 
 
 ## WHY's

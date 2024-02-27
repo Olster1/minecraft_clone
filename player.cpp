@@ -16,7 +16,7 @@ float3 getBlockWorldPos(BlockChunkPartner b) {
     return p;
 }
 
-BlockChunkPartner blockExists(GameState *gameState, int worldx, int worldy, int worldz) {
+BlockChunkPartner blockExists(GameState *gameState, int worldx, int worldy, int worldz, BlockExistFlag flags) {
     BlockChunkPartner found = {};
     found.block = 0;
 
@@ -38,7 +38,7 @@ BlockChunkPartner blockExists(GameState *gameState, int worldx, int worldy, int 
             assert(localz < CHUNK_DIM);
             int blockIndex = getBlockIndex(localx, localy, localz);
             assert(blockIndex < arrayCount(c->blocks));
-            if(blockIndex < arrayCount(c->blocks) && c->blocks[blockIndex].exists) {
+            if(blockIndex < arrayCount(c->blocks) && c->blocks[blockIndex].exists && c->blocks[blockIndex].flags & flags) {
                 // c->blocks[blockIndex].hitBlock = true;
                 found.block = &c->blocks[blockIndex];
                 found.blockIndex = blockIndex;
@@ -65,7 +65,7 @@ BlockChunkPartner castRayAgainstBlock(GameState *gameState, float3 dir, float le
                 int worldy = (int)pos.y + y;
                 int worldz = (int)pos.z + z;
 
-                BlockChunkPartner blockTemp = blockExists(gameState, worldx, worldy, worldz);
+                BlockChunkPartner blockTemp = blockExists(gameState, worldx, worldy, worldz, BLOCK_EXISTS_COLLISION);
 
                 if(blockTemp.block) {
                     //NOTE: Ray Cast against the block
@@ -134,7 +134,7 @@ void updatePlayerPhysics(GameState *gameState, Entity *e, float3 movementForFram
                     int worldy = (int)pos.y + y;
                     int worldz = (int)pos.z + z;
                     
-                    BlockChunkPartner blockPtr = blockExists(gameState, worldx, worldy, worldz);
+                    BlockChunkPartner blockPtr = blockExists(gameState, worldx, worldy, worldz, BLOCK_EXISTS_COLLISION);
                     if(blockPtr.block) {
                         //NOTE: Ray Cast against the block
                         Rect3f block = make_rect3f_center_dim(make_float3(worldx, worldy, worldz), make_float3(1, 1, 1));
@@ -192,7 +192,7 @@ void updatePlayerPhysics(GameState *gameState, Entity *e, float3 movementForFram
             || float3_dot(make_float3(0, 0, 1), shortestNormalVector) > 0.0f) {
 
                 if(blockHit.block && blockHit.chunk) {
-                    if(!blockExistsReadOnly(gameState, blockHit.block->x + CHUNK_DIM*blockHit.chunk->x, blockHit.block->y + CHUNK_DIM*blockHit.chunk->y + 1, blockHit.block->z + CHUNK_DIM*blockHit.chunk->z)) {
+                    if(!blockExistsReadOnly(gameState, blockHit.block->x + CHUNK_DIM*blockHit.chunk->x, blockHit.block->y + CHUNK_DIM*blockHit.chunk->y + 1, blockHit.block->z + CHUNK_DIM*blockHit.chunk->z, BLOCK_EXISTS_COLLISION)) {
                         e->tryJump = true;
                     }
                 }
@@ -231,7 +231,7 @@ void placeBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
         int worldY = b.sideNormal.y + b.block->y + (CHUNK_DIM*b.chunk->y);
         int worldZ = b.sideNormal.z + b.block->z + (CHUNK_DIM*b.chunk->z);
 
-        BlockChunkPartner nxtBlock = blockExists(gameState, worldX, worldY, worldZ);
+        BlockChunkPartner nxtBlock = blockExists(gameState, worldX, worldY, worldZ, BLOCK_EXISTS_COLLISION);
 
         if(!nxtBlock.block) {
             float c = 1 + EPSILON_VALUE;
@@ -246,7 +246,7 @@ void placeBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
 
                     int blockIndex = getBlockIndex(localX, localY, localZ);
                     if(blockIndex < arrayCount(nxtBlock.chunk->blocks)) {
-                        nxtBlock.chunk->blocks[blockIndex] = spawnBlock(localX, localY, localZ, BLOCK_TREE_WOOD);
+                        nxtBlock.chunk->blocks[blockIndex] = spawnBlock(localX, localY, localZ, BLOCK_TREE_WOOD, BLOCK_EXISTS_COLLISION);
                     } else {
                         assert(false);
                     }

@@ -108,6 +108,8 @@ void updateGame(GameState *gameState) {
         }
     }
 
+    // printf("Player Y: %f\n", gameState->player.T.pos.y);
+
     // pushCircleOutline(gameState->renderer, make_float3(0, 0, 1), 50, make_float4(1, 1, 1, 1));
     float16 rot = eulerAnglesToTransform(gameState->player.T.rotation.y, gameState->player.T.rotation.x, gameState->player.T.rotation.z);
     float3 lookingAxis = make_float3(rot.E_[2][0], rot.E_[2][1], rot.E_[2][2]);

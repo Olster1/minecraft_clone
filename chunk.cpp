@@ -26,13 +26,20 @@ float getBlockTime(BlockType type) {
     return result;
 }
 
-Block spawnBlock(int x, int y, int z, BlockType type) {
+enum BlockExistFlag {
+    BLOCK_EXISTS_COLLISION = 1 << 0,
+    BLOCK_EXISITS_WATER = 1 << 1,
+};
+
+Block spawnBlock(int x, int y, int z, BlockType type, BlockExistFlag flags) {
     //NOTE: Input positions are local to chunk
     Block b = {};
 
     b.x = x;
     b.y = y;
     b.z = z;
+
+    b.flags = flags;
 
     b.type = type;
 
@@ -127,7 +134,7 @@ Chunk *generateChunk(GameState *gameState, int x, int y, int z, uint32_t hash);
 Chunk *getChunk_(GameState *gameState, int x, int y, int z, bool shouldGenerateChunk, bool shouldGenerateFully);
 
 
-void addBlock(GameState *gameState, float3 worldP, BlockType type) {
+void addBlock(GameState *gameState, float3 worldP, BlockType type, BlockExistFlag flags) {
     int chunkX = (int)worldP.x / CHUNK_DIM;
     int chunkY = (int)worldP.y / CHUNK_DIM;
     int chunkZ = (int)worldP.z / CHUNK_DIM;
@@ -144,7 +151,7 @@ void addBlock(GameState *gameState, float3 worldP, BlockType type) {
 
         int blockIndex = getBlockIndex(localX, localY, localZ);
         if(blockIndex < arrayCount(c->blocks)) {
-            c->blocks[blockIndex] = spawnBlock(localX, localY, localZ, type);
+            c->blocks[blockIndex] = spawnBlock(localX, localY, localZ, type, flags);
         } else {
             assert(false);
         }
@@ -157,14 +164,14 @@ void generateTree(GameState *gameState, Chunk *chunk, float3 worldP) {
     for(int i = 0; i < treeHeight; ++i) {
         float3 p = plus_float3(worldP, make_float3(0, i, 0));
         //NOTE: Add block
-        addBlock(gameState, p, BLOCK_TREE_WOOD);
+        addBlock(gameState, p, BLOCK_TREE_WOOD, BLOCK_EXISTS_COLLISION);
     }
 
     int z = 0;
     int x = 0;
 
     float3 p = plus_float3(worldP, make_float3(x, (treeHeight + 1), z));
-    addBlock(gameState, p, BLOCK_TREE_LEAVES);
+    addBlock(gameState, p, BLOCK_TREE_LEAVES, BLOCK_EXISTS_COLLISION);
 
     float3 offsets[] = {make_float3(1, treeHeight, 0), make_float3(1, treeHeight, 1), 
                         make_float3(-1, treeHeight, -1), make_float3(1, treeHeight, -1), 
@@ -177,7 +184,7 @@ void generateTree(GameState *gameState, Chunk *chunk, float3 worldP) {
             float3 o = offsets[i];
             o.y -= j;
             float3 p = plus_float3(worldP, o);
-            addBlock(gameState, p, BLOCK_TREE_LEAVES);
+            addBlock(gameState, p, BLOCK_TREE_LEAVES, BLOCK_EXISTS_COLLISION);
         }
     }
     treeHeight -=1;
@@ -194,7 +201,7 @@ void generateTree(GameState *gameState, Chunk *chunk, float3 worldP) {
 
     for(int i = 0; i < arrayCount(offsets2); ++i) {
         float3 p = plus_float3(worldP, offsets2[i]);
-        addBlock(gameState, p, BLOCK_TREE_LEAVES);
+        addBlock(gameState, p, BLOCK_TREE_LEAVES, BLOCK_EXISTS_COLLISION);
     }
 
 }
@@ -210,10 +217,12 @@ void fillChunk(GameState *gameState, Chunk *chunk) {
             float perlinValueLow = perlin2d(worldX, worldZ, 0.00522, 16);
             float perlinValueHigh = 0;//perlin2d(worldX, worldZ, 10, 4);
             
+            float waterElevation = 40;
             float terrainAmplitude = 100;
             float terrainHeight = perlinValueLow*terrainAmplitude + perlinValueHigh; 
 
             for(int y = 0; y < CHUNK_DIM; ++y) {
+                BlockExistFlag flags = BLOCK_EXISTS_COLLISION;
                 int worldY = y + chunk->y*CHUNK_DIM;
 
                 if(worldY < terrainHeight) {
@@ -232,15 +241,15 @@ void fillChunk(GameState *gameState, Chunk *chunk) {
 
                     int blockIndex = getBlockIndex(x, y, z);
                     if(blockIndex < arrayCount(chunk->blocks)) {
-                        chunk->blocks[blockIndex] = spawnBlock(x, y, z, type);
+                        chunk->blocks[blockIndex] = spawnBlock(x, y, z, type, flags);
                     }
 
                     int treeProb = (int)(2*((float)rand() / (float)RAND_MAX));
                     float prob = (float)rand() / (float)RAND_MAX;
 
-                    if(isTop && !(worldX % 4 - treeProb) && !(worldZ % 4 - treeProb) && prob > 0.5f) {
+                    if(worldY > waterElevation && isTop && !(worldX % 4 - treeProb) && !(worldZ % 4 - treeProb) && prob > 0.5f) {
                         generateTree(gameState, chunk, make_float3(worldX, worldY + 1, worldZ));
-                    } else {
+                    } else if(worldY > waterElevation) {
                         int grassProb = (int)(2*((float)rand() / (float)RAND_MAX));
                         prob = (float)rand() / (float)RAND_MAX;
                         if(isTop && !(worldX % 2 - grassProb) && !(worldZ % 2 - grassProb) && prob > 0.5f) {
@@ -266,6 +275,14 @@ void fillChunk(GameState *gameState, Chunk *chunk) {
                         }
                     }
                     
+                } else if(worldY < waterElevation) {
+                    flags = BLOCK_EXISITS_WATER;
+                    //NOTE: Is water so add water
+                    int blockIndex = getBlockIndex(x, y, z);
+                    if(blockIndex < arrayCount(chunk->blocks)) {
+                        chunk->blocks[blockIndex] = spawnBlock(x, y, z, BLOCK_WATER, flags);
+                    }
+
                 }
             }
         }
@@ -324,7 +341,9 @@ Chunk *generateChunk(GameState *gameState, int x, int y, int z, uint32_t hash) {
     return chunk;
 }
 
-bool blockExistsReadOnly(GameState *gameState, int worldx, int worldy, int worldz) {
+
+
+bool blockExistsReadOnly(GameState *gameState, int worldx, int worldy, int worldz, BlockExistFlag flags) {
     int chunkX = worldx / CHUNK_DIM;
     int chunkY = worldy / CHUNK_DIM;
     int chunkZ = worldz / CHUNK_DIM;
@@ -338,7 +357,7 @@ bool blockExistsReadOnly(GameState *gameState, int worldx, int worldy, int world
     if(c) {
         int blockIndex = getBlockIndex(localx, localy, localz);
         assert(blockIndex < arrayCount(c->blocks));
-        if(blockIndex < arrayCount(c->blocks) && c->blocks[blockIndex].exists) {
+        if(blockIndex < arrayCount(c->blocks) && c->blocks[blockIndex].exists && c->blocks[blockIndex].flags & flags) {
             found = true;
         }
     }
@@ -356,7 +375,7 @@ uint64_t getAOMask(GameState *gameState, const float3 worldP) {
         
         for(int j = 0; j < arrayCount(blockValues); j++) {
             float3 p = plus_float3(worldP,gameState->aoOffsets[i].offsets[j]);
-            if(blockExistsReadOnly(gameState, p.x, p.y, p.z)) {
+            if(blockExistsReadOnly(gameState, p.x, p.y, p.z, (BlockExistFlag)0xFFFFFFFF)) {
                 blockValues[j] = true; 
             }
         }
@@ -408,7 +427,10 @@ void drawChunk(GameState *gameState, Chunk *c) {
 
             BlockType t = b.type;
 
-            {
+            if(t == BLOCK_WATER) {
+                //NOTE: Draw the water
+                pushAlphaCube(gameState->renderer, worldP, t, color);
+            } else {
                 if(b.hitBlock) {
                     // t = BLOCK_SOIL;
                     color = make_float4(1, 1, 1, 1);
@@ -433,7 +455,7 @@ void drawCloudChunk(GameState *gameState, CloudChunk *c) {
         CloudBlock cloud = c->clouds[i];
         float3 worldP = make_float3(c->x*CHUNK_DIM + cloud.x, cloudElevation, c->z*CHUNK_DIM + cloud.z);
         //NOTE: Push the cloud blocks
-        pushAlphaCube(gameState->renderer, worldP, BLOCK_SOIL, make_float4(1, 1, 1, 1.0f));
+        pushAlphaCube(gameState->renderer, worldP, BLOCK_CLOUD, make_float4(1, 1, 1, 1.0f));
     }
 }
 

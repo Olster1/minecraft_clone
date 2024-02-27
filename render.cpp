@@ -156,7 +156,7 @@ struct Renderer {
     int blockItemsCount; //NOTE: The blocks that are rotating
     InstanceDataWithRotation blockItemsData[MAX_WORLD_ITEMS_PER_INSTANCE];
 
-    int alphaBlockCount; //NOTE: The blocks that are rotating
+    int alphaBlockCount; //NOTE: Blocks that have an alpha component 
     InstanceData alphaBlockData[MAX_CUBES_PER_RENDER];
 
     int alphaItemCount; //NOTE: The blocks that are rotating
@@ -235,6 +235,9 @@ float2 getUVCoordForBlock(BlockType type) {
     } else if(type == BLOCK_TREE_WOOD) {
         uv.x = 0.8f;
         uv.y = 1.0f;
+    } else if(type == BLOCK_WATER) {
+        uv.x = 0.6f;
+        uv.y = 0.8f;
     }
     return uv;
 }
@@ -265,6 +268,7 @@ void pushAlphaCube(Renderer *renderer, float3 worldP, BlockType type, float4 col
 
         cube->pos = worldP;
         cube->color = color;
+        cube->uv = getUVCoordForBlock(type);
     } else {
         assert(false);
     }

@@ -14,6 +14,7 @@ enum BlockType {
     BLOCK_CLOUD,
     BLOCK_TREE_WOOD,
     BLOCK_TREE_LEAVES,
+    BLOCK_WATER,
 };
 
 struct Block {
@@ -26,6 +27,7 @@ struct Block {
     float timeLeft;
     float maxTime;
     bool exists;
+    uint64_t flags;
 
     BlockType type;
 };

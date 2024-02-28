@@ -16,7 +16,7 @@ float3 getBlockWorldPos(BlockChunkPartner b) {
     return p;
 }
 
-BlockChunkPartner blockExists(GameState *gameState, int worldx, int worldy, int worldz, BlockExistFlag flags) {
+BlockChunkPartner blockExists(GameState *gameState, int worldx, int worldy, int worldz, BlockFlags flags) {
     BlockChunkPartner found = {};
     found.block = 0;
 
@@ -412,6 +412,16 @@ void updatePlayer(GameState *gameState, Entity *e) {
             }
         }
     }
-    
 
+    {
+        //NOTE: Check if player is under water
+        float3 cameraP = plus_float3(gameState->cameraOffset, gameState->player.T.pos);
+        BlockChunkPartner data = blockExists(gameState, cameraP.x, cameraP.y, cameraP.z, BLOCK_EXISTS);
+        if(data.block && data.block->type == BLOCK_WATER) {
+            gameState->renderer->underWater = true;
+        } else {
+            gameState->renderer->underWater = false;
+        }
+        
+    }
 }

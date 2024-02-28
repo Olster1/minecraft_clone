@@ -148,6 +148,9 @@ static char *blockFragShader =
 "in float distanceFromEye;"
 "uniform sampler2D diffuse;"
 "uniform vec3 lookingAxis;"
+"uniform vec4 fogColor;"
+"uniform float fogSeeDistance;"
+"uniform float fogFadeDistance;"
 
 "out vec4 color;"
 "void main() {"
@@ -164,7 +167,7 @@ static char *blockFragShader =
         "c = mix(vec4(darkness, darkness, darkness, 1), 1.5*color_frag, mixValue);"
     "}"
     "c = vec4(AOValue*c.xyz, c.w);"
-    "vec4 fogFactor = mix(diffSample*c, vec4(0.7, 0.7, 0.7, 1), (distanceFromEye - 20) / 50);"
+    "vec4 fogFactor = mix(diffSample*c, vec4(fogColor), (distanceFromEye - fogSeeDistance) / fogFadeDistance);"
     
     "color = vec4((AOValue*fogFactor).xyz, 1);"//fogFactor
 "}";

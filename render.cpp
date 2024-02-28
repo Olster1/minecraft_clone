@@ -1,7 +1,7 @@
 #define MAX_CUBES_PER_RENDER 150000000
 #define MAX_CIRCLES_PER_RENDER 32
 #define MAX_RENDER_ITEMS_PER_INSTANCE 32
-#define MAX_WORLD_ITEMS_PER_INSTANCE 1024
+#define MAX_WORLD_ITEMS_PER_INSTANCE 50000
 
 struct Vertex {
     float3 pos;
@@ -176,18 +176,23 @@ struct Renderer {
     ModelBuffer triangleModel;
     ModelBuffer avocadoModel;
     ModelBuffer blockModelSameTexture;
-};
 
+    bool underWater;
+};
 
 InstanceDataWithRotation *pushAtlasQuad_(Renderer *renderer, float3 worldP, float3 scale, float3 rotation, float4 uvs, float4 color, bool isHUD) {
     InstanceDataWithRotation *c = 0;
     if(isHUD) {
         if(renderer->atlasQuadHUDCount < arrayCount(renderer->atlasHUDQuads)) {
             c = &renderer->atlasHUDQuads[renderer->atlasQuadHUDCount++];
-        }   
+        } else {
+            assert(false);
+        }
     } else {
         if(renderer->atlasQuadCount < arrayCount(renderer->atlasQuads)) {
             c = &renderer->atlasQuads[renderer->atlasQuadCount++];
+        } else {
+            assert(false);
         }
     }
     
@@ -204,6 +209,10 @@ InstanceDataWithRotation *pushAtlasQuad_(Renderer *renderer, float3 worldP, floa
 void pushGrassQuad(Renderer *renderer, float3 worldP, float height, float4 color) {
     pushAtlasQuad_(renderer, worldP, make_float3(1, height, 1), make_float3(0, 0, 0), make_float4(0, 0.25f, 0, 0.25f), color, false);
     pushAtlasQuad_(renderer, worldP, make_float3(1, height, 1), make_float3(0, 90, 0), make_float4(0, 0.25f, 0, 0.25f), color, false);
+}
+
+void pushWaterQuad(Renderer *renderer, float3 worldP, float4 color) {
+    pushAtlasQuad_(renderer, plus_float3(worldP, make_float3(0, 0.5f, 0)), make_float3(1, 1, 1), make_float3(90, 0, 0), make_float4(0.25f, 0.5f, 0, 0.25f), color, false);
 }
 
 void pushHUDOutline(Renderer *renderer, float3 worldP, float2 scale, float4 color) {

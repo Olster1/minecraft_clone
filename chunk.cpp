@@ -26,12 +26,13 @@ float getBlockTime(BlockType type) {
     return result;
 }
 
-enum BlockExistFlag {
+enum BlockFlags {
+    BLOCK_FLAGS_NONE = 0,
     BLOCK_EXISTS_COLLISION = 1 << 0,
-    BLOCK_EXISITS_WATER = 1 << 1,
+    BLOCK_EXISTS = 1 << 1, //NOTE: All blocks have this
 };
 
-Block spawnBlock(int x, int y, int z, BlockType type, BlockExistFlag flags) {
+Block spawnBlock(int x, int y, int z, BlockType type, BlockFlags flags) {
     //NOTE: Input positions are local to chunk
     Block b = {};
 
@@ -39,7 +40,7 @@ Block spawnBlock(int x, int y, int z, BlockType type, BlockExistFlag flags) {
     b.y = y;
     b.z = z;
 
-    b.flags = flags;
+    b.flags = flags | BLOCK_EXISTS;
 
     b.type = type;
 
@@ -134,7 +135,7 @@ Chunk *generateChunk(GameState *gameState, int x, int y, int z, uint32_t hash);
 Chunk *getChunk_(GameState *gameState, int x, int y, int z, bool shouldGenerateChunk, bool shouldGenerateFully);
 
 
-void addBlock(GameState *gameState, float3 worldP, BlockType type, BlockExistFlag flags) {
+void addBlock(GameState *gameState, float3 worldP, BlockType type, BlockFlags flags) {
     int chunkX = (int)worldP.x / CHUNK_DIM;
     int chunkY = (int)worldP.y / CHUNK_DIM;
     int chunkZ = (int)worldP.z / CHUNK_DIM;
@@ -222,7 +223,7 @@ void fillChunk(GameState *gameState, Chunk *chunk) {
             float terrainHeight = perlinValueLow*terrainAmplitude + perlinValueHigh; 
 
             for(int y = 0; y < CHUNK_DIM; ++y) {
-                BlockExistFlag flags = BLOCK_EXISTS_COLLISION;
+                BlockFlags flags = BLOCK_EXISTS_COLLISION;
                 int worldY = y + chunk->y*CHUNK_DIM;
 
                 if(worldY < terrainHeight) {
@@ -276,7 +277,7 @@ void fillChunk(GameState *gameState, Chunk *chunk) {
                     }
                     
                 } else if(worldY < waterElevation) {
-                    flags = BLOCK_EXISITS_WATER;
+                    flags = BLOCK_FLAGS_NONE;
                     //NOTE: Is water so add water
                     int blockIndex = getBlockIndex(x, y, z);
                     if(blockIndex < arrayCount(chunk->blocks)) {
@@ -343,7 +344,7 @@ Chunk *generateChunk(GameState *gameState, int x, int y, int z, uint32_t hash) {
 
 
 
-bool blockExistsReadOnly(GameState *gameState, int worldx, int worldy, int worldz, BlockExistFlag flags) {
+bool blockExistsReadOnly(GameState *gameState, int worldx, int worldy, int worldz, BlockFlags flags) {
     int chunkX = worldx / CHUNK_DIM;
     int chunkY = worldy / CHUNK_DIM;
     int chunkZ = worldz / CHUNK_DIM;
@@ -375,7 +376,7 @@ uint64_t getAOMask(GameState *gameState, const float3 worldP) {
         
         for(int j = 0; j < arrayCount(blockValues); j++) {
             float3 p = plus_float3(worldP,gameState->aoOffsets[i].offsets[j]);
-            if(blockExistsReadOnly(gameState, p.x, p.y, p.z, (BlockExistFlag)0xFFFFFFFF)) {
+            if(blockExistsReadOnly(gameState, p.x, p.y, p.z, (BlockFlags)0xFFFFFFFF)) {
                 blockValues[j] = true; 
             }
         }
@@ -428,8 +429,11 @@ void drawChunk(GameState *gameState, Chunk *c) {
             BlockType t = b.type;
 
             if(t == BLOCK_WATER) {
-                //NOTE: Draw the water
-                pushAlphaCube(gameState->renderer, worldP, t, color);
+                if(!blockExistsReadOnly(gameState, worldP.x, worldP.y + 1, worldP.z, (BlockFlags)0xFFFFFFFF)) {
+                    //NOTE: Draw the water
+                    pushWaterQuad(gameState->renderer, worldP, make_float4(1, 1, 1, 0.6f));
+                }
+                
             } else {
                 if(b.hitBlock) {
                     // t = BLOCK_SOIL;
@@ -591,7 +595,6 @@ void updateEntities(GameState *gameState) {
                 height = 2;
             }
             pushGrassQuad(gameState->renderer, plus_float3(e->offset, e->T.pos), height, make_float4(1, 1, 1, 1));
-            // pushGrassQuad(gameState->renderer, plus_float3(e->offset, e->T.pos), height, make_float4(1, 1, 1, 1));
         } else {
             //NOTE: Draw the entity now
             float16 T = eulerAnglesToTransform(e->T.rotation.y, e->T.rotation.x, e->T.rotation.z);

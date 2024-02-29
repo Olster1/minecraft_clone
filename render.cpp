@@ -135,9 +135,9 @@ struct InstanceDataWithRotation {
 
 struct Renderer {
     uint32_t terrainTextureHandle;
-    uint32_t circleHandle;
-    uint32_t circleOutlineHandle;
-    uint32_t skyboxTextureHandle;
+    // uint32_t circleHandle;
+    // uint32_t circleOutlineHandle;
+    // uint32_t skyboxTextureHandle;
     uint32_t breakBlockTexture;
     uint32_t atlasTexture;
 

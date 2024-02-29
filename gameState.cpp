@@ -140,21 +140,21 @@ void initGameState(GameState *gameState) {
     gameState->lastMouseP = gameState->mouseP_screenSpace;
 
     gameState->grassTexture = loadTextureToGPU("./images/grass_block.png");
-    gameState->soilTexture = loadTextureToGPU("./images/soil_block.png");
-    Texture skyboxTexture = loadCubeMapTextureToGPU("./images/skybox/");
+    // gameState->soilTexture = loadTextureToGPU("./images/soil_block.png");
+    // Texture skyboxTexture = loadCubeMapTextureToGPU("./images/skybox/");
     Texture breakBlockTexture = loadTextureToGPU("./images/break_block.png");
-    Texture woodBlockTexture = loadTextureToGPU("./images/woodBlock.png");
-    Texture hotBarTexture = loadTextureToGPU("./images/hotBar.png");
-    Texture leavesTexture = loadTextureToGPU("./images/leaves.png");
+    // Texture woodBlockTexture = loadTextureToGPU("./images/woodBlock.png");
+    // Texture hotBarTexture = loadTextureToGPU("./images/hotBar.png");
+    // Texture leavesTexture = loadTextureToGPU("./images/leaves.png");
     Texture atlasTexture = loadTextureToGPU("./images/atlas.png");
 
-    gameState->circleOutlineTexture = loadTextureToGPU("./images/circleOutline.png");
+    // gameState->circleOutlineTexture = loadTextureToGPU("./images/circleOutline.png");
     // gameState->circleOutlineTexture = loadTextureToGPU("./models/avocado/Avocado_baseColor.png");
-    gameState->circleTexture = loadTextureToGPU("./images/fillCircle.png");
+    // gameState->circleTexture = loadTextureToGPU("./images/fillCircle.png");
 
     gameState->currentMiningBlock = 0;
 
-    gameState->renderer = initRenderer(gameState->grassTexture, gameState->circleTexture, gameState->circleOutlineTexture, skyboxTexture, breakBlockTexture, atlasTexture);
+    gameState->renderer = initRenderer(gameState->grassTexture, breakBlockTexture, atlasTexture);
 
     gameState->placeBlockTimer = -1;
     gameState->mineBlockTimer = -1;

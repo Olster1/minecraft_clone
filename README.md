@@ -10,7 +10,7 @@ Uses OpenGL 3.3 and SDL for platform layer.
 - [x] Clouds & Sky 
 - [x] Ambient Occulsion of blocks - need to speed up
 - [x] Tree & grasses generation
-- [ ] Water generation with alpha 
+- [x] Water generation with alpha 
 - [ ] Cows & Sheep Mobs
 - [ ] Skeletal Animation of player & mobs
 - [ ] Health, Stamina & Item Hotbar
@@ -28,9 +28,8 @@ Uses OpenGL 3.3 and SDL for platform layer.
 - [x] Build confidence
  
 ![](screenshot.png)
+![](screenshot1.png)
 
 ## Building on Mac OS
 run ```./run.sh``` to build and run the program. 
-
-I haven't added any of the images so it won't run without them. 
 

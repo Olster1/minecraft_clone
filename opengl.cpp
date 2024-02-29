@@ -463,8 +463,8 @@ void bindTexture(char *uniformName, int slotId, GLint textureId, Shader *shader,
     renderCheckError();
     
     if(flags & SHADER_CUBE_MAP) {
-        glBindTexture(GL_TEXTURE_CUBE_MAP, textureId); 
-        renderCheckError();
+        // glBindTexture(GL_TEXTURE_CUBE_MAP, textureId); 
+        // renderCheckError();
     } else {
         glBindTexture(GL_TEXTURE_2D, textureId); 
         renderCheckError();
@@ -547,7 +547,7 @@ void rendererFinish(Renderer *renderer, float16 projectionTransform, float16 mod
     
     //NOTE: Draw the skybox here
     glDepthMask(GL_FALSE); //NOTE: Disable WRITING to the depth buffer
-    drawModels(&renderer->blockModel, &renderer->skyboxShader, renderer->skyboxTextureHandle, 1, projectionTransform, cameraTransformWithoutTranslation, lookingAxis, renderer->underWater, SHADER_CUBE_MAP);
+    drawModels(&renderer->blockModel, &renderer->skyboxShader, renderer->terrainTextureHandle, 1, projectionTransform, cameraTransformWithoutTranslation, lookingAxis, renderer->underWater, SHADER_CUBE_MAP);
     glDepthMask(GL_TRUE);
 
     if(renderer->alphaBlockCount > 0) {
@@ -583,16 +583,16 @@ void rendererFinish(Renderer *renderer, float16 projectionTransform, float16 mod
     }
 
 
-    if(renderer->triangleCount > 0) {
-        //NOTE: Draw circle oultines
-        // updateInstanceData(renderer->triangleModel.instanceBufferhandle, renderer->triangleData, renderer->triangleCount*sizeof(InstanceData));
-        // drawModels(&renderer->triangleModel, &renderer->quadShader, renderer->circleOutlineHandle, renderer->triangleCount, projectionScreenTransform, float16_identity(), lookingAxis);
+    // if(renderer->triangleCount > 0) {
+    //     //NOTE: Draw circle oultines
+    //     // updateInstanceData(renderer->triangleModel.instanceBufferhandle, renderer->triangleData, renderer->triangleCount*sizeof(InstanceData));
+    //     // drawModels(&renderer->triangleModel, &renderer->quadShader, renderer->circleOutlineHandle, renderer->triangleCount, projectionScreenTransform, float16_identity(), lookingAxis);
 
-        updateInstanceData(renderer->avocadoModel.instanceBufferhandle, renderer->triangleData, renderer->triangleCount*sizeof(InstanceData));
-        drawModels(&renderer->avocadoModel, &renderer->quadShader, renderer->circleOutlineHandle, renderer->triangleCount, projectionTransform, modelViewTransform, lookingAxis, renderer->underWater);
+    //     updateInstanceData(renderer->avocadoModel.instanceBufferhandle, renderer->triangleData, renderer->triangleCount*sizeof(InstanceData));
+    //     drawModels(&renderer->avocadoModel, &renderer->quadShader, renderer->circleOutlineHandle, renderer->triangleCount, projectionTransform, modelViewTransform, lookingAxis, renderer->underWater);
 
-        renderer->triangleCount = 0;
-    }
+    //     renderer->triangleCount = 0;
+    // }
 
  
 }

@@ -4,16 +4,16 @@
 #include "./opengl.cpp"
 #include "./animation.cpp"
 
-Renderer *initRenderer(Texture grassTexture, Texture circleTexture, Texture circleOutlineTexture, Texture skyboxTexture, Texture breakBlockTexture, Texture atlasTexture) {
+Renderer *initRenderer(Texture grassTexture, Texture breakBlockTexture, Texture atlasTexture) {
     Renderer *renderer = (Renderer *)malloc(sizeof(Renderer));
     
     renderer->cubeCount = 0;
     renderer->atlasQuadCount = 0;
     renderer->terrainTextureHandle = grassTexture.handle;
-    renderer->skyboxTextureHandle = skyboxTexture.handle;
-    renderer->circleHandle = circleTexture.handle;
+    // renderer->skyboxTextureHandle = skyboxTexture.handle;
+    // renderer->circleHandle = circleTexture.handle;
     renderer->breakBlockTexture = breakBlockTexture.handle;
-    renderer->circleOutlineHandle = circleOutlineTexture.handle;
+    // renderer->circleOutlineHandle = circleOutlineTexture.handle;
     renderer->atlasTexture = atlasTexture.handle;
 
     renderer->blockShader = loadShader(blockVertexShader, blockFragShader);
@@ -29,8 +29,8 @@ Renderer *initRenderer(Texture grassTexture, Texture circleTexture, Texture circ
     renderer->blockModelWithInstancedT = generateVertexBuffer(global_cubeData, 24, global_cubeIndices, 36, ATTRIB_INSTANCE_TYPE_MODEL_MATRIX);
     renderer->blockModelSameTexture = generateVertexBuffer(global_cubeData_sameTexture, 24, global_cubeIndices, 36, ATTRIB_INSTANCE_TYPE_MODEL_MATRIX);
     
-    renderer->triangleModel = loadGLTF("./models/sparse.gltf").modelBuffer;
-    renderer->avocadoModel = loadGLTF("./models/avocado/Avocado.gltf").modelBuffer;
+    // renderer->triangleModel = loadGLTF("./models/sparse.gltf").modelBuffer;
+    // renderer->avocadoModel = loadGLTF("./models/avocado/Avocado.gltf").modelBuffer;
 
     return renderer;
 }

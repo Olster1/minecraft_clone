@@ -4,6 +4,8 @@ A minecraft clone for me to practice 3d games & see how close I can get it to th
 
 Uses OpenGL 3.3 and SDL for platform layer.
 
+On Hiatus at the moment!
+
 ## Goals
 - [x] Collision & physics
 - [x] Block mining (need to add paticle efffects & gravity affected pickup blocks)

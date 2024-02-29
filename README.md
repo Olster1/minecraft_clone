@@ -26,9 +26,8 @@ Uses OpenGL 3.3 and SDL for platform layer.
 - [x] Get as good as I can at programming
 - [x] Add to my projects list
 - [x] Build confidence
- 
-![](screenshot.png)
-![](screenshot1.png)
+
+![](screenshot1.png) 
 
 ## Building on Mac OS
 run ```./run.sh``` to build and run the program. 

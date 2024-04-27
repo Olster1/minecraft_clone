@@ -493,7 +493,7 @@ void drawModels(ModelBuffer *model, Shader *shader, uint32_t textureId, int inst
     glUniform3f(glGetUniformLocation(shader->handle, "lookingAxis"), lookingAxis.x, lookingAxis.y, lookingAxis.z);
     renderCheckError();
 
-    float4 fogColor = make_float4(0.7, 0.7, 0.7, 1);
+    float4 fogColor = make_float4(0.9, 0.9, 0.9, 1);
 
     if(underWater) {
         fogColor = make_float4(0.163, 0.551, 0.776, 1);

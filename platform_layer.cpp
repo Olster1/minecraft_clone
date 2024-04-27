@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <SDL2/SDL.h>
 #include <SDL2_image/SDL_image.h>
 #include <cstdio>
@@ -5,6 +6,7 @@
 #define arrayCount(array1) (sizeof(array1) / sizeof(array1[0]))
 #include "./3DMaths.h"
 #include <cstdio>
+
 
 enum MouseKeyState {
   MOUSE_BUTTON_NONE,

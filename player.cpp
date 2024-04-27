@@ -222,6 +222,23 @@ void cancelMiningInteraction(GameState *gameState) {
     }
 }
 
+void invalidateSurroundingAoValues(GameState *gs, int worldX, int worldY, int worldZ) {
+
+    for(int z = -1; z <= 1; z++) {
+        for(int y = -1; y <= 1; y++) {
+            for(int x = -1; x <= 1; x++) {
+                Block *b =  blockExistsReadOnly(gs, worldX + x, worldY + y, worldZ + z, BLOCK_EXISTS);
+
+                if(b) {
+                    //NOTE: Invalidate the AO value
+                    b->aoMask = getInvalidAoMaskValue();
+                }
+            }
+        }
+    }
+    
+}
+
 void placeBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
     BlockChunkPartner b = castRayAgainstBlock(gameState, lookingAxis, 4, plus_float3(gameState->cameraOffset, e->T.pos));
 
@@ -250,6 +267,8 @@ void placeBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
                     } else {
                         assert(false);
                     }
+
+                    invalidateSurroundingAoValues(gameState, worldX, worldY, worldZ);
 
                     playSound(&gameState->blockFinishSound);
                 }
@@ -291,6 +310,7 @@ void mineBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
             gameState->showCircleTimer = 0;
             pushFillCircle(gameState->renderer, make_float3(0, 0, 0), CIRCLE_RADIUS_MAX*percent, make_float4(1, 1, 1, 1));
             
+            //NOTE: Check if block was successfully mined
             if(b.block->timeLeft <= 0) {
                 //NOTE: Add block to pickup 
                 initPickupItem(b.chunk, getBlockWorldPos(b), b.block->type, gameState->randomStartUpID);
@@ -299,6 +319,9 @@ void mineBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
                 b.chunk->blocks[b.blockIndex].exists = false;
 
                 playSound(&gameState->blockFinishSound);
+
+                float3 worldP = getBlockWorldPos(b);
+                invalidateSurroundingAoValues(gameState, worldP.x, worldP.y, worldP.z);
 
                 //NOTE: Clear the block
                 b.block = 0;
@@ -381,7 +404,7 @@ void updatePlayer(GameState *gameState, Entity *e) {
         }
 
         if(gameState->mineBlockTimer > 0.45f) {
-            //NOTE: Placing a block down
+            //NOTE: Mining a block
             mineBlock(gameState, lookingAxis, e);
         }
     }

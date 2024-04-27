@@ -29,6 +29,8 @@ struct Block {
     bool exists;
     uint64_t flags;
 
+    uint64_t aoMask;
+
     BlockType type;
 };
 

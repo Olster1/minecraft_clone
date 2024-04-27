@@ -32,6 +32,10 @@ enum BlockFlags {
     BLOCK_EXISTS = 1 << 1, //NOTE: All blocks have this
 };
 
+uint64_t getInvalidAoMaskValue() {
+    return (((uint64_t)(1)) << 63);
+}
+
 Block spawnBlock(int x, int y, int z, BlockType type, BlockFlags flags) {
     //NOTE: Input positions are local to chunk
     Block b = {};
@@ -46,6 +50,8 @@ Block spawnBlock(int x, int y, int z, BlockType type, BlockFlags flags) {
 
     b.maxTime = getBlockTime(type);
     b.timeLeft = b.maxTime;
+
+    b.aoMask = getInvalidAoMaskValue();
 
     b.exists = true;
     
@@ -344,7 +350,7 @@ Chunk *generateChunk(GameState *gameState, int x, int y, int z, uint32_t hash) {
 
 
 
-bool blockExistsReadOnly(GameState *gameState, int worldx, int worldy, int worldz, BlockFlags flags) {
+Block *blockExistsReadOnly(GameState *gameState, int worldx, int worldy, int worldz, BlockFlags flags) {
     int chunkX = worldx / CHUNK_DIM;
     int chunkY = worldy / CHUNK_DIM;
     int chunkZ = worldz / CHUNK_DIM;
@@ -354,12 +360,12 @@ bool blockExistsReadOnly(GameState *gameState, int worldx, int worldy, int world
     int localz = worldz - (CHUNK_DIM*chunkZ); 
     
     Chunk *c = getChunkReadOnly(gameState, chunkX, chunkY, chunkZ);
-    bool found = false;
+    Block *found = 0;
     if(c) {
         int blockIndex = getBlockIndex(localx, localy, localz);
         assert(blockIndex < arrayCount(c->blocks));
         if(blockIndex < arrayCount(c->blocks) && c->blocks[blockIndex].exists && c->blocks[blockIndex].flags & flags) {
-            found = true;
+            found = &c->blocks[blockIndex];
         }
     }
 
@@ -417,16 +423,16 @@ uint64_t getAOMask(GameState *gameState, const float3 worldP) {
 void drawChunk(GameState *gameState, Chunk *c) {
     
     for(int i = 0; i < arrayCount(c->blocks); ++i) {
-        Block b = c->blocks[i];
+        Block *b = &c->blocks[i];
 
-        if(b.exists) {
-            float3 worldP = make_float3(c->x*CHUNK_DIM + b.x, c->y*CHUNK_DIM + b.y, c->z*CHUNK_DIM + b.z);
+        if(b->exists) {
+            float3 worldP = make_float3(c->x*CHUNK_DIM + b->x, c->y*CHUNK_DIM + b->y, c->z*CHUNK_DIM + b->z);
 
-            float maxColor = 0.9f;
+            float maxColor = 0.0f;
 
             float4 color = make_float4(maxColor, maxColor, maxColor, 1);
 
-            BlockType t = b.type;
+            BlockType t = b->type;
 
             if(t == BLOCK_WATER) {
                 if(!blockExistsReadOnly(gameState, worldP.x, worldP.y + 1, worldP.z, (BlockFlags)0xFFFFFFFF)) {
@@ -435,12 +441,17 @@ void drawChunk(GameState *gameState, Chunk *c) {
                 }
                 
             } else {
-                if(b.hitBlock) {
+                if(b->hitBlock) {
                     // t = BLOCK_SOIL;
-                    color = make_float4(1, 1, 1, 1);
+                    color = make_float4(1.0f, 1.0f, 1.0f, 1);
                 }
 
-                uint64_t AOMask = 0;//getAOMask(gameState, worldP);
+                //NOTE: Calculate the aoMask if haven't yet
+                if(b->aoMask & (((uint64_t)(1)) << 63)) { //NOTE: top bit is set 
+                    b->aoMask = getAOMask(gameState, worldP);
+                }
+
+                uint64_t AOMask = b->aoMask;
                 
                 pushCube(gameState->renderer, worldP, t, color, AOMask);
                 // pushAlphaItem(gameState->renderer, worldP, make_float3(1, 1, 1), color);

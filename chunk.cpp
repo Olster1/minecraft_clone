@@ -1,3 +1,9 @@
+enum DimensionEnum {
+    DIMENSION_X,
+    DIMENSION_Y,
+    DIMENSION_Z
+};
+
 uint32_t getHashForChunk(int x, int y, int z) {
     int values[3] = {x, y, z};
     uint32_t hash = get_crc32((char *)values, arrayCount(values)*sizeof(int));
@@ -324,6 +330,37 @@ Chunk *getChunk_(GameState *gameState, int x, int y, int z, bool shouldGenerateC
     return chunk;
 }
 
+void resetChunksAO(GameState *gameState, int x, int y, int z, DimensionEnum dimension, int dimensionValue) {
+    Chunk *c = getChunkReadOnly(gameState, x, y, z);
+
+    if(c) {
+        for(int i = 0; i < arrayCount(c->blocks); ++i) {
+            Block *b = &c->blocks[i];
+
+            if(b->exists) {
+                if(dimension == DIMENSION_X && b->x == dimensionValue) {
+                    b->aoMask = getInvalidAoMaskValue();
+                } else if(dimension == DIMENSION_Y && b->y == dimensionValue) {
+                    b->aoMask = getInvalidAoMaskValue();
+                } else if(dimension == DIMENSION_Z && b->z == dimensionValue) {
+                    b->aoMask = getInvalidAoMaskValue();
+                }
+            }
+        }
+    }
+}
+
+void resetNeighbouringChunksAO(GameState *gameState, int x, int y, int z) {
+    //NOTE: This function resets outer boundarie block's AO mask where they should take into account new blocks to compute their AO mask from.
+    int maxOffsets[] = {CHUNK_DIM - 1, 0, CHUNK_DIM - 1, 0, CHUNK_DIM - 1, 0};
+    DimensionEnum enums[] = {DIMENSION_X, DIMENSION_X, DIMENSION_Y, DIMENSION_Y, DIMENSION_Z, DIMENSION_Z};
+    float3 offsets[] = {make_float3(-1, 0, 0), make_float3(1, 0, 0), make_float3(0, -1, 0), make_float3(0, 1, 0), make_float3(0, 0, -1), make_float3(0, 0, 1)};
+    for(int i = 0; i < arrayCount(offsets); i++) {
+        float3 o = offsets[i];
+        resetChunksAO(gameState, x + o.x, y + o.y, z + o.z, enums[i], maxOffsets[i]);
+    }
+}
+
 
 Chunk *generateChunk(GameState *gameState, int x, int y, int z, uint32_t hash) {
     Chunk *chunk = (Chunk *)malloc(sizeof(Chunk));
@@ -334,6 +371,9 @@ Chunk *generateChunk(GameState *gameState, int x, int y, int z, uint32_t hash) {
     chunk->z = z;
     chunk->isGenerated = false;
     chunk->entityCount = 0;
+
+    //NOTE: Reset all AO of neighbouring blocks
+    resetNeighbouringChunksAO(gameState, x, y, z);
 
     chunk->next = 0;
 

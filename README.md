@@ -10,7 +10,7 @@ On Hiatus at the moment!
 - [x] Collision & physics
 - [x] Block mining (need to add paticle efffects & gravity affected pickup blocks)
 - [x] Clouds & Sky 
-- [x] Ambient Occulsion of blocks - need to speed up
+- [x] Ambient Occulsion of blocks - (put chunk creation on separate threads)
 - [x] Tree & grasses generation
 - [x] Water generation with alpha 
 - [ ] Cows & Sheep Mobs

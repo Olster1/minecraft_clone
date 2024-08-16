@@ -265,8 +265,10 @@ static char *skyboxFragShader =
 "#version 330\n"
 "in vec3 uv_frag; "
 "uniform samplerCube diffuse;"
+"uniform vec4 skyColorA;"
+"uniform vec4 skyColorB;"
 "out vec4 color;"
 "void main() {"
 "float value = dot(normalize(uv_frag), vec3(0, 1, 0));"
-"color = mix(vec4(0.678, 0.847, 0.901, 1), vec4(0.126, 0.162, 0.529, 1), value);"
+"color = mix(skyColorA, skyColorB, value);"
 "}";

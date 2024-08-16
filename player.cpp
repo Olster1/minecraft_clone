@@ -5,6 +5,9 @@
 #define WALK_SPEED 2
 #define CIRCLE_RADIUS_MAX 10
 #define SHOW_CIRCLE_DELAY 2
+#define STAMINA_DRAIN_SPEED 0.1f
+#define STAMINA_RECHARGE_SPEED 0.1f
+#define DISTANCE_CAN_PLACE_BLOCK 6
 
 float3 getBlockWorldPos(BlockChunkPartner b) {
     float3 p = {};
@@ -239,8 +242,8 @@ void invalidateSurroundingAoValues(GameState *gs, int worldX, int worldY, int wo
     
 }
 
-void placeBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
-    BlockChunkPartner b = castRayAgainstBlock(gameState, lookingAxis, 4, plus_float3(gameState->cameraOffset, e->T.pos));
+void placeBlock(GameState *gameState, float3 lookingAxis, Entity *e, BlockType blockType) {
+    BlockChunkPartner b = castRayAgainstBlock(gameState, lookingAxis, DISTANCE_CAN_PLACE_BLOCK, plus_float3(gameState->cameraOffset, e->T.pos));
 
     if(b.block) {
         // b.block->hitBlock = true;
@@ -263,7 +266,7 @@ void placeBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
 
                     int blockIndex = getBlockIndex(localX, localY, localZ);
                     if(blockIndex < arrayCount(nxtBlock.chunk->blocks)) {
-                        nxtBlock.chunk->blocks[blockIndex] = spawnBlock(localX, localY, localZ, BLOCK_TREE_WOOD, BLOCK_EXISTS_COLLISION);
+                        nxtBlock.chunk->blocks[blockIndex] = spawnBlock(localX, localY, localZ, blockType, BLOCK_EXISTS_COLLISION);
                     } else {
                         assert(false);
                     }
@@ -278,7 +281,7 @@ void placeBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
 }
 
 void highlightBlockLookingAt(GameState *gameState, float3 lookingAxis, Entity *e) {
-    BlockChunkPartner b = castRayAgainstBlock(gameState, lookingAxis, 4, plus_float3(gameState->cameraOffset, e->T.pos));
+    BlockChunkPartner b = castRayAgainstBlock(gameState, lookingAxis, DISTANCE_CAN_PLACE_BLOCK, plus_float3(gameState->cameraOffset, e->T.pos));
 
     if(b.block) {
         b.block->hitBlock = true;
@@ -287,7 +290,7 @@ void highlightBlockLookingAt(GameState *gameState, float3 lookingAxis, Entity *e
 
 
 void mineBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
-     BlockChunkPartner b = castRayAgainstBlock(gameState, lookingAxis, 4, plus_float3(gameState->cameraOffset, e->T.pos));
+     BlockChunkPartner b = castRayAgainstBlock(gameState, lookingAxis, DISTANCE_CAN_PLACE_BLOCK, plus_float3(gameState->cameraOffset, e->T.pos));
 
         if(b.block) {
             //NOTE: Play sound
@@ -357,9 +360,10 @@ void updatePlayer(GameState *gameState, Entity *e) {
     zAxis = normalize_float3(zAxis);
     float3 xAxis = make_float3(rot.E_[0][0], rot.E_[0][1], rot.E_[0][2]);
 
-    float3 movement = make_float3(0, 0, 0);
-
+    float3 playerSpeed = make_float3(1, 1, 1);
     float magnitude = gameState->dt*WALK_SPEED;
+
+    float3 movement = make_float3(0, 0, 0);
 
     if(gameState->keys.keys[KEY_LEFT]) {
         movement = plus_float3(movement, float3_negate(xAxis));
@@ -372,10 +376,42 @@ void updatePlayer(GameState *gameState, Entity *e) {
     }
     if(gameState->keys.keys[KEY_UP]) {
         movement = plus_float3(movement, zAxis);
+
+        if(gameState->keys.keys[KEY_SHIFT] && e->grounded) {
+            //NOTE: Player is running
+            magnitude *= 2.0f;
+
+            if(!e->running) {
+                e->running = true;
+                
+                gameState->camera.runShakeTimer = 0;
+            }
+            
+        }
+    }
+
+    if(e->running) {
+        gameState->camera.targetFov = 80;
+        e->stamina -= gameState->dt*STAMINA_DRAIN_SPEED;
+
+         if(e->stamina < 0) {
+            e->stamina = 0;
+        }
+    } else {
+        e->stamina += gameState->dt*STAMINA_RECHARGE_SPEED;
+
+        if(e->stamina >= 1) {
+            e->stamina = 1;
+        }
     }
 
     movement = normalize_float3(movement);
     movement = scale_float3(magnitude, movement);
+
+    if(!gameState->keys.keys[KEY_SHIFT] || e->stamina <= 0) {
+        e->running = false;
+        gameState->camera.runShakeTimer = -1;
+    }
     
     if((gameState->keys.keys[KEY_SPACE] == MOUSE_BUTTON_PRESSED || e->tryJump) && (e->grounded || !gameState->gravityOn)) {
         //NOTE: JUMP
@@ -411,8 +447,12 @@ void updatePlayer(GameState *gameState, Entity *e) {
 
     if(gameState->mouseLeftBtn == MOUSE_BUTTON_RELEASED) {
         if(gameState->placeBlockTimer < 0.2f) {
-            //NOTE: Placing a block down
-            placeBlock(gameState, lookingAxis, e);
+            //NOTE: Check if user has any blocks in their inventory hotspot they can use
+            if(gameState->playerInventory[gameState->currentInventoryHotIndex].count > 0) {
+                gameState->playerInventory[gameState->currentInventoryHotIndex].count--;
+                //NOTE: Placing a block down
+                placeBlock(gameState, lookingAxis, e, gameState->playerInventory[gameState->currentInventoryHotIndex].type);
+            }
         }
 
         if(gameState->currentMiningBlock) {

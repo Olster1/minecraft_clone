@@ -130,6 +130,8 @@ static float2 lerp_float2(float2 a, float2 b, float t) {
 	return make_float2((b.x - a.x)*t + a.x, (b.y - a.y)*t + a.y);
 }
 
+
+
 static float3 make_float3(float x0, float y0, float z0) {
 	float3 result = {};
 
@@ -163,6 +165,10 @@ static float4 make_float4(float x, float y, float z, float w) {
 	result.w = w;
 
 	return result;
+}
+
+static float4 lerp_float4(float4 a, float4 b, float t) {
+	return make_float4((b.x - a.x)*t + a.x, (b.y - a.y)*t + a.y, (b.z - a.z)*t + a.z, (b.w - a.w)*t + a.w);
 }
 
 static float3 scale_float3(float dt, float3 value) {

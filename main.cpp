@@ -2,7 +2,7 @@
 #include "./entity.cpp"
 #include "./render.cpp"
 #include "./opengl.cpp"
-#include "./animation.cpp"
+// #include "./animation.cpp"
 
 Renderer *initRenderer(Texture grassTexture, Texture breakBlockTexture, Texture atlasTexture) {
     Renderer *renderer = (Renderer *)malloc(sizeof(Renderer));
@@ -44,24 +44,100 @@ Renderer *initRenderer(Texture grassTexture, Texture breakBlockTexture, Texture 
 #include "./player.cpp"
 #include "./camera.cpp"
 
-void drawHUD(GameState *gameState) {
-    for(int i = 0; i < arrayCount(gameState->playerInventory); ++i) {
-        float3 screenP = make_float3((10 + 10*i) - 50, (10 - 50), 1);
+TimeOfDayValues getTimeOfDayValues(GameState *gameState) {
+    float4 a;
+    float4 b;
 
-        float2 scale = make_float2(10, 10);
+    float4 dayA = make_float4(0.678, 0.847, 0.901, 1);
+    float4 dayB = make_float4(0.126, 0.162, 0.529, 1);
+    
+    float4 afternoonA = make_float4(0.98, 0.56, 0.384, 1);
+    float4 afternoonB = make_float4(0.8, 0.28, 0.576, 1);
+
+    float4 nightTimeA = make_float4(0.18, 0.09, 0.2, 1);
+    float4 nightTimeB = make_float4(0, 0, 0, 1);
+
+    if(gameState->timeOfDay < 0.25f) {
+        float t = gameState->timeOfDay / 0.25f;
+        a = lerp_float4(nightTimeA, afternoonA, t);
+        b = lerp_float4(nightTimeB, afternoonB, t);
+    } else if(gameState->timeOfDay >= 0.25f && gameState->timeOfDay < 0.5f) {
+        float t = (gameState->timeOfDay - 0.25f) / 0.25f;
+        a = lerp_float4(afternoonA, dayA, t);
+        b = lerp_float4(afternoonB, dayB, t);
+    } else if(gameState->timeOfDay >= 0.5f && gameState->timeOfDay < 0.75f) {
+        float t = (gameState->timeOfDay - 0.5f) / 0.25f;
+        a = lerp_float4(dayA, afternoonA, t);
+        b = lerp_float4(dayB, afternoonB, t);
+    } else if(gameState->timeOfDay >= 0.75f && gameState->timeOfDay <= 1.0f) {
+        float t = (gameState->timeOfDay - 0.75f) / 0.25f;
+        a = lerp_float4(afternoonA, nightTimeA, t);
+        b = lerp_float4(afternoonB, nightTimeB, t);
+    }
+
+    TimeOfDayValues result = {};
+    result.skyColorA = a;
+    result.skyColorB = b;
+
+    return result;
+
+}
+
+void drawHUD(GameState *gameState) {
+    for(int i = 0; i < ITEM_HOT_SPOTS; ++i) {
+        float2 scale = make_float2(8, 8);
+        float halfWidth = 0.5f*(ITEM_HOT_SPOTS*scale.x);
+        float3 screenP = make_float3(((scale.x*i) + 0.5f*scale.x) - halfWidth, (-50 + 0.55f*scale.y), 1);
 
         if(i == gameState->currentInventoryHotIndex) {
             scale = scale_float2(1.2f, scale);
         }
 
         pushHUDOutline(gameState->renderer, screenP, scale, make_float4(1, 1, 1, 1));
+        if(gameState->inventoryCount >= i && gameState->playerInventory[i].count > 0) {
+            //NOTE: Draw item if in slot
+            InventoryItem *item = &gameState->playerInventory[i];
+
+            //NOTE: Draw the inventory sprite
+            pushSpriteForInventoryType(gameState->renderer, screenP, scale, make_float4(1, 1, 1, 1), item->type);
+
+            //NOTE: Draw the number of items we have
+            //TODO: Don't have text support yet
+            
+        }
     }
+    {
+        //NOTE: Draw the player stamina bar
+        float3 screenP = make_float3(-35, 49, 1);
+        float2 scale = make_float2(30, 2.5);
+        float3 innerScreenP = screenP;
+        float2 innerScale = scale;
+        innerScale.x *= gameState->player.stamina;
+
+        innerScreenP.x -= 0.5f*(scale.x - innerScale.x);
+        pushPlainQuadHUD(gameState->renderer, innerScreenP, innerScale, make_float4(1, 1, 1, 1));
+        pushHUDOutline(gameState->renderer, screenP, scale, make_float4(1, 1, 1, 1));
+    }
+    
 }
 
 void updateGame(GameState *gameState) {
     if(!gameState->inited) {
         initGameState(gameState);
     }
+
+    gameState->camera.targetFov = 60;
+
+    gameState->timeOfDay += 0.001f*gameState->dt;
+
+    if(gameState->timeOfDay > 1.0f) {
+        //NOTE: Always keep in 0 - 1 range
+        int a = (int)(gameState->timeOfDay*100);
+        a = a % 100;
+        gameState->timeOfDay = (float)(a / 100);
+    }
+
+    TimeOfDayValues timeOfDayValues = getTimeOfDayValues(gameState);
 
     loadEntitiesForFrameUpdate(gameState);
 
@@ -118,7 +194,7 @@ void updateGame(GameState *gameState) {
 
     drawHUD(gameState);
     
-    rendererFinish(gameState->renderer, screenT, cameraT, screenGuiT, lookingAxis, cameraTWithoutTranslation);
+    rendererFinish(gameState->renderer, screenT, cameraT, screenGuiT, lookingAxis, cameraTWithoutTranslation, timeOfDayValues);
 
     //NOTE: End Mouse interaction if release
     if(gameState->mouseLeftBtn == MOUSE_BUTTON_RELEASED && gameState->currentInteraction.isValid) {

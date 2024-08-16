@@ -21,6 +21,7 @@ enum KeyTypes {
   KEY_LEFT,
   KEY_RIGHT,
   KEY_SPACE,
+  KEY_SHIFT,
   KEY_1,
   KEY_2,
   KEY_3,
@@ -163,6 +164,7 @@ int main(int argc, char **argv) {
     updateKeyState(gameState, KEY_LEFT, currentKeyStates[SDL_SCANCODE_LEFT] == 1 || currentKeyStates[SDL_SCANCODE_A] == 1);
     updateKeyState(gameState, KEY_RIGHT, currentKeyStates[SDL_SCANCODE_RIGHT] == 1 || currentKeyStates[SDL_SCANCODE_D] == 1);
     updateKeyState(gameState, KEY_SPACE, currentKeyStates[SDL_SCANCODE_SPACE] == 1);
+    updateKeyState(gameState, KEY_SHIFT, currentKeyStates[SDL_SCANCODE_LSHIFT] == 1);
     updateKeyState(gameState, KEY_1, currentKeyStates[SDL_SCANCODE_1] == 1);
     updateKeyState(gameState, KEY_2, currentKeyStates[SDL_SCANCODE_2] == 1);
     updateKeyState(gameState, KEY_3, currentKeyStates[SDL_SCANCODE_3] == 1);
@@ -173,16 +175,17 @@ int main(int argc, char **argv) {
     updateKeyState(gameState, KEY_8, currentKeyStates[SDL_SCANCODE_8] == 1);
     int w; 
     int h;
-    // if(SDL_GetRendererOutputSize(renderer, &w, &h) == 0) {
-    //   gameState->screenWidth = w;
-    //   gameState->aspectRatio_y_over_x = (float)h / (float)w;
-    // }
+    SDL_GetWindowSize(window, &w, &h);
+    gameState->screenWidth = (float)w;
+    gameState->aspectRatio_y_over_x = (float)h / (float)w;
+    // printf("w: %d\n", w);
+    // printf("ap: %d\n", h);
 
     int x; 
     int y;
     Uint32 mouseState = SDL_GetMouseState(&x, &y);
     gameState->mouseP_screenSpace.x = (float)x;
-    gameState->mouseP_screenSpace.y = (float)(h - y); //NOTE: Bottom corner is origin 
+    gameState->mouseP_screenSpace.y = (float)(-y); //NOTE: Bottom corner is origin 
 
     gameState->mouseP_01.x = gameState->mouseP_screenSpace.x / w;
     gameState->mouseP_01.y = gameState->mouseP_screenSpace.y / h;

@@ -57,5 +57,13 @@ void updateCamera(GameState *gameState) {
                 gameState->cameraOffset = plus_float3(plus_float3(CAMERA_OFFSET, scale_float3(y, yAxis)), scale_float3(x, xAxis));
             }
         }
+
+        if(gameState->player.running && gameState->camera.runShakeTimer >= 0) {
+            //NOTE: Do the rotation around z
+            gameState->camera.T.rotation.z += (float)sin(20*gameState->camera.runShakeTimer);
+            gameState->camera.runShakeTimer += gameState->dt;
+        } 
     }
+
+    gameState->camera.fov = lerp(gameState->camera.fov, gameState->camera.targetFov, make_lerpTValue(0.4f));
 }

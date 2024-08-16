@@ -7,6 +7,7 @@ struct Vertex {
     float3 pos;
     float2 texUV;
     float3 normal;
+    // float weights[32];
 };
 
 Vertex makeVertex(float3 pos, float2 texUV, float3 normal) {
@@ -206,27 +207,6 @@ InstanceDataWithRotation *pushAtlasQuad_(Renderer *renderer, float3 worldP, floa
     return c;
 }
 
-void pushGrassQuad(Renderer *renderer, float3 worldP, float height, float4 color) {
-    pushAtlasQuad_(renderer, worldP, make_float3(1, height, 1), make_float3(0, 0, 0), make_float4(0, 0.25f, 0, 0.25f), color, false);
-    pushAtlasQuad_(renderer, worldP, make_float3(1, height, 1), make_float3(0, 90, 0), make_float4(0, 0.25f, 0, 0.25f), color, false);
-}
-
-void pushWaterQuad(Renderer *renderer, float3 worldP, float4 color) {
-    pushAtlasQuad_(renderer, plus_float3(worldP, make_float3(0, 0.5f, 0)), make_float3(1, 1, 1), make_float3(90, 0, 0), make_float4(0.25f, 0.5f, 0, 0.25f), color, false);
-}
-
-void pushHUDOutline(Renderer *renderer, float3 worldP, float2 scale, float4 color) {
-    pushAtlasQuad_(renderer, worldP, make_float3(scale.x, scale.y, 1), make_float3(0, 0, 0), make_float4(0.0, 0.25f, 0.25f, 0.5f), color, true);
-}
-
-void pushCircleOutline(Renderer *renderer, float3 worldP, float radius, float4 color) {
-    pushAtlasQuad_(renderer, worldP, make_float3(radius, radius, 1), make_float3(0, 0, 0), make_float4(0.5f, 1.0f, 0, 0.5f), color, true);
-}
-
-void pushFillCircle(Renderer *renderer, float3 worldP, float radius, float4 color) {
-    pushAtlasQuad_(renderer, worldP, make_float3(radius, radius, 1), make_float3(0, 0, 0), make_float4(0, 0.5f, 0.5f, 1.0f), color, true);
-}
-
 float2 getUVCoordForBlock(BlockType type) {
     float2 uv = make_float2(0, 0);
      if(type == BLOCK_GRASS) {
@@ -249,6 +229,37 @@ float2 getUVCoordForBlock(BlockType type) {
         uv.y = 0.8f;
     }
     return uv;
+}
+
+void pushGrassQuad(Renderer *renderer, float3 worldP, float height, float4 color) {
+    pushAtlasQuad_(renderer, worldP, make_float3(1, height, 1), make_float3(0, 0, 0), make_float4(0, 0.25f, 0, 0.25f), color, false);
+    pushAtlasQuad_(renderer, worldP, make_float3(1, height, 1), make_float3(0, 90, 0), make_float4(0, 0.25f, 0, 0.25f), color, false);
+}
+
+void pushWaterQuad(Renderer *renderer, float3 worldP, float4 color) {
+    pushAtlasQuad_(renderer, plus_float3(worldP, make_float3(0, 0.5f, 0)), make_float3(1, 1, 1), make_float3(90, 0, 0), make_float4(0.25f, 0.5f, 0, 0.25f), color, false);
+}
+
+void pushHUDOutline(Renderer *renderer, float3 worldP, float2 scale, float4 color) {
+    pushAtlasQuad_(renderer, worldP, make_float3(scale.x, scale.y, 1), make_float3(0, 0, 0), make_float4(0.0, 0.25f, 0.25f, 0.5f), color, true);
+}
+
+void pushSpriteForInventoryType(Renderer *renderer, float3 worldP, float2 scale, float4 color, BlockType type) {
+    float4 coords = make_float4(0.0, 0.25f, 0, 0.25f);
+
+    pushAtlasQuad_(renderer, worldP, make_float3(scale.x, scale.y, 1), make_float3(0, 0, 0), coords, color, true);
+}
+
+void pushPlainQuadHUD(Renderer *renderer, float3 worldP, float2 scale, float4 color) {
+    pushAtlasQuad_(renderer, worldP, make_float3(scale.x, scale.y, 1), make_float3(0, 0, 0), make_float4(0.25f, 0.5f, 0, 0.25f), color, true);
+}
+
+void pushCircleOutline(Renderer *renderer, float3 worldP, float radius, float4 color) {
+    pushAtlasQuad_(renderer, worldP, make_float3(radius, radius, 1), make_float3(0, 0, 0), make_float4(0.5f, 1.0f, 0, 0.5f), color, true);
+}
+
+void pushFillCircle(Renderer *renderer, float3 worldP, float radius, float4 color) {
+    pushAtlasQuad_(renderer, worldP, make_float3(radius, radius, 1), make_float3(0, 0, 0), make_float4(0, 0.5f, 0.5f, 1.0f), color, true);
 }
 
 void pushCube(Renderer *renderer, float3 worldP, BlockType type, float4 color, uint64_t AOMask) {

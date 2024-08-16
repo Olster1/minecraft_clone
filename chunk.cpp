@@ -604,6 +604,29 @@ void loadEntitiesForFrameUpdate(GameState *gameState) {
     }
 }
 
+void addItemToInventory(GameState *gameState, Entity *e, int count) {
+    InventoryItem *foundItem = 0;
+
+    //NOTE: Check first if there is a slot already with the item
+    for(int i = 0; i < gameState->inventoryCount && !foundItem; ++i) {
+        InventoryItem *item = &gameState->playerInventory[gameState->inventoryCount];
+        int totalCount = item->count + count;
+        if(item->type == e->itemType && totalCount <= ITEM_PER_SLOT_COUNT) {
+            foundItem = item;
+        }
+    }
+    
+    if(!foundItem && gameState->inventoryCount < arrayCount(gameState->playerInventory)) {
+        //NOTE: Has room in the inventory
+        foundItem = &gameState->playerInventory[gameState->inventoryCount++];
+    }
+
+    if(foundItem) {
+        foundItem->count += count;
+        foundItem->type = e->itemType;
+    }
+}
+
 void updateEntities(GameState *gameState) {
     Entity *player = &gameState->player;
     for(int i = 0; i < gameState->entityCount; ++i) {
@@ -619,15 +642,11 @@ void updateEntities(GameState *gameState) {
         if(e->type == ENTITY_PICKUP_ITEM) {
 
             //NOTE: Update Fall
-            
-
             Rect3f bounds = rect3f_minowski_plus(player->T.scale, e->T.scale, e->T.pos);
             if(in_rect3f_bounds(bounds, player->T.pos)) {
                 if(gameState->inventoryCount < arrayCount(gameState->playerInventory)) {
                     //NOTE: Pickup the item
-                    InventoryItem *item = &gameState->playerInventory[gameState->inventoryCount++];
-                    item->count++;
-                    item->type = e->itemType;
+                    addItemToInventory(gameState, e, 1);
 
                     assert(gameState->entityToDeleteCount < arrayCount(gameState->entitiesToDelete));
 

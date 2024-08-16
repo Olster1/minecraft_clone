@@ -44,8 +44,9 @@ struct GameState {
 
     int currentInventoryHotIndex;
 
+    //NOTE: First 8 are what player as equipped in the hotbar
     int inventoryCount;
-    InventoryItem playerInventory[8];
+    InventoryItem playerInventory[64];
 
     float3 cameraOffset;
 
@@ -66,6 +67,8 @@ struct GameState {
     SDL_AudioSpec audioSpec;
 
     Camera camera;
+
+    float timeOfDay; //NOTE: 0 - 1 is one day
 
     int randomStartUpID;
 
@@ -117,11 +120,13 @@ void initGameState(GameState *gameState) {
     gameState->camera.followingPlayer = true;
     gameState->cameraOffset = CAMERA_OFFSET;
     gameState->camera.shakeTimer = -1;
+    gameState->camera.runShakeTimer = -1;
 
     gameState->currentInventoryHotIndex = 0;
 
     srand(time(NULL));
 
+    gameState->timeOfDay = 0.4f;
     
     initPlayer(&gameState->player, gameState->randomStartUpID);
     gameState->player.T.pos = gameState->camera.T.pos;
@@ -169,7 +174,7 @@ void initGameState(GameState *gameState) {
 
     createAOOffsets(gameState);
 
-    // loadGLTF("./models/cesiumMan/CesiumMan.gltf");
+    // loadGLTF("./models/fox/Fox.gltf");
     // loadGLTF("./models/boxAnimated/BoxAnimated.gltf");
 
     gameState->inited = true;

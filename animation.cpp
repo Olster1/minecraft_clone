@@ -203,10 +203,14 @@ SkeletalModel loadGLTF(char *fileName) {
 				float *poss = 0;
 				float *uvs = 0;
 				float *normals = 0;
+				float *joints = 0;
+				float *weights = 0;
 				unsigned short *indicies = 0;
 
 				int normalCount = 0;
 				int uvCount = 0;
+				int jointCount = 0;
+				int weightsCount = 0;
 
 				{
 					cgltf_accessor *indiciesAccessor = data->meshes[0].primitives[0].indices;
@@ -257,7 +261,18 @@ SkeletalModel loadGLTF(char *fileName) {
 						bufferToCopyTo = normals = (float *)malloc(buffer_view->size);
 						normalCount = accessor->count;
 					}
-					
+					if(attrib.type == cgltf_attribute_type_joints) {
+						assert(accessor->type == cgltf_type_mat4);
+						bufferToCopyTo = joints = (float *)malloc(buffer_view->size);
+						jointCount = accessor->count;
+						floatCount = 16;
+					}
+					if(attrib.type == cgltf_attribute_type_weights) {
+						assert(accessor->type == cgltf_type_scalar);
+						bufferToCopyTo = weights = (float *)malloc(buffer_view->size);
+						weightsCount = accessor->count;
+						floatCount = 1;
+					}
 					if(attrib.type == cgltf_attribute_type_texcoord) {
 						assert(accessor->type == cgltf_type_vec2);
 						bufferToCopyTo = uvs = (float *)malloc(buffer_view->size);
@@ -328,6 +343,14 @@ SkeletalModel loadGLTF(char *fileName) {
 						if(uvs) {
 							v->texUV = make_float2((float)uvs[i*2 + 0], (float)uvs[i*2 + 1]);
 						}
+
+						if(joints) {
+							v->joints = make_float2((float)uvs[i*2 + 0], (float)uvs[i*2 + 1]);
+						}
+
+						if(weights) {
+							v->weights[i] = (float)weights[i];
+						}
 					}
 				}
 
@@ -353,7 +376,9 @@ SkeletalModel loadGLTF(char *fileName) {
         } 
                 
         cgltf_free(data);
-    } 
+    } else {
+		printf("didn't Parsed files successfully\n");
+	}
 
     if(result == cgltf_result_success) {
         model.valid = true;

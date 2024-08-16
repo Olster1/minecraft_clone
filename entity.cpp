@@ -1,4 +1,6 @@
 #define CAMERA_OFFSET make_float3(0, 0.7f, 0)
+#define ITEM_PER_SLOT_COUNT 64
+#define ITEM_HOT_SPOTS 8
 
 enum EntityType {
     ENTITY_PLAYER,
@@ -15,6 +17,11 @@ enum BlockType {
     BLOCK_TREE_WOOD,
     BLOCK_TREE_LEAVES,
     BLOCK_WATER,
+};
+
+struct TimeOfDayValues {
+    float4 skyColorA;
+    float4 skyColorB;
 };
 
 struct Block {
@@ -81,6 +88,8 @@ struct Entity {
 
     float3 offset;
     float floatTime;
+
+    float stamina;
     
     TransformX T;
     float3 dP;
@@ -89,7 +98,7 @@ struct Entity {
     Rect3f collisionBox;
     bool grounded;
     bool tryJump;
-
+    bool running;
 
     uint32_t flags;
     BlockType itemType;
@@ -137,7 +146,9 @@ struct BlockChunkPartner {
 struct Camera {
     TransformX T;
     float fov;
+    float targetFov;
     float shakeTimer;
+    float runShakeTimer;
     bool followingPlayer;
 };
 
@@ -158,6 +169,7 @@ Entity *initPlayer(Entity *e, int randomStartUpID) {
     e->offset = make_float3(0, 0, 0);
     e->grounded = false;
     e->flags = 0;
+    e->stamina = 1;
     return e;
 }
 

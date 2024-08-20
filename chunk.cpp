@@ -609,7 +609,7 @@ void addItemToInventory(GameState *gameState, Entity *e, int count) {
 
     //NOTE: Check first if there is a slot already with the item
     for(int i = 0; i < gameState->inventoryCount && !foundItem; ++i) {
-        InventoryItem *item = &gameState->playerInventory[gameState->inventoryCount];
+        InventoryItem *item = &gameState->playerInventory[i];
         int totalCount = item->count + count;
         if(item->type == e->itemType && totalCount <= ITEM_PER_SLOT_COUNT) {
             foundItem = item;

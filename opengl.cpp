@@ -534,7 +534,7 @@ void drawModels(ModelBuffer *model, Shader *shader, uint32_t textureId, int inst
     
 }
 
-void rendererFinish(Renderer *renderer, float16 projectionTransform, float16 modelViewTransform, float16 projectionScreenTransform, float3 lookingAxis, float16 cameraTransformWithoutTranslation, TimeOfDayValues timeOfDay) {
+void rendererFinish(Renderer *renderer, float16 projectionTransform, float16 modelViewTransform, float16 projectionScreenTransform, float16 textScreenTransform, float3 lookingAxis, float16 cameraTransformWithoutTranslation, TimeOfDayValues timeOfDay) {
 
     if(renderer->cubeCount > 0) {
         //NOTE: Draw Cubes
@@ -586,6 +586,14 @@ void rendererFinish(Renderer *renderer, float16 projectionTransform, float16 mod
         drawModels(&renderer->quadModel, &renderer->quadTextureShader, renderer->atlasTexture, renderer->atlasQuadHUDCount, projectionScreenTransform, float16_identity(), lookingAxis, renderer->underWater, timeOfDay);
 
         renderer->atlasQuadHUDCount = 0;
+    }
+
+    if(renderer->glyphCount > 0) {
+        //NOTE: Draw circle oultines
+        updateInstanceData(renderer->quadModel.instanceBufferhandle, renderer->glyphData, renderer->glyphCount*sizeof(InstanceDataWithRotation));
+        drawModels(&renderer->quadModel, &renderer->fontTextureShader, renderer->fontAtlasTexture, renderer->glyphCount, textScreenTransform, float16_identity(), lookingAxis, renderer->underWater, timeOfDay);
+
+        renderer->glyphCount = 0;
     }
 
 

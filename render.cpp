@@ -2,6 +2,8 @@
 #define MAX_CIRCLES_PER_RENDER 32
 #define MAX_RENDER_ITEMS_PER_INSTANCE 32
 #define MAX_WORLD_ITEMS_PER_INSTANCE 50000
+#define MAX_GLYPHS_PER_RENDER 50000
+
 
 struct Vertex {
     float3 pos;
@@ -141,6 +143,7 @@ struct Renderer {
     // uint32_t skyboxTextureHandle;
     uint32_t breakBlockTexture;
     uint32_t atlasTexture;
+    uint32_t fontAtlasTexture;
 
     int cubeCount;
     InstanceData cubeData[MAX_CUBES_PER_RENDER];
@@ -163,10 +166,14 @@ struct Renderer {
     int alphaItemCount; //NOTE: The blocks that are rotating
     InstanceDataWithRotation alphaItemData[MAX_WORLD_ITEMS_PER_INSTANCE];
 
+    int glyphCount; 
+    InstanceDataWithRotation glyphData[MAX_GLYPHS_PER_RENDER];
+
     Shader blockShader;
     Shader blockPickupShader;
     Shader quadShader;
     Shader quadTextureShader;
+    Shader fontTextureShader;
     Shader skyboxShader;
     Shader blockColorShader;
     Shader blockSameTextureShader;
@@ -207,6 +214,25 @@ InstanceDataWithRotation *pushAtlasQuad_(Renderer *renderer, float3 worldP, floa
     return c;
 }
 
+InstanceDataWithRotation *pushGlyphQuad_(Renderer *renderer, float3 worldP, float3 scale, float4 uvs, float4 color) {
+    InstanceDataWithRotation *c = 0;
+    if(renderer->glyphCount < arrayCount(renderer->glyphData)) {
+        c = &renderer->glyphData[renderer->glyphCount++];
+    } else {
+        assert(false);
+    }
+    
+    
+    if(c) {
+        float16 T = float16_identity();
+        c->M = float16_set_pos(float16_scale(T, scale), worldP);
+        c->color = color;
+        c->uv = uvs;
+    }
+
+    return c;
+}
+
 float2 getUVCoordForBlock(BlockType type) {
     float2 uv = make_float2(0, 0);
      if(type == BLOCK_GRASS) {
@@ -238,6 +264,10 @@ void pushGrassQuad(Renderer *renderer, float3 worldP, float height, float4 color
 
 void pushWaterQuad(Renderer *renderer, float3 worldP, float4 color) {
     pushAtlasQuad_(renderer, plus_float3(worldP, make_float3(0, 0.5f, 0)), make_float3(1, 1, 1), make_float3(90, 0, 0), make_float4(0.25f, 0.5f, 0, 0.25f), color, false);
+}
+
+void pushGlyph(Renderer *renderer, float3 worldP, float3 scale, float4 uvs, float4 color) {
+    pushGlyphQuad_(renderer, worldP, scale, uvs, color);
 }
 
 void pushHUDOutline(Renderer *renderer, float3 worldP, float2 scale, float4 color) {

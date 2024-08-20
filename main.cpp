@@ -2,6 +2,7 @@
 #include "./entity.cpp"
 #include "./render.cpp"
 #include "./opengl.cpp"
+#include "./font.cpp"
 // #include "./animation.cpp"
 
 Renderer *initRenderer(Texture grassTexture, Texture breakBlockTexture, Texture atlasTexture) {
@@ -9,6 +10,7 @@ Renderer *initRenderer(Texture grassTexture, Texture breakBlockTexture, Texture 
     
     renderer->cubeCount = 0;
     renderer->atlasQuadCount = 0;
+    renderer->glyphCount = 0;
     renderer->terrainTextureHandle = grassTexture.handle;
     // renderer->skyboxTextureHandle = skyboxTexture.handle;
     // renderer->circleHandle = circleTexture.handle;
@@ -18,6 +20,8 @@ Renderer *initRenderer(Texture grassTexture, Texture breakBlockTexture, Texture 
 
     renderer->blockShader = loadShader(blockVertexShader, blockFragShader);
     renderer->quadTextureShader = loadShader(quadVertexShader, quadTextureFragShader);
+    renderer->fontTextureShader = loadShader(quadVertexShader, fontTextureFragShader);
+    
     renderer->skyboxShader = loadShader(skyboxVertexShader, skyboxFragShader);
     renderer->quadShader = loadShader(quadVertexShader, quadFragShader);
     renderer->blockPickupShader = loadShader(blockPickupVertexShader, blockPickupFragShader);
@@ -102,7 +106,15 @@ void drawHUD(GameState *gameState) {
             pushSpriteForInventoryType(gameState->renderer, screenP, scale, make_float4(1, 1, 1, 1), item->type);
 
             //NOTE: Draw the number of items we have
-            //TODO: Don't have text support yet
+            char s[255];
+            sprintf (s, "%d", item->count);
+            float2 numPos = make_float2(screenP.x, screenP.y);
+            
+            //NOTE: Adjust the screen position from using the HUD projection T to the text projection T which uses y+ve down and starts in top corner. Both are 100 units wide. 
+            numPos.x = 50 + numPos.x;
+            numPos.y = -1*(numPos.y - 50);
+        
+            renderText(gameState->renderer, &gameState->mainFont, s, numPos, 0.2f);
             
         }
     }
@@ -150,6 +162,9 @@ void updateGame(GameState *gameState) {
     storeEntitiesAfterFrameUpdate(gameState);
     
     float16 screenGuiT = make_ortho_matrix_origin_center(100, 100*gameState->aspectRatio_y_over_x, MATH_3D_NEAR_CLIP_PlANE, MATH_3D_FAR_CLIP_PlANE);
+    float16 textGuiT = make_ortho_matrix_top_left_corner_y_down(100, 100*gameState->aspectRatio_y_over_x, MATH_3D_NEAR_CLIP_PlANE, MATH_3D_FAR_CLIP_PlANE);
+
+    
     float16 screenT = make_perspective_matrix_origin_center(gameState->camera.fov, MATH_3D_NEAR_CLIP_PlANE, MATH_3D_FAR_CLIP_PlANE, 1.0f / gameState->aspectRatio_y_over_x);
     float16 cameraT = getCameraX(gameState->camera.T);
     float16 cameraTWithoutTranslation = getCameraX_withoutTranslation(gameState->camera.T);
@@ -184,8 +199,6 @@ void updateGame(GameState *gameState) {
         }
     }
 
-    // printf("Player Y: %f\n", gameState->player.T.pos.y);
-
     // pushCircleOutline(gameState->renderer, make_float3(0, 0, 1), 50, make_float4(1, 1, 1, 1));
     float16 rot = eulerAnglesToTransform(gameState->player.T.rotation.y, gameState->player.T.rotation.x, gameState->player.T.rotation.z);
     float3 lookingAxis = make_float3(rot.E_[2][0], rot.E_[2][1], rot.E_[2][2]);
@@ -194,7 +207,7 @@ void updateGame(GameState *gameState) {
 
     drawHUD(gameState);
     
-    rendererFinish(gameState->renderer, screenT, cameraT, screenGuiT, lookingAxis, cameraTWithoutTranslation, timeOfDayValues);
+    rendererFinish(gameState->renderer, screenT, cameraT, screenGuiT, textGuiT, lookingAxis, cameraTWithoutTranslation, timeOfDayValues);
 
     //NOTE: End Mouse interaction if release
     if(gameState->mouseLeftBtn == MOUSE_BUTTON_RELEASED && gameState->currentInteraction.isValid) {

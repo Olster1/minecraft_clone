@@ -27,6 +27,8 @@ struct GameState {
     float2 mouseP_screenSpace;
     float2 mouseP_01;
     float2 lastMouseP;
+    
+    Font mainFont;
 
     Texture grassTexture;
     Texture soilTexture;
@@ -137,7 +139,7 @@ void initGameState(GameState *gameState) {
     loadWavFile(&gameState->blockFinishSound, "./sounds/blockFinish.wav", &gameState->audioSpec);
     loadWavFile(&gameState->fallBigSound, "./sounds/fallbig.wav", &gameState->audioSpec);
     loadWavFile(&gameState->pickupSound, "./sounds/pop.wav", &gameState->audioSpec);
-    
+
     // loadWavFile(&gameState->bgMusic, "./sounds/sweeden.wav", &gameState->audioSpec);
 
     gameState->gravityOn = true;
@@ -160,6 +162,9 @@ void initGameState(GameState *gameState) {
     gameState->currentMiningBlock = 0;
 
     gameState->renderer = initRenderer(gameState->grassTexture, breakBlockTexture, atlasTexture);
+
+    gameState->mainFont = initFontAtlas("./fonts/Minecraft.ttf");
+    gameState->renderer->fontAtlasTexture = gameState->mainFont.textureHandle;
 
     gameState->placeBlockTimer = -1;
     gameState->mineBlockTimer = -1;

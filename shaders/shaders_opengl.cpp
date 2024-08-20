@@ -232,6 +232,17 @@ static char *quadTextureFragShader =
     "color = diffSample*color_frag;"
 "}";
 
+static char *fontTextureFragShader = 
+"#version 330\n"
+"in vec4 color_frag;" 
+"in vec2 uv_frag; "
+"uniform sampler2D diffuse;"
+"out vec4 color;"
+"void main() {"
+    "vec4 diffSample = texture(diffuse, uv_frag);"
+    "color = vec4(diffSample.r);"
+"}";
+
 static char *quadFragShader = 
 "#version 330\n"
 "in vec4 color_frag;" 

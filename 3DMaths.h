@@ -560,6 +560,45 @@ static float16 make_ortho_matrix_bottom_left_corner_01NDC(float planeWidth, floa
 	return result;
 }
 
+float16 float16_multiply(float16 a, float16 b) {
+    float16 result = {};
+    
+    for(int i = 0; i < 4; ++i) {
+        for(int j = 0; j < 4; ++j) {
+            
+            result.E_[i][j] = 
+                a.E_[0][j] * b.E_[i][0] + 
+                a.E_[1][j] * b.E_[i][1] + 
+                a.E_[2][j] * b.E_[i][2] + 
+                a.E_[3][j] * b.E_[i][3];
+            
+        }
+    }
+    
+    return result;
+}
+
+static float16 make_ortho_matrix_top_left_corner_y_down(float planeWidth, float planeHeight, float nearClip, float farClip) {
+	//NOTE: The size of the plane we're projection onto
+	float a = 2.0f / planeWidth;
+	float b = 2.0f / planeHeight;
+
+	//NOTE: We can offset the origin of the viewport by adding these to the translation part of the matrix
+	float originOffsetX = -1; //NOTE: Defined in NDC space
+	float originOffsetY = 1; //NOTE: Defined in NDC space
+
+
+	float16 result = {{
+	        a, 0, 0, 0,
+	        0, -b, 0, 0,
+	        0, 0, 1.0f/(farClip - nearClip), 0,
+	        originOffsetX, originOffsetY, nearClip/(nearClip - farClip), 1
+	    }};
+
+
+	return result;
+}
+
 static float16 make_ortho_matrix_top_left_corner(float planeWidth, float planeHeight, float nearClip, float farClip) {
 	//NOTE: The size of the plane we're projection onto
 	float a = 2.0f / planeWidth;
@@ -804,23 +843,6 @@ float16 float16_angle_aroundZ(float angle_radians) {
 //     return result;
 // }
 
-float16 float16_multiply(float16 a, float16 b) {
-    float16 result = {};
-    
-    for(int i = 0; i < 4; ++i) {
-        for(int j = 0; j < 4; ++j) {
-            
-            result.E_[i][j] = 
-                a.E_[0][j] * b.E_[i][0] + 
-                a.E_[1][j] * b.E_[i][1] + 
-                a.E_[2][j] * b.E_[i][2] + 
-                a.E_[3][j] * b.E_[i][3];
-            
-        }
-    }
-    
-    return result;
-}
 
 float4 float16_transform(float16 i, float4 p) {
 	float4 result;

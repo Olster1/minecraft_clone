@@ -29,7 +29,7 @@ On Hiatus at the moment!
 - [x] Add to my projects list
 - [x] Build confidence
 
-![](screenshot1.png) 
+![](screenshot2.png) 
 
 ## Building on Mac OS
 run ```./run.sh``` to build and run the program. 

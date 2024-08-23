@@ -42,6 +42,7 @@ Renderer *initRenderer(Texture grassTexture, Texture breakBlockTexture, Texture 
 #include <stdio.h>
 #include "./sound.cpp"
 #include "./perlin.cpp"
+#include "./SimplexNoise.cpp"
 #include "./interaction.cpp"
 #include "./gameState.cpp"
 #include "./chunk.cpp"

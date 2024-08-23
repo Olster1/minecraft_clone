@@ -227,7 +227,7 @@ void fillChunk(GameState *gameState, Chunk *chunk) {
             int worldX = x + chunk->x*CHUNK_DIM;
             int worldZ = z + chunk->z*CHUNK_DIM;
 
-            float perlinValueLow = perlin2d(worldX, worldZ, 0.00522, 16);
+            float perlinValueLow = perlin2d(worldX, worldZ, 0.00522, 16); //SimplexNoise_fractal_2d(16, worldX, worldZ, 0.00522);
             float perlinValueHigh = 0;//perlin2d(worldX, worldZ, 10, 4);
             
             float waterElevation = 40;
@@ -238,11 +238,19 @@ void fillChunk(GameState *gameState, Chunk *chunk) {
                 BlockFlags flags = BLOCK_EXISTS_COLLISION;
                 int worldY = y + chunk->y*CHUNK_DIM;
 
+                bool underWater = worldY < waterElevation;
+
                 if(worldY < terrainHeight) {
                     BlockType type = BLOCK_GRASS;
                     bool isTop = false;
 
-                    if(worldY < (terrainHeight - 1)) {
+                    if(underWater) {
+                        float value = SimplexNoise_fractal_3d(4, worldX, worldY, worldZ, 0.2f);
+                        type = BLOCK_SOIL;
+                        if(value < 0) {
+                            type = BLOCK_STONE;
+                        }
+                    } else if(worldY < (terrainHeight - 1)) {
                         if(worldY >= ((terrainHeight - 1) - subSoilDepth)) {
                             type = BLOCK_SOIL;
                         } else {

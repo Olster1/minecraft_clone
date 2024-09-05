@@ -9,6 +9,7 @@ uint32_t getHashForChunk(int x, int y, int z) {
     uint32_t hash = get_crc32((char *)values, arrayCount(values)*sizeof(int));
     hash = hash & (CHUNK_LIST_SIZE - 1);
     assert(hash < CHUNK_LIST_SIZE);
+    assert(hash >= 0);
     return hash;
 }
 
@@ -27,6 +28,8 @@ float getBlockTime(BlockType type) {
         result = 4.0f;
     } else if(type == BLOCK_TREE_LEAVES) {
         result = 0.1f;
+    } else if(type == BLOCK_GRASS_ENTITY) {
+        result = 0.05f;
     }
 
     return result;
@@ -36,6 +39,10 @@ enum BlockFlags {
     BLOCK_FLAGS_NONE = 0,
     BLOCK_EXISTS_COLLISION = 1 << 0,
     BLOCK_EXISTS = 1 << 1, //NOTE: All blocks have this
+    BLOCK_FLAG_STACKABLE = 1 << 2, //NOTE: Whether you can put a block ontop of this one
+    BLOCK_NOT_PICKABLE = 1 << 3, //NOTE: Whether it destroys without dropping itself to be picked up i.e. grass just gets destroyed.
+    BLOCK_FLAGS_NO_MINE_OUTLINE = 1 << 4, //NOTE: Whether it shows the mining outline
+    BLOCK_FLAGS_AO = 1 << 5, //NOTE: Whether it shows the mining outline
 };
 
 uint64_t getInvalidAoMaskValue() {
@@ -50,7 +57,7 @@ Block spawnBlock(int x, int y, int z, BlockType type, BlockFlags flags) {
     b.y = y;
     b.z = z;
 
-    b.flags = flags | BLOCK_EXISTS;
+    b.flags = flags | BLOCK_EXISTS | BLOCK_FLAGS_AO | BLOCK_FLAG_STACKABLE;
 
     b.type = type;
 
@@ -67,9 +74,9 @@ Block spawnBlock(int x, int y, int z, BlockType type, BlockFlags flags) {
 int getBlockIndex(int x, int y, int z) {
     int result = 0;
 
-    result += z*CHUNK_DIM*CHUNK_DIM;
-    result += y*CHUNK_DIM;
-    result += x;
+    result += abs(z)*CHUNK_DIM*CHUNK_DIM;
+    result += abs(y)*CHUNK_DIM;
+    result += abs(x);
 
     assert(result < CHUNK_DIM*CHUNK_DIM*CHUNK_DIM);
 
@@ -183,8 +190,10 @@ void generateTree(GameState *gameState, Chunk *chunk, float3 worldP) {
     int z = 0;
     int x = 0;
 
+    BlockFlags leaveFlags = (BlockFlags)(BLOCK_EXISTS_COLLISION | BLOCK_FLAGS_NO_MINE_OUTLINE);
+
     float3 p = plus_float3(worldP, make_float3(x, (treeHeight + 1), z));
-    addBlock(gameState, p, BLOCK_TREE_LEAVES, BLOCK_EXISTS_COLLISION);
+    addBlock(gameState, p, BLOCK_TREE_LEAVES, leaveFlags);
 
     float3 offsets[] = {make_float3(1, treeHeight, 0), make_float3(1, treeHeight, 1), 
                         make_float3(-1, treeHeight, -1), make_float3(1, treeHeight, -1), 
@@ -197,7 +206,7 @@ void generateTree(GameState *gameState, Chunk *chunk, float3 worldP) {
             float3 o = offsets[i];
             o.y -= j;
             float3 p = plus_float3(worldP, o);
-            addBlock(gameState, p, BLOCK_TREE_LEAVES, BLOCK_EXISTS_COLLISION);
+            addBlock(gameState, p, BLOCK_TREE_LEAVES, leaveFlags);
         }
     }
     treeHeight -=1;
@@ -245,7 +254,7 @@ void fillChunk(GameState *gameState, Chunk *chunk) {
                     bool isTop = false;
 
                     if(underWater) {
-                        float value = SimplexNoise_fractal_3d(4, worldX, worldY, worldZ, 0.2f);
+                        float value = SimplexNoise_fractal_3d(8, worldX, worldY, worldZ, 0.1f);
                         type = BLOCK_SOIL;
                         if(value < 0) {
                             type = BLOCK_STONE;
@@ -275,9 +284,11 @@ void fillChunk(GameState *gameState, Chunk *chunk) {
                         prob = (float)rand() / (float)RAND_MAX;
                         if(isTop && !(worldX % 2 - grassProb) && !(worldZ % 2 - grassProb) && prob > 0.5f) {
                             EntityType grassType = ENTITY_GRASS_LONG;
+                            float height = 2;
                             prob = (float)rand() / (float)RAND_MAX;
                             if(prob < 0.5f) {
                                 grassType = ENTITY_GRASS_SHORT;
+                                height = 1;
                             }
 
                             int chunkX = worldX / CHUNK_DIM;
@@ -291,8 +302,21 @@ void fillChunk(GameState *gameState, Chunk *chunk) {
                             } else {
                                 c = getChunkNoGenerate(gameState, chunkX, chunkY, chunkZ);
                             }
+
+                            int localX = x;
+                            int localY = (worldY + 1) - (CHUNK_DIM*chunkY); 
+                            int localZ = z;
+
+                            //NOTE: New way by making a block entity
+                            int blockIndex = getBlockIndex(localX, localY, localZ);
+                            if(blockIndex < arrayCount(chunk->blocks)) {
+                                chunk->blocks[blockIndex] = spawnBlock(localX, localY, localZ, BLOCK_GRASS_ENTITY, (BlockFlags)(flags | BLOCK_NOT_PICKABLE | BLOCK_FLAGS_NO_MINE_OUTLINE));
+                                chunk->blocks[blockIndex].grassHeight = height;
+                                chunk->blocks[blockIndex].flags &= ~(BLOCK_FLAGS_AO | BLOCK_FLAG_STACKABLE | BLOCK_EXISTS_COLLISION);
+                            }
                             
-                            initGrassEntity(c, make_float3(worldX, worldY + 1, worldZ), grassType, gameState->randomStartUpID);
+                            //NOTE: Old way making just entities
+                            //initGrassEntity(c, make_float3(worldX, worldY + 1, worldZ), grassType, gameState->randomStartUpID);
                         }
                     }
                     
@@ -412,7 +436,7 @@ Block *blockExistsReadOnly(GameState *gameState, int worldx, int worldy, int wor
     if(c) {
         int blockIndex = getBlockIndex(localx, localy, localz);
         assert(blockIndex < arrayCount(c->blocks));
-        if(blockIndex < arrayCount(c->blocks) && c->blocks[blockIndex].exists && c->blocks[blockIndex].flags & flags) {
+        if(blockIndex < arrayCount(c->blocks) && c->blocks[blockIndex].exists && (c->blocks[blockIndex].flags & flags)) {
             found = &c->blocks[blockIndex];
         }
     }
@@ -420,47 +444,50 @@ Block *blockExistsReadOnly(GameState *gameState, int worldx, int worldy, int wor
     return found;
 }
 
-uint64_t getAOMask(GameState *gameState, const float3 worldP) {
+uint64_t getAOMask(GameState *gameState, const float3 worldP, BlockFlags blockFlags) {
     uint64_t result = 0;
 
-    for(int i = 0; i < arrayCount(global_cubeData); ++i) {
-        Vertex v = global_cubeData[i];
+    if(blockFlags & BLOCK_FLAGS_AO) 
+    {
+        for(int i = 0; i < arrayCount(global_cubeData); ++i) {
+            Vertex v = global_cubeData[i];
 
-        bool blockValues[3] = {false, false, false};
-        
-        for(int j = 0; j < arrayCount(blockValues); j++) {
-            float3 p = plus_float3(worldP,gameState->aoOffsets[i].offsets[j]);
-            if(blockExistsReadOnly(gameState, p.x, p.y, p.z, (BlockFlags)0xFFFFFFFF)) {
-                blockValues[j] = true; 
+            bool blockValues[3] = {false, false, false};
+            
+            for(int j = 0; j < arrayCount(blockValues); j++) {
+                float3 p = plus_float3(worldP,gameState->aoOffsets[i].offsets[j]);
+                if(blockExistsReadOnly(gameState, p.x, p.y, p.z, BLOCK_FLAGS_AO)) {
+                    blockValues[j] = true; 
+                }
             }
+
+            //NOTE: Get the ambient occulusion level
+            uint64_t value = 0;
+            //SPEED: Somehow make this not into if statments
+            if(blockValues[0] && blockValues[2])  {
+                value = 3;
+            } else if((blockValues[0] && blockValues[1])) {
+                assert(!blockValues[2]);
+                value = 2;
+            } else if((blockValues[1] && blockValues[2])) {
+                assert(!blockValues[0]);
+                value = 2;
+            } else if(blockValues[0]) {
+                assert(!blockValues[1]);
+                assert(!blockValues[2]);
+                value = 1;
+            } else if(blockValues[1]) {
+                assert(!blockValues[0]);
+                assert(!blockValues[2]);
+                value = 1;
+            } else if(blockValues[2]) {
+                assert(!blockValues[0]);
+                assert(!blockValues[1]);
+                value = 1;
+            } 
+
+            result |= (value << (uint64_t)(i*2)); //NOTE: Add the mask value
         }
-
-        //NOTE: Get the ambient occulusion level
-        uint64_t value = 0;
-        //SPEED: Somehow make this not into if statments
-        if(blockValues[0] && blockValues[2])  {
-            value = 3;
-        } else if((blockValues[0] && blockValues[1])) {
-            assert(!blockValues[2]);
-            value = 2;
-        } else if((blockValues[1] && blockValues[2])) {
-            assert(!blockValues[0]);
-            value = 2;
-        } else if(blockValues[0]) {
-            assert(!blockValues[1]);
-            assert(!blockValues[2]);
-            value = 1;
-        } else if(blockValues[1]) {
-            assert(!blockValues[0]);
-            assert(!blockValues[2]);
-            value = 1;
-        } else if(blockValues[2]) {
-            assert(!blockValues[0]);
-            assert(!blockValues[1]);
-            value = 1;
-        } 
-
-        result |= (value << (uint64_t)(i*2)); //NOTE: Add the mask value
     }
 
     return result;
@@ -483,11 +510,14 @@ void drawChunk(GameState *gameState, Chunk *c) {
             BlockType t = b->type;
 
             if(t == BLOCK_WATER) {
+                //NOTE: Only draw the water quad if there isn't any block above it - notice the +1 on the y coord
                 if(!blockExistsReadOnly(gameState, worldP.x, worldP.y + 1, worldP.z, (BlockFlags)0xFFFFFFFF)) {
                     //NOTE: Draw the water
                     pushWaterQuad(gameState->renderer, worldP, make_float4(1, 1, 1, 0.6f));
                 }
                 
+            } else if(t == BLOCK_GRASS_ENTITY) {
+                pushGrassQuad(gameState->renderer, worldP, b->grassHeight, make_float4(1, 1, 1, 1));
             } else {
                 if(b->hitBlock) {
                     // t = BLOCK_SOIL;
@@ -496,7 +526,7 @@ void drawChunk(GameState *gameState, Chunk *c) {
 
                 //NOTE: Calculate the aoMask if haven't yet
                 if(b->aoMask & (((uint64_t)(1)) << 63)) { //NOTE: top bit is set 
-                    b->aoMask = getAOMask(gameState, worldP);
+                    b->aoMask = getAOMask(gameState, worldP, (BlockFlags)b->flags);
                 }
 
                 uint64_t AOMask = b->aoMask;
@@ -635,10 +665,67 @@ void addItemToInventory(GameState *gameState, Entity *e, int count) {
     }
 }
 
+void updateParticlers(GameState *gameState) {
+    float3 cameraPos = plus_float3(gameState->cameraOffset, gameState->player.T.pos);
+    
+    for(int i = 0; i < gameState->particlerCount; ) {
+        int addend = 1;
+        
+
+        Particler *p = &gameState->particlers[i];
+
+        bool shouldRemove = updateParticler(gameState->renderer, p, cameraPos, gameState->dt);
+
+        if(shouldRemove) {
+            //NOTE: Move from the end
+            gameState->particlers[i] = gameState->particlers[--gameState->particlerCount];
+            addend = 0;
+        } 
+
+        i += addend;
+    }
+    
+}
+
 void updateEntities(GameState *gameState) {
     Entity *player = &gameState->player;
+
+    if(gameState->mouseLeftBtn == MOUSE_BUTTON_DOWN) {
+        Entity *shortestEntity = 0;
+        float shortestT = FLT_MAX;
+        int entityIndex = -1;
+
+        float16 rot = eulerAnglesToTransform(player->T.rotation.y, player->T.rotation.x, player->T.rotation.z);
+
+        float3 lookingAxis = make_float3(rot.E_[2][0], rot.E_[2][1], rot.E_[2][2]);
+
+        for(int i = 0; i < gameState->entityCount; ++i) {
+            Entity *e = gameState->entitiesForFrame[i];
+            if(e->flags & ENTITY_DESTRUCTIBLE) {
+                Rect3f b = make_rect3f_center_dim(e->T.pos, e->T.scale);
+                float3 hitPoint;
+                float3 normalVector;
+                float tAt;
+                if(easyMath_rayVsAABB3f(plus_float3(gameState->cameraOffset, player->T.pos), lookingAxis, b, &hitPoint, &tAt, &normalVector)) {
+                    if(tAt <= DISTANCE_CAN_PLACE_BLOCK && tAt < shortestT) {
+                        shortestT = tAt;
+                        shortestEntity = e;
+                        entityIndex = i;
+                    }
+                }
+            }
+        }
+
+        if(shortestEntity) {
+            assert(gameState->entityToDeleteCount < arrayCount(gameState->entitiesToDelete));
+            gameState->entitiesToDelete[gameState->entityToDeleteCount++] = entityIndex;
+            shortestEntity->flags |= ENTITY_DELETED;
+        }
+    }
+
     for(int i = 0; i < gameState->entityCount; ++i) {
         Entity *e = gameState->entitiesForFrame[i];
+        
 
         if(e->flags & SHOULD_ROTATE) {
             //NOTE: Update the rotation
@@ -649,7 +736,7 @@ void updateEntities(GameState *gameState) {
 
         if(e->type == ENTITY_PICKUP_ITEM) {
 
-            //NOTE: Update Fall
+            //NOTE: Pick up the block
             Rect3f bounds = rect3f_minowski_plus(player->T.scale, e->T.scale, e->T.pos);
             if(in_rect3f_bounds(bounds, player->T.pos)) {
                 if(gameState->inventoryCount < arrayCount(gameState->playerInventory)) {
@@ -657,7 +744,6 @@ void updateEntities(GameState *gameState) {
                     addItemToInventory(gameState, e, 1);
 
                     assert(gameState->entityToDeleteCount < arrayCount(gameState->entitiesToDelete));
-
                     gameState->entitiesToDelete[gameState->entityToDeleteCount++] = i;
                     e->flags |= ENTITY_DELETED;
 

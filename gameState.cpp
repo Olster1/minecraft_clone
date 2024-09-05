@@ -27,6 +27,9 @@ struct GameState {
     float2 mouseP_screenSpace;
     float2 mouseP_01;
     float2 lastMouseP;
+
+    int particlerCount;
+    Particler particlers[512];
     
     Font mainFont;
 
@@ -57,6 +60,8 @@ struct GameState {
     WavFile bgMusic;
     WavFile fallBigSound;
     WavFile pickupSound;
+
+    float3 startP;
 
     PlayingSound *miningSoundPlaying;
 
@@ -178,6 +183,8 @@ void initGameState(GameState *gameState) {
     gameState->randomStartUpID = rand();
 
     createAOOffsets(gameState);
+
+    gameState->particlerCount = 0;
 
     // loadGLTF("./models/fox/Fox.gltf");
     // loadGLTF("./models/boxAnimated/BoxAnimated.gltf");

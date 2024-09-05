@@ -1,0 +1,9 @@
+{
+    "C_Cpp.errorSquiggles": "disabled",
+    "files.associations": {
+        "__locale": "cpp",
+        "string": "cpp",
+        "string_view": "cpp",
+        "cmath": "cpp"
+    }
+}

@@ -1,3 +1,4 @@
+#define DISTANCE_CAN_PLACE_BLOCK 6
 #define CAMERA_OFFSET make_float3(0, 0.7f, 0)
 #define ITEM_PER_SLOT_COUNT 64
 #define ITEM_HOT_SPOTS 8
@@ -17,6 +18,7 @@ enum BlockType {
     BLOCK_TREE_WOOD,
     BLOCK_TREE_LEAVES,
     BLOCK_WATER,
+    BLOCK_GRASS_ENTITY,
 };
 
 struct TimeOfDayValues {
@@ -38,6 +40,10 @@ struct Block {
 
     uint64_t aoMask;
 
+    void *data;//NOTE: This can be null and is the specific data for each entity 
+
+    float grassHeight;
+
     BlockType type;
 };
 
@@ -49,7 +55,8 @@ struct CloudBlock {
 
 enum EntityFlags {
     SHOULD_ROTATE = 1 << 0,
-    ENTITY_DELETED = 1 << 1,
+    ENTITY_DESTRUCTIBLE = 1 << 1,
+    ENTITY_DELETED = 1 << 2,
 };
 
 struct EntityID {
@@ -181,6 +188,7 @@ void initGrassEntity(Chunk *chunk, float3 pos, EntityType type, int randomStartU
         e->T.pos = pos;
         e->T.scale = make_float3(1, 1, 1);
         e->offset = make_float3(0, 0, 0);
+        e->flags |= ENTITY_DESTRUCTIBLE;
     }
 }
 
@@ -198,4 +206,3 @@ void initPickupItem(Chunk *chunk, float3 pos, BlockType itemType, int randomStar
         e->flags = SHOULD_ROTATE;
     }
 }
-

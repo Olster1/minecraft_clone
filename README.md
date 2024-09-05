@@ -8,7 +8,7 @@ On Hiatus at the moment!
 
 ## Goals
 - [x] Collision & physics
-- [x] Block mining (need to add paticle efffects & gravity affected pickup blocks)
+- [x] Block mining (need to add gravity affected pickup blocks)
 - [x] Clouds & Sky 
 - [x] Ambient Occulsion of blocks - need to speed up
 - [x] Tree & grasses generation

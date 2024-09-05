@@ -3,6 +3,7 @@
 #include "./render.cpp"
 #include "./opengl.cpp"
 #include "./font.cpp"
+#include "./particles.cpp"
 // #include "./animation.cpp"
 
 Renderer *initRenderer(Texture grassTexture, Texture breakBlockTexture, Texture atlasTexture) {
@@ -160,12 +161,26 @@ void updateGame(GameState *gameState) {
     //NOTE: Update the entities
     updateEntities(gameState);
 
+    //NOTE: Update particle systems
+    updateParticlers(gameState);
+
+    {
+        float3 cameraPos = plus_float3(gameState->cameraOffset, gameState->player.T.pos);
+        float3 pPos = gameState->startP;
+        float3 diffVec = minus_float3(cameraPos, pPos);
+        float d = radiansToDegrees((atan2(diffVec.z, diffVec.x) + 0.5f*PI32));
+        float3 rotation = make_float3(0, d, 0);
+
+        //NOTE: Draw the particle
+        pushAtlasQuad_(gameState->renderer, pPos, make_float3(2, 2, 2), rotation, make_float4(0, 0.25f, 0, 0.25f), make_float4(1, 1, 1, 1), false);
+
+    }
+   
     storeEntitiesAfterFrameUpdate(gameState);
     
     float16 screenGuiT = make_ortho_matrix_origin_center(100, 100*gameState->aspectRatio_y_over_x, MATH_3D_NEAR_CLIP_PlANE, MATH_3D_FAR_CLIP_PlANE);
     float16 textGuiT = make_ortho_matrix_top_left_corner_y_down(100, 100*gameState->aspectRatio_y_over_x, MATH_3D_NEAR_CLIP_PlANE, MATH_3D_FAR_CLIP_PlANE);
 
-    
     float16 screenT = make_perspective_matrix_origin_center(gameState->camera.fov, MATH_3D_NEAR_CLIP_PlANE, MATH_3D_FAR_CLIP_PlANE, 1.0f / gameState->aspectRatio_y_over_x);
     float16 cameraT = getCameraX(gameState->camera.T);
     float16 cameraTWithoutTranslation = getCameraX_withoutTranslation(gameState->camera.T);

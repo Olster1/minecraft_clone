@@ -15,6 +15,12 @@ static inline float get_abs_value(float value) {
 	return value;
 }
 
+inline float radiansToDegrees(float radians) {
+	float result = (radians / TAU32) * 360;
+	return result;
+
+}
+
 int MathMin(int a, int b) {
 	if(a < b) {
 		return a;
@@ -49,6 +55,9 @@ static float lerp(float a, float b, LerpTValue t) {
 	return (b - a)*t.value + a;
 }
 
+float randomBetween(float min, float max) {
+	return lerp(min, max, make_lerpTValue((float)rand() / RAND_MAX));
+}
 
 struct float2
 {

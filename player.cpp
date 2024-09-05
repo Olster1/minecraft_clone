@@ -7,7 +7,6 @@
 #define SHOW_CIRCLE_DELAY 2
 #define STAMINA_DRAIN_SPEED 0.1f
 #define STAMINA_RECHARGE_SPEED 0.1f
-#define DISTANCE_CAN_PLACE_BLOCK 6
 
 float3 getBlockWorldPos(BlockChunkPartner b) {
     float3 p = {};
@@ -53,7 +52,7 @@ BlockChunkPartner blockExists(GameState *gameState, int worldx, int worldy, int 
     return found;
 }
 
-BlockChunkPartner castRayAgainstBlock(GameState *gameState, float3 dir, float length, float3 start) {
+BlockChunkPartner castRayAgainstBlock(GameState *gameState, float3 dir, float length, float3 start, BlockFlags blockFlags = BLOCK_EXISTS) {
     int blockRadius = length;
     float shortestT = FLT_MAX;
     BlockChunkPartner block = {};
@@ -68,7 +67,7 @@ BlockChunkPartner castRayAgainstBlock(GameState *gameState, float3 dir, float le
                 int worldy = (int)pos.y + y;
                 int worldz = (int)pos.z + z;
 
-                BlockChunkPartner blockTemp = blockExists(gameState, worldx, worldy, worldz, BLOCK_EXISTS_COLLISION);
+                BlockChunkPartner blockTemp = blockExists(gameState, worldx, worldy, worldz, blockFlags);
 
                 if(blockTemp.block) {
                     //NOTE: Ray Cast against the block
@@ -152,11 +151,10 @@ void updatePlayerPhysics(GameState *gameState, Entity *e, float3 movementForFram
                             float distToGround = 0.1f;
                             if(tAt < distToGround && float3_dot(make_float3(0, 1, 0), normalVector) > slopeFactor) {
                                 e->grounded = true;
+
                             }
 
                             if(tAt <= float3_magnitude(dpVector) && tAt < shortestT) {
-                                // printf("NORMAL: %f %f %f\n", normalVector.x, normalVector.y, normalVector.z);
-                                // assert(normalVector.x != 0 || normalVector.y != 0 || normalVector.z != 0);
                                 shortestT = tAt;
                                 shortestNormalVector = normalVector;
                                 hit = true;
@@ -242,8 +240,9 @@ void invalidateSurroundingAoValues(GameState *gs, int worldX, int worldY, int wo
     
 }
 
-void placeBlock(GameState *gameState, float3 lookingAxis, Entity *e, BlockType blockType) {
-    BlockChunkPartner b = castRayAgainstBlock(gameState, lookingAxis, DISTANCE_CAN_PLACE_BLOCK, plus_float3(gameState->cameraOffset, e->T.pos));
+bool placeBlock(GameState *gameState, float3 lookingAxis, Entity *e, BlockType blockType) {
+    bool placed = false;
+    BlockChunkPartner b = castRayAgainstBlock(gameState, lookingAxis, DISTANCE_CAN_PLACE_BLOCK, plus_float3(gameState->cameraOffset, e->T.pos), BLOCK_EXISTS);
 
     if(b.block) {
         // b.block->hitBlock = true;
@@ -251,33 +250,54 @@ void placeBlock(GameState *gameState, float3 lookingAxis, Entity *e, BlockType b
         int worldY = b.sideNormal.y + b.block->y + (CHUNK_DIM*b.chunk->y);
         int worldZ = b.sideNormal.z + b.block->z + (CHUNK_DIM*b.chunk->z);
 
-        BlockChunkPartner nxtBlock = blockExists(gameState, worldX, worldY, worldZ, BLOCK_EXISTS_COLLISION);
+        //NOTE: check if stacking ontop of a block
+        if(b.sideNormal.y < 1 || (b.block->flags & BLOCK_FLAG_STACKABLE)){
+            BlockChunkPartner nxtBlock = blockExists(gameState, worldX, worldY, worldZ, BLOCK_EXISTS_COLLISION);
+            
+            //NOTE: There's no block there
+            if(!nxtBlock.block) {
+                float c = 1 + EPSILON_VALUE;
+                Rect3f blockBounds = make_rect3f_center_dim(make_float3(0, 0, 0), make_float3(c, c, c));
+                blockBounds = rect3f_minowski_plus(blockBounds, make_rect3f_center_dim(make_float3(0, 0, 0), e->T.scale), make_float3(worldX, worldY, worldZ));
+                if(!in_rect3f_bounds(blockBounds, e->T.pos)) {
+                    //NOTE: place block
+                    if(nxtBlock.chunk) {
+                        int localX = worldX - (CHUNK_DIM*nxtBlock.chunk->x); 
+                        int localY = worldY - (CHUNK_DIM*nxtBlock.chunk->y); 
+                        int localZ = worldZ - (CHUNK_DIM*nxtBlock.chunk->z); 
 
-        if(!nxtBlock.block) {
-            float c = 1 + EPSILON_VALUE;
-            Rect3f blockBounds = make_rect3f_center_dim(make_float3(0, 0, 0), make_float3(c, c, c));
-            blockBounds = rect3f_minowski_plus(blockBounds, make_rect3f_center_dim(make_float3(0, 0, 0), e->T.scale), make_float3(worldX, worldY, worldZ));
-            if(!in_rect3f_bounds(blockBounds, e->T.pos)) {
-                //NOTE: place block
-                if(nxtBlock.chunk) {
-                    int localX = worldX - (CHUNK_DIM*nxtBlock.chunk->x); 
-                    int localY = worldY - (CHUNK_DIM*nxtBlock.chunk->y); 
-                    int localZ = worldZ - (CHUNK_DIM*nxtBlock.chunk->z); 
-
-                    int blockIndex = getBlockIndex(localX, localY, localZ);
-                    if(blockIndex < arrayCount(nxtBlock.chunk->blocks)) {
-                        nxtBlock.chunk->blocks[blockIndex] = spawnBlock(localX, localY, localZ, blockType, BLOCK_EXISTS_COLLISION);
-                    } else {
-                        assert(false);
+                        int blockIndex = getBlockIndex(localX, localY, localZ);
+                        if(blockIndex < arrayCount(nxtBlock.chunk->blocks)) {
+                            nxtBlock.chunk->blocks[blockIndex] = spawnBlock(localX, localY, localZ, blockType, BLOCK_EXISTS_COLLISION);
+                            placed = true;
+                            invalidateSurroundingAoValues(gameState, worldX, worldY, worldZ);
+                            playSound(&gameState->blockFinishSound);
+                        } else {
+                            assert(false);
+                        }
                     }
-
-                    invalidateSurroundingAoValues(gameState, worldX, worldY, worldZ);
-
-                    playSound(&gameState->blockFinishSound);
                 }
             }
         }
     }
+    return placed;
+}
+
+
+
+Particler *findParticler(GameState *gameState, ParticlerId id) {
+    Particler *result = 0;
+    for(int i = 0; i < gameState->particlerCount && !result; ++i) {
+        Particler *p = &gameState->particlers[i];
+
+        if(particlerIdsMatch(p->id, id)) {
+            result = p;
+            break;
+        }
+    }
+
+    return result;
+
 }
 
 void highlightBlockLookingAt(GameState *gameState, float3 lookingAxis, Entity *e) {
@@ -290,7 +310,8 @@ void highlightBlockLookingAt(GameState *gameState, float3 lookingAxis, Entity *e
 
 
 void mineBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
-     BlockChunkPartner b = castRayAgainstBlock(gameState, lookingAxis, DISTANCE_CAN_PLACE_BLOCK, plus_float3(gameState->cameraOffset, e->T.pos));
+    float3 cameraPos = plus_float3(gameState->cameraOffset, e->T.pos);
+     BlockChunkPartner b = castRayAgainstBlock(gameState, lookingAxis, DISTANCE_CAN_PLACE_BLOCK, cameraPos);
 
         if(b.block) {
             //NOTE: Play sound
@@ -305,10 +326,27 @@ void mineBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
             //NOTE: Show progress on mining the block
             float percent = 1.0f - fmax(0, b.block->timeLeft / b.block->maxTime);
 
-            if(b.block->type != BLOCK_TREE_LEAVES) {
-                pushAlphaItem(gameState->renderer, getBlockWorldPos(b), make_float3(1.001f, 1.001f, 1.001f), make_float4(1, 1, 1, 0.7f), percent);
+            float3 blockWorldP = getBlockWorldPos(b);
+            if(!(b.block->flags & BLOCK_FLAGS_NO_MINE_OUTLINE)) {
+                //NOTE: the destruction outline
+                pushAlphaItem(gameState->renderer, blockWorldP, make_float3(1.001f, 1.001f, 1.001f), make_float4(1, 1, 1, 0.7f), percent);
             }
             
+            Particler *p = findParticler(gameState, makeParticlerId(b.block));
+            if(!p) {
+                //NOTE: Get reference to the particler
+                assert(gameState->particlerCount < arrayCount(gameState->particlers));
+                if(gameState->particlerCount < arrayCount(gameState->particlers)) {
+                    
+                    gameState->particlers[gameState->particlerCount++] = initParticler(0.1f, 10, make_rect3f_center_dim(plus_float3(blockWorldP, make_float3(0, 0.5f, 0)), make_float3(1, 0.1f, 1)), make_float4(0.5f, 0.75f, 0.5f, 0.75f), makeParticlerId(b.block));
+                    p = &gameState->particlers[gameState->particlerCount - 1];
+                }
+            }
+
+            assert(p);
+            if(p) {
+                p->lifeAt = 0; //NOTE: doesn't die while were still mining
+            }
 
             gameState->showCircleTimer = 0;
             pushFillCircle(gameState->renderer, make_float3(0, 0, 0), CIRCLE_RADIUS_MAX*percent, make_float4(1, 1, 1, 1));
@@ -316,8 +354,10 @@ void mineBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
             //NOTE: Check if block was successfully mined
             if(b.block->timeLeft <= 0) {
                 //NOTE: Add block to pickup 
-                initPickupItem(b.chunk, getBlockWorldPos(b), b.block->type, gameState->randomStartUpID);
-
+                if(!(b.block->flags & BLOCK_NOT_PICKABLE)) {
+                    initPickupItem(b.chunk, getBlockWorldPos(b), b.block->type, gameState->randomStartUpID);
+                }
+                
                 //NOTE: Destory the block
                 b.chunk->blocks[b.blockIndex].exists = false;
 
@@ -325,6 +365,8 @@ void mineBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
 
                 float3 worldP = getBlockWorldPos(b);
                 invalidateSurroundingAoValues(gameState, worldP.x, worldP.y, worldP.z);
+
+                //TODO: Check if we should destroy an above block like grass
 
                 //NOTE: Clear the block
                 b.block = 0;
@@ -449,9 +491,12 @@ void updatePlayer(GameState *gameState, Entity *e) {
         if(gameState->placeBlockTimer < 0.2f) {
             //NOTE: Check if user has any blocks in their inventory hotspot they can use
             if(gameState->playerInventory[gameState->currentInventoryHotIndex].count > 0) {
-                gameState->playerInventory[gameState->currentInventoryHotIndex].count--;
                 //NOTE: Placing a block down
-                placeBlock(gameState, lookingAxis, e, gameState->playerInventory[gameState->currentInventoryHotIndex].type);
+                bool placed = placeBlock(gameState, lookingAxis, e, gameState->playerInventory[gameState->currentInventoryHotIndex].type);
+                if(placed) {
+                    //NOTE: Decrement their inventory count
+                    gameState->playerInventory[gameState->currentInventoryHotIndex].count--;
+                }
             }
         }
 

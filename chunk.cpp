@@ -285,7 +285,7 @@ void getAOMask_multiThreaded(void *data_) {
 
     uint64_t result = 0;
 
-    if((blockFlags & BLOCK_FLAGS_AO) && (b->aoMask & (((uint64_t)(1)) << 62))) {
+    if((blockFlags & BLOCK_FLAGS_AO)) {
         for(int i = 0; i < arrayCount(global_cubeData); ++i) {
             Vertex v = global_cubeData[i];
 

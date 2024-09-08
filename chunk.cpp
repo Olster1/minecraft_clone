@@ -189,6 +189,31 @@ Chunk *getChunk_(GameState *gameState, int x, int y, int z, bool shouldGenerateC
     return chunk;
 }
 
+
+void getAOMaskForBlock(GameState *gameState, const float3 worldP, BlockFlags blockFlags, Block *b) {
+    if(b->aoMask & (((uint64_t)(1)) << 62)) {
+        //NOTE: Generating so don't start a new generation
+        // assert(false);
+    } else {
+        b->aoMask |= (((uint64_t)(1)) << 62);
+        b->aoMask |= (((uint64_t)(1)) << 63);
+
+        MemoryBarrier();
+        ReadWriteBarrier();
+
+        //NOTE: Multi-threaded version
+        AoMaskData *data = (AoMaskData *)malloc(sizeof(AoMaskData));
+        
+        data->gameState = gameState;
+        data->worldP = worldP;
+        data->blockFlags = blockFlags; 
+        data->b = b;
+
+        pushWorkOntoQueue(&gameState->threadsInfo, getAOMask_multiThreaded, data);
+
+    }
+}
+
 void resetChunksAO(GameState *gameState, int x, int y, int z, DimensionEnum dimension, int dimensionValue) {
     Chunk *c = getChunkReadOnly(gameState, x, y, z);
 
@@ -197,6 +222,7 @@ void resetChunksAO(GameState *gameState, int x, int y, int z, DimensionEnum dime
             Block *b = &c->blocks[i];
 
             if(b->exists) {
+                float3 worldP = make_float3(c->x*CHUNK_DIM + b->x, c->y*CHUNK_DIM + b->y, c->z*CHUNK_DIM + b->z);
                 if(dimension == DIMENSION_X && b->x == dimensionValue) {
                     b->aoMask = getInvalidAoMaskValue();
                 } else if(dimension == DIMENSION_Y && b->y == dimensionValue) {
@@ -337,31 +363,6 @@ void getAOMask_multiThreaded(void *data_) {
     assert(!(b->aoMask & (((uint64_t)(1)) << 63)));
 
     free(data_);
-}
-
-void getAOMaskForBlock(GameState *gameState, const float3 worldP, BlockFlags blockFlags, Block *b) {
-    if(b->aoMask & (((uint64_t)(1)) << 62)) {
-        //NOTE: Generating so don't start a new generation
-        // assert(false);
-    } else {
-        b->aoMask |= (((uint64_t)(1)) << 62);
-        b->aoMask |= (((uint64_t)(1)) << 63);
-
-        MemoryBarrier();
-        ReadWriteBarrier();
-
-        //NOTE: Multi-threaded version
-        AoMaskData *data = (AoMaskData *)malloc(sizeof(AoMaskData));
-        
-        data->gameState = gameState;
-        data->worldP = worldP;
-        data->blockFlags = blockFlags; 
-        data->b = b;
-
-        pushWorkOntoQueue(&gameState->threadsInfo, getAOMask_multiThreaded, data);
-        // getAOMask_multiThreaded(data);
-
-    }
 }
 
 void drawChunk(GameState *gameState, Chunk *c) {

@@ -65,6 +65,7 @@ ThreadWork *GetWorkOffQueue(ThreadsInfo *Info, ThreadWork **WorkRetrieved)
         if(SDL_AtomicCAS(&Info->IndexToTakeFrom, OldValue, NewValue) == SDL_TRUE)
         {
             *WorkRetrieved = Info->WorkQueue + OldValue;
+            assert(*WorkRetrieved);
         }
     }    
     return *WorkRetrieved;
@@ -83,7 +84,6 @@ void doThreadWork(ThreadsInfo *Info, int id)
         ReadWriteBarrier();
         
         Work->Finished = true;
-        
     }
 }
 

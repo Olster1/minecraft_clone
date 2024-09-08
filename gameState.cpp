@@ -63,6 +63,8 @@ struct GameState {
 
     float3 startP;
 
+    ThreadsInfo threadsInfo;
+
     PlayingSound *miningSoundPlaying;
 
     //NOTE: linked hash maps
@@ -185,6 +187,8 @@ void initGameState(GameState *gameState) {
     createAOOffsets(gameState);
 
     gameState->particlerCount = 0;
+
+    initThreadQueue(&gameState->threadsInfo);
 
     // loadGLTF("./models/fox/Fox.gltf");
     // loadGLTF("./models/boxAnimated/BoxAnimated.gltf");

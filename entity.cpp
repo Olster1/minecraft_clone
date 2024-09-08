@@ -124,12 +124,18 @@ struct CloudChunk {
     CloudChunk *next;
 };
 
+enum ChunkGenerationState {
+    CHUNK_NOT_GENERATED = 0, 
+    CHUNK_GENERATING = 1, 
+    CHUNK_GENERATED = 2, 
+};
+
 struct Chunk {
     int x;
     int y;
     int z;
 
-    bool isGenerated; //NOTE: Chunk might not be generated, so check first when you get one
+    ChunkGenerationState generateState; //NOTE: Chunk might not be generated, so check first when you get one
 
     //NOTE: 16 x 16 x 16
     //NOTE: Z Y X

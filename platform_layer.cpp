@@ -6,6 +6,7 @@
 #define arrayCount(array1) (sizeof(array1) / sizeof(array1[0]))
 #include "./3DMaths.h"
 #include <cstdio>
+#include "./threads.cpp"
 
 
 enum MouseKeyState {

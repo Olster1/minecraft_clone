@@ -31,8 +31,6 @@ BlockChunkPartner blockExists(GameState *gameState, int worldx, int worldy, int 
     int localz = worldz - (CHUNK_DIM*chunkZ); 
     
     Chunk *c = getChunk(gameState, chunkX, chunkY, chunkZ);
-    assert(c);
-    found.chunk = c;
 
     if(c) {
             assert(localx < CHUNK_DIM);
@@ -44,6 +42,7 @@ BlockChunkPartner blockExists(GameState *gameState, int worldx, int worldy, int 
                 // c->blocks[blockIndex].hitBlock = true;
                 found.block = &c->blocks[blockIndex];
                 found.blockIndex = blockIndex;
+                found.chunk = c;
             } else {
                 // found.block = 0;
             }

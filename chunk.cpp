@@ -45,6 +45,13 @@ enum BlockFlags {
     BLOCK_FLAGS_AO = 1 << 5, //NOTE: Whether it shows the mining outline
 };
 
+struct AoMaskData {
+    GameState *gameState;
+    float3 worldP;
+    BlockFlags blockFlags; 
+    Block *b;
+};
+
 uint64_t getInvalidAoMaskValue() {
     return (((uint64_t)(1)) << 63);
 }
@@ -153,188 +160,7 @@ CloudChunk *getCloudChunk(GameState *gameState, int x, int z) {
 Chunk *generateChunk(GameState *gameState, int x, int y, int z, uint32_t hash);
 Chunk *getChunk_(GameState *gameState, int x, int y, int z, bool shouldGenerateChunk, bool shouldGenerateFully);
 
-
-void addBlock(GameState *gameState, float3 worldP, BlockType type, BlockFlags flags) {
-    int chunkX = (int)worldP.x / CHUNK_DIM;
-    int chunkY = (int)worldP.y / CHUNK_DIM;
-    int chunkZ = (int)worldP.z / CHUNK_DIM;
-
-    //NOTE: entity swapped chunk, so move it to the new chunk
-    Chunk *c = getChunkNoGenerate(gameState, chunkX, chunkY, chunkZ);
-
-    assert(c);
-   
-    if(c) {
-        int localX = worldP.x - (CHUNK_DIM*chunkX); 
-        int localY = worldP.y - (CHUNK_DIM*chunkY); 
-        int localZ = worldP.z - (CHUNK_DIM*chunkZ); 
-
-        int blockIndex = getBlockIndex(localX, localY, localZ);
-        if(blockIndex < arrayCount(c->blocks)) {
-            c->blocks[blockIndex] = spawnBlock(localX, localY, localZ, type, flags);
-        } else {
-            assert(false);
-        }
-    } 
-}
-
-void generateTree(GameState *gameState, Chunk *chunk, float3 worldP) {
-    int treeHeight = (int)(3*((float)rand() / (float)RAND_MAX)) + 3;
-
-    for(int i = 0; i < treeHeight; ++i) {
-        float3 p = plus_float3(worldP, make_float3(0, i, 0));
-        //NOTE: Add block
-        addBlock(gameState, p, BLOCK_TREE_WOOD, BLOCK_EXISTS_COLLISION);
-    }
-
-    int z = 0;
-    int x = 0;
-
-    BlockFlags leaveFlags = (BlockFlags)(BLOCK_EXISTS_COLLISION | BLOCK_FLAGS_NO_MINE_OUTLINE);
-
-    float3 p = plus_float3(worldP, make_float3(x, (treeHeight + 1), z));
-    addBlock(gameState, p, BLOCK_TREE_LEAVES, leaveFlags);
-
-    float3 offsets[] = {make_float3(1, treeHeight, 0), make_float3(1, treeHeight, 1), 
-                        make_float3(-1, treeHeight, -1), make_float3(1, treeHeight, -1), 
-                        make_float3(-1, treeHeight, 1), make_float3(0, treeHeight, 1),
-                        make_float3(-1, treeHeight, 0), make_float3(0, treeHeight, -1), 
-                        };
-
-    for(int j = 0; j < 2; ++j) {
-        for(int i = 0; i < arrayCount(offsets); ++i) {
-            float3 o = offsets[i];
-            o.y -= j;
-            float3 p = plus_float3(worldP, o);
-            addBlock(gameState, p, BLOCK_TREE_LEAVES, leaveFlags);
-        }
-    }
-    treeHeight -=1;
-
-    float3 offsets2[] = {make_float3(2, treeHeight, 0), make_float3(2, treeHeight, 1), make_float3(2, treeHeight, 2), 
-                        make_float3(1, treeHeight, 2), make_float3(0, treeHeight, 2), 
-
-                        make_float3(-1, treeHeight, 2), make_float3(-2, treeHeight, 2), make_float3(-2, treeHeight, 1), 
-                        make_float3(-2, treeHeight, 0), make_float3(-2, treeHeight, -1), 
-
-                        make_float3(-2, treeHeight, -2), make_float3(-1, treeHeight, -2), 
-                        make_float3(0, treeHeight, -2), make_float3(1, treeHeight, -2),  make_float3(2, treeHeight, -2), make_float3(2, treeHeight, -1), 
-                        };
-
-    for(int i = 0; i < arrayCount(offsets2); ++i) {
-        float3 p = plus_float3(worldP, offsets2[i]);
-        addBlock(gameState, p, BLOCK_TREE_LEAVES, BLOCK_EXISTS_COLLISION);
-    }
-
-}
-
-void fillChunk(GameState *gameState, Chunk *chunk) {
-    int subSoilDepth = 5; //NOTE: 5 blocks to bedrock //TODO: could be random
-
-    for(int z = 0; z < CHUNK_DIM; ++z) {
-        for(int x = 0; x < CHUNK_DIM; ++x) {
-            int worldX = x + chunk->x*CHUNK_DIM;
-            int worldZ = z + chunk->z*CHUNK_DIM;
-
-            float perlinValueLow = perlin2d(worldX, worldZ, 0.00522, 16); //SimplexNoise_fractal_2d(16, worldX, worldZ, 0.00522);
-            float perlinValueHigh = 0;//perlin2d(worldX, worldZ, 10, 4);
-            
-            float waterElevation = 40;
-            float terrainAmplitude = 100;
-            float terrainHeight = perlinValueLow*terrainAmplitude + perlinValueHigh; 
-
-            for(int y = 0; y < CHUNK_DIM; ++y) {
-                BlockFlags flags = BLOCK_EXISTS_COLLISION;
-                int worldY = y + chunk->y*CHUNK_DIM;
-
-                bool underWater = worldY < waterElevation;
-
-                if(worldY < terrainHeight) {
-                    BlockType type = BLOCK_GRASS;
-                    bool isTop = false;
-
-                    if(underWater) {
-                        float value = SimplexNoise_fractal_3d(8, worldX, worldY, worldZ, 0.1f);
-                        type = BLOCK_SOIL;
-                        if(value < 0) {
-                            type = BLOCK_STONE;
-                        }
-                    } else if(worldY < (terrainHeight - 1)) {
-                        if(worldY >= ((terrainHeight - 1) - subSoilDepth)) {
-                            type = BLOCK_SOIL;
-                        } else {
-                            type = BLOCK_STONE;
-                        }
-                    } else {
-                        isTop = true;
-                    }
-
-                    int blockIndex = getBlockIndex(x, y, z);
-                    if(blockIndex < arrayCount(chunk->blocks)) {
-                        chunk->blocks[blockIndex] = spawnBlock(x, y, z, type, flags);
-                    }
-
-                    int treeProb = (int)(2*((float)rand() / (float)RAND_MAX));
-                    float prob = (float)rand() / (float)RAND_MAX;
-
-                    if(worldY > waterElevation && isTop && !(worldX % 4 - treeProb) && !(worldZ % 4 - treeProb) && prob > 0.5f) {
-                        generateTree(gameState, chunk, make_float3(worldX, worldY + 1, worldZ));
-                    } else if(worldY > waterElevation) {
-                        int grassProb = (int)(2*((float)rand() / (float)RAND_MAX));
-                        prob = (float)rand() / (float)RAND_MAX;
-                        if(isTop && !(worldX % 2 - grassProb) && !(worldZ % 2 - grassProb) && prob > 0.5f) {
-                            EntityType grassType = ENTITY_GRASS_LONG;
-                            float height = 2;
-                            prob = (float)rand() / (float)RAND_MAX;
-                            if(prob < 0.5f) {
-                                grassType = ENTITY_GRASS_SHORT;
-                                height = 1;
-                            }
-
-                            int chunkX = worldX / CHUNK_DIM;
-                            int chunkY = (worldY + 1) / CHUNK_DIM;
-                            int chunkZ = worldZ / CHUNK_DIM;
-
-                            Chunk *c = chunk;
-
-                            if(c->x == chunkX && c->z == chunkZ && c->y == chunkY) {
-
-                            } else {
-                                c = getChunkNoGenerate(gameState, chunkX, chunkY, chunkZ);
-                            }
-
-                            int localX = x;
-                            int localY = (worldY + 1) - (CHUNK_DIM*chunkY); 
-                            int localZ = z;
-
-                            //NOTE: New way by making a block entity
-                            int blockIndex = getBlockIndex(localX, localY, localZ);
-                            if(blockIndex < arrayCount(chunk->blocks)) {
-                                chunk->blocks[blockIndex] = spawnBlock(localX, localY, localZ, BLOCK_GRASS_ENTITY, (BlockFlags)(flags | BLOCK_NOT_PICKABLE | BLOCK_FLAGS_NO_MINE_OUTLINE));
-                                chunk->blocks[blockIndex].grassHeight = height;
-                                chunk->blocks[blockIndex].flags &= ~(BLOCK_FLAGS_AO | BLOCK_FLAG_STACKABLE | BLOCK_EXISTS_COLLISION);
-                            }
-                            
-                            //NOTE: Old way making just entities
-                            //initGrassEntity(c, make_float3(worldX, worldY + 1, worldZ), grassType, gameState->randomStartUpID);
-                        }
-                    }
-                    
-                } else if(worldY < waterElevation) {
-                    flags = BLOCK_FLAGS_NONE;
-                    //NOTE: Is water so add water
-                    int blockIndex = getBlockIndex(x, y, z);
-                    if(blockIndex < arrayCount(chunk->blocks)) {
-                        chunk->blocks[blockIndex] = spawnBlock(x, y, z, BLOCK_WATER, flags);
-                    }
-
-                }
-            }
-        }
-    }
-
-    chunk->isGenerated = true;
-}
+#include "./generate.cpp"
 
 Chunk *getChunk_(GameState *gameState, int x, int y, int z, bool shouldGenerateChunk, bool shouldGenerateFully) {
     uint32_t hash = getHashForChunk(x, y, z);
@@ -355,7 +181,8 @@ Chunk *getChunk_(GameState *gameState, int x, int y, int z, bool shouldGenerateC
         chunk = generateChunk(gameState, x, y, z, hash);
     }
 
-    if(chunk && shouldGenerateFully && !chunk->isGenerated) {
+    if(chunk && shouldGenerateFully && chunk->generateState == CHUNK_NOT_GENERATED) {
+        //NOTE: Launches multi-thread work
         fillChunk(gameState, chunk);
     } 
 
@@ -401,7 +228,7 @@ Chunk *generateChunk(GameState *gameState, int x, int y, int z, uint32_t hash) {
     chunk->x = x;
     chunk->y = y;
     chunk->z = z;
-    chunk->isGenerated = false;
+    chunk->generateState = CHUNK_NOT_GENERATED;
     chunk->entityCount = 0;
 
     //NOTE: Reset all AO of neighbouring blocks
@@ -444,11 +271,21 @@ Block *blockExistsReadOnly(GameState *gameState, int worldx, int worldy, int wor
     return found;
 }
 
-uint64_t getAOMask(GameState *gameState, const float3 worldP, BlockFlags blockFlags) {
+
+void getAOMask_multiThreaded(void *data_) {
+    AoMaskData *data = (AoMaskData *)data_;
+
+    GameState *gameState = data->gameState;
+    float3 worldP = data->worldP;
+    BlockFlags blockFlags = data->blockFlags; 
+    Block *b = data->b;
+
+    // assert((b->aoMask & (((uint64_t)(1)) << 62))); //NOTE: It might get invalidated while it's on the queue, so we want to ignore this work
+    // assert((b->aoMask & (((uint64_t)(1)) << 63)));
+
     uint64_t result = 0;
 
-    if(blockFlags & BLOCK_FLAGS_AO) 
-    {
+    if((blockFlags & BLOCK_FLAGS_AO) && (b->aoMask & (((uint64_t)(1)) << 62))) {
         for(int i = 0; i < arrayCount(global_cubeData); ++i) {
             Vertex v = global_cubeData[i];
 
@@ -490,10 +327,42 @@ uint64_t getAOMask(GameState *gameState, const float3 worldP, BlockFlags blockFl
         }
     }
 
-    return result;
+    MemoryBarrier();
+    ReadWriteBarrier();
 
+    b->aoMask = result;
+    
+    //NOTE: make sure these bits aren't set
+    assert(!(b->aoMask & (((uint64_t)(1)) << 62)));
+    assert(!(b->aoMask & (((uint64_t)(1)) << 63)));
+
+    free(data_);
 }
 
+void getAOMaskForBlock(GameState *gameState, const float3 worldP, BlockFlags blockFlags, Block *b) {
+    if(b->aoMask & (((uint64_t)(1)) << 62)) {
+        //NOTE: Generating so don't start a new generation
+        // assert(false);
+    } else {
+        b->aoMask |= (((uint64_t)(1)) << 62);
+        b->aoMask |= (((uint64_t)(1)) << 63);
+
+        MemoryBarrier();
+        ReadWriteBarrier();
+
+        //NOTE: Multi-threaded version
+        AoMaskData *data = (AoMaskData *)malloc(sizeof(AoMaskData));
+        
+        data->gameState = gameState;
+        data->worldP = worldP;
+        data->blockFlags = blockFlags; 
+        data->b = b;
+
+        pushWorkOntoQueue(&gameState->threadsInfo, getAOMask_multiThreaded, data);
+        // getAOMask_multiThreaded(data);
+
+    }
+}
 
 void drawChunk(GameState *gameState, Chunk *c) {
     
@@ -524,9 +393,10 @@ void drawChunk(GameState *gameState, Chunk *c) {
                     color = make_float4(1.0f, 1.0f, 1.0f, 1);
                 }
 
-                //NOTE: Calculate the aoMask if haven't yet
-                if(b->aoMask & (((uint64_t)(1)) << 63)) { //NOTE: top bit is set 
-                    b->aoMask = getAOMask(gameState, worldP, (BlockFlags)b->flags);
+                //NOTE: Calculate the aoMask if haven't yet - top bit is set 
+                if(b->aoMask & getInvalidAoMaskValue()) 
+                { 
+                    getAOMaskForBlock(gameState, worldP, (BlockFlags)b->flags, b);
                 }
 
                 uint64_t AOMask = b->aoMask;

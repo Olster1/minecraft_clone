@@ -38,7 +38,7 @@ struct Block {
     bool exists;
     uint64_t flags;
 
-    uint64_t aoMask;
+    volatile uint64_t aoMask; //NOTE: Multiple threads can change this
 
     void *data;//NOTE: This can be null and is the specific data for each entity 
 
@@ -135,7 +135,7 @@ struct Chunk {
     int y;
     int z;
 
-    ChunkGenerationState generateState; //NOTE: Chunk might not be generated, so check first when you get one
+    volatile ChunkGenerationState generateState; //NOTE: Chunk might not be generated, so check first when you get one
 
     //NOTE: 16 x 16 x 16
     //NOTE: Z Y X

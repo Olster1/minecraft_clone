@@ -18,6 +18,8 @@
         "bitset": "cpp",
         "__memory": "cpp",
         "optional": "cpp",
-        "vector": "cpp"
+        "vector": "cpp",
+        "map": "cpp",
+        "unordered_map": "cpp"
     }
 }

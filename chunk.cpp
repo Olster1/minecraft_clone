@@ -413,7 +413,7 @@ void drawChunk(GameState *gameState, Chunk *c) {
 }
 
 void drawCloudChunk(GameState *gameState, CloudChunk *c) {
-    int cloudElevation = 80;
+    int cloudElevation = CLOUD_EVELVATION;
     
     for(int i = 0; i < c->cloudCount; ++i) {
         CloudBlock cloud = c->clouds[i];

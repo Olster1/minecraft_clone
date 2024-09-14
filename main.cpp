@@ -1,9 +1,19 @@
+#include "./game_defines.h"
+#include "./easy_memory.h"
+#include "./memory_arena.h"
+#include "./easy_string_utf8.h"
+#include "./easy_string.h"
+#include "./easy_files.h"
+#include "./easy_lex.h"
+
 #include "./transform.cpp"
 #include "./entity.cpp"
 #include "./render.cpp"
 #include "./opengl.cpp"
 #include "./font.cpp"
 #include "./particles.cpp"
+
+#include "./texture_atlas.cpp"
 // #include "./animation.cpp"
 
 Renderer *initRenderer(Texture grassTexture, Texture breakBlockTexture, Texture atlasTexture) {
@@ -137,7 +147,14 @@ void drawHUD(GameState *gameState) {
 
 void updateGame(GameState *gameState) {
     if(!gameState->inited) {
+        globalLongTermArena = createArena(Kilobytes(200));
+        globalPerFrameArena = createArena(Kilobytes(100));
+        perFrameArenaMark = takeMemoryMark(&globalPerFrameArena);
+
         initGameState(gameState);
+    } else { 
+        releaseMemoryMark(&perFrameArenaMark);
+        perFrameArenaMark = takeMemoryMark(&globalPerFrameArena);
     }
 
     gameState->camera.targetFov = 60;
@@ -208,14 +225,14 @@ void updateGame(GameState *gameState) {
         }
     }
 
-    //NOTE: Draw the clouds
-    // for(int z = -chunkRadiusXZ; z <= chunkRadiusXZ; ++z) {
-    //     for(int x = -chunkRadiusXZ; x <= chunkRadiusXZ; ++x) {
-    //         CloudChunk *chunk = getCloudChunk(gameState, chunkX + x, chunkZ + z);
-    //         assert(chunk);
-    //         drawCloudChunk(gameState, chunk);
-    //     }
-    // }
+    // NOTE: Draw the clouds
+    for(int z = -chunkRadiusXZ; z <= chunkRadiusXZ; ++z) {
+        for(int x = -chunkRadiusXZ; x <= chunkRadiusXZ; ++x) {
+            CloudChunk *chunk = getCloudChunk(gameState, chunkX + x, chunkZ + z);
+            assert(chunk);
+            drawCloudChunk(gameState, chunk);
+        }
+    }
 
     // pushCircleOutline(gameState->renderer, make_float3(0, 0, 1), 50, make_float4(1, 1, 1, 1));
     float16 rot = eulerAnglesToTransform(gameState->player.T.rotation.y, gameState->player.T.rotation.x, gameState->player.T.rotation.z);

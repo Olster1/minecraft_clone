@@ -96,7 +96,7 @@ void fillChunk_multiThread(void *data_) {
             float perlinValueLow = perlin2d(worldX, worldZ, 0.00522, 16); //SimplexNoise_fractal_2d(16, worldX, worldZ, 0.00522);
             float perlinValueHigh = 0;//perlin2d(worldX, worldZ, 10, 4);
             
-            float waterElevation = 40;
+            float waterElevation = WATER_ELEVATION;
             float terrainAmplitude = 100;
             float terrainHeight = perlinValueLow*terrainAmplitude + perlinValueHigh; 
 

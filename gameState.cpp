@@ -1,3 +1,5 @@
+using namespace TextureAtlas;
+
 struct EntityChunkInfo {
     EntityID entityID;
     Chunk *chunk;
@@ -132,6 +134,8 @@ void initGameState(GameState *gameState) {
     gameState->camera.runShakeTimer = -1;
 
     gameState->currentInventoryHotIndex = 0;
+
+    createTextureAtlas("./images/");
 
     srand(time(NULL));
 

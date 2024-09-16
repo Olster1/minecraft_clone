@@ -4,6 +4,13 @@
 #define MAX_WORLD_ITEMS_PER_INSTANCE 50000
 #define MAX_GLYPHS_PER_RENDER 50000
 
+struct AtlasAsset {
+    char *name;
+    float4 uv;
+
+    AtlasAsset *next;
+};
+
 
 struct Vertex {
     float3 pos;
@@ -276,6 +283,12 @@ void pushHUDOutline(Renderer *renderer, float3 worldP, float2 scale, float4 colo
 
 void pushSpriteForInventoryType(Renderer *renderer, float3 worldP, float2 scale, float4 color, BlockType type) {
     float4 coords = make_float4(0.0, 0.25f, 0, 0.25f);
+
+    pushAtlasQuad_(renderer, worldP, make_float3(scale.x, scale.y, 1), make_float3(0, 0, 0), coords, color, true);
+}
+
+void pushSprite(Renderer *renderer, AtlasAsset *assetItem, float3 worldP, float2 scale, float4 color) {
+    float4 coords = assetItem->uv;
 
     pushAtlasQuad_(renderer, worldP, make_float3(scale.x, scale.y, 1), make_float3(0, 0, 0), coords, color, true);
 }

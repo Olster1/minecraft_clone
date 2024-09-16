@@ -12,8 +12,6 @@
 #include "./opengl.cpp"
 #include "./font.cpp"
 #include "./particles.cpp"
-
-#include "./texture_atlas.cpp"
 // #include "./animation.cpp"
 
 Renderer *initRenderer(Texture grassTexture, Texture breakBlockTexture, Texture atlasTexture) {
@@ -55,10 +53,12 @@ Renderer *initRenderer(Texture grassTexture, Texture breakBlockTexture, Texture 
 #include "./perlin.cpp"
 #include "./SimplexNoise.cpp"
 #include "./interaction.cpp"
+#include "./texture_atlas.cpp"
 #include "./gameState.cpp"
 #include "./chunk.cpp"
 #include "./player.cpp"
 #include "./camera.cpp"
+
 
 TimeOfDayValues getTimeOfDayValues(GameState *gameState) {
     float4 a;
@@ -110,6 +110,7 @@ void drawHUD(GameState *gameState) {
         }
 
         pushHUDOutline(gameState->renderer, screenP, scale, make_float4(1, 1, 1, 1));
+        // pushSprite(gameState->renderer, getItem(&gameState->spriteTextureAtlas, "pumpkin.png"), screenP, scale, make_float4(1, 1, 1, 1));
         if(gameState->inventoryCount >= i && gameState->playerInventory[i].count > 0) {
             //NOTE: Draw item if in slot
             InventoryItem *item = &gameState->playerInventory[i];
@@ -141,6 +142,7 @@ void drawHUD(GameState *gameState) {
         innerScreenP.x -= 0.5f*(scale.x - innerScale.x);
         pushPlainQuadHUD(gameState->renderer, innerScreenP, innerScale, make_float4(1, 1, 1, 1));
         pushHUDOutline(gameState->renderer, screenP, scale, make_float4(1, 1, 1, 1));
+        
     }
     
 }

@@ -28,6 +28,42 @@ void renderCheckError_(int lineNumber, char *fileName) {
     #endif
 }
 
+struct FrameBuffer {
+    uint32_t handle;
+
+};
+
+void rendererBindFrameBuffer(FrameBuffer *b) {
+    glBindFramebuffer(GL_FRAMEBUFFER, b->handle);  
+}
+
+FrameBuffer createFrameBuffer(int width, int height) {
+    FrameBuffer result;
+    glGenFramebuffers(1, &result.handle);
+    glBindFramebuffer(GL_FRAMEBUFFER, result.handle);  
+
+    unsigned int texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);  
+
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0); 
+
+     glBindTexture(GL_TEXTURE_2D, 0);    
+
+    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        assert(false);
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);  
+
+    return result;
+}
+
 Shader loadShader(char *vertexShader, char *fragShader) {
     Shader result = {};
     
@@ -405,7 +441,7 @@ Texture loadTextureToGPU(char *fileName) {
     glBindTexture(GL_TEXTURE_2D, resultId);
     renderCheckError();
     
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     renderCheckError();
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     renderCheckError();

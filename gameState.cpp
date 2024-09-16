@@ -1,4 +1,4 @@
-using namespace TextureAtlas;
+using namespace TextureAtlasModule;
 
 struct EntityChunkInfo {
     EntityID entityID;
@@ -21,6 +21,8 @@ struct GameState {
     float dt;
     float screenWidth;
     float aspectRatio_y_over_x;
+
+    TextureAtlas spriteTextureAtlas;
 
     bool gravityOn;
 
@@ -135,8 +137,6 @@ void initGameState(GameState *gameState) {
 
     gameState->currentInventoryHotIndex = 0;
 
-    createTextureAtlas("./images/");
-
     srand(time(NULL));
 
     gameState->timeOfDay = 0.4f;
@@ -196,6 +196,10 @@ void initGameState(GameState *gameState) {
 
     // loadGLTF("./models/fox/Fox.gltf");
     // loadGLTF("./models/boxAnimated/BoxAnimated.gltf");
+
+    // createTextureAtlas(gameState->renderer, "./sprites/");
+    gameState->spriteTextureAtlas = readTextureAtlas("./texture_atlas.json", "./texture_atlas.png");
+    gameState->renderer->atlasTexture = gameState->spriteTextureAtlas.texture.handle;
 
     gameState->inited = true;
 

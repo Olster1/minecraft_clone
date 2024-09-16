@@ -20,6 +20,7 @@
         "optional": "cpp",
         "vector": "cpp",
         "map": "cpp",
-        "unordered_map": "cpp"
+        "unordered_map": "cpp",
+        "typeinfo": "cpp"
     }
 }

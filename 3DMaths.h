@@ -893,14 +893,14 @@ uint32_t get_crc32(char *bytes, size_t bytes_length) {
 	return result;
 }
 
-// int get_crc32_for_string(char *string_nullterminated) {
-// 	int result = 0;
-// 	while(*string_nullterminated) {
-// 		result = _mm_crc32_u8 (result, *string_nullterminated);
-// 		string_nullterminated++;
-// 	}
-// 	return result;
-// }
+uint32_t get_crc32_for_string(char *string_nullterminated) {
+	uint32_t result = 0;
+	while(*string_nullterminated) {
+		result = __crc32b (result, *string_nullterminated);
+		string_nullterminated++;
+	}
+	return result;
+}
 
 
 

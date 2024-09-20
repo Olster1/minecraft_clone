@@ -4,6 +4,18 @@ enum DimensionEnum {
     DIMENSION_Z
 };
 
+float3 convertRealWorldToBlockCoords(float3 p) {
+    //NOTE: The origin is at the center of a block
+    //NOTE: So 0.5 & 1.4 should both map to 1 - I think the +0.5
+    //NOTE: So -0.5 & -1.4 should both map to -1 - I think the -0.5
+    //NOTE: So -0.4 & 0.4 should both map to 0 - I think the -0.5
+    p.x = round(p.x);
+    p.y = round(p.y);
+    p.z = round(p.z);
+
+    return p;
+}
+
 uint32_t getHashForChunk(int x, int y, int z) {
     int values[3] = {x, y, z};
     uint32_t hash = get_crc32((char *)values, arrayCount(values)*sizeof(int));
@@ -372,6 +384,7 @@ void drawChunk(GameState *gameState, Chunk *c) {
 
         if(b->exists) {
             float3 worldP = make_float3(c->x*CHUNK_DIM + b->x, c->y*CHUNK_DIM + b->y, c->z*CHUNK_DIM + b->z);
+            
 
             float maxColor = 0.0f;
 
@@ -401,7 +414,7 @@ void drawChunk(GameState *gameState, Chunk *c) {
                 }
 
                 uint64_t AOMask = b->aoMask;
-                
+
                 pushCube(gameState->renderer, worldP, t, color, AOMask);
                 // pushAlphaItem(gameState->renderer, worldP, make_float3(1, 1, 1), color);
                 
@@ -448,9 +461,11 @@ void storeEntitiesAfterFrameUpdate(GameState *gameState) {
         if(!(e->flags & ENTITY_DELETED)) {
             EntityChunkInfo chunkInfo = gameState->entitiesForFrameChunkInfo[i];
 
-            int entChunkX = (int)e->T.pos.x / CHUNK_DIM;
-            int entChunkY = (int)e->T.pos.y / CHUNK_DIM;
-            int entChunkZ = (int)e->T.pos.z / CHUNK_DIM;
+            float3 blockPos = convertRealWorldToBlockCoords(e->T.pos);
+
+            int entChunkX = (int)blockPos.x / CHUNK_DIM;
+            int entChunkY = (int)blockPos.y / CHUNK_DIM;
+            int entChunkZ = (int)blockPos.z / CHUNK_DIM;
 
             Chunk *oldChunk = chunkInfo.chunk;
 
@@ -482,7 +497,6 @@ void loadEntitiesForFrameUpdate(GameState *gameState) {
     
     //NOTE: Clear the entitiy count from last frame
     gameState->entityCount = 0;
-    
 
     int chunkX = (int)gameState->player.T.pos.x / CHUNK_DIM;
     int chunkY = (int)gameState->player.T.pos.y / CHUNK_DIM;
@@ -558,6 +572,71 @@ void updateParticlers(GameState *gameState) {
     
 }
 
+
+BlockChunkPartner blockExists(GameState *gameState, int worldx, int worldy, int worldz, BlockFlags flags) {
+    BlockChunkPartner found = {};
+    found.block = 0;
+
+    int chunkX = worldx / CHUNK_DIM;
+    int chunkY = worldy / CHUNK_DIM;
+    int chunkZ = worldz / CHUNK_DIM;
+
+    int localx = worldx - (CHUNK_DIM*chunkX); 
+    int localy = worldy - (CHUNK_DIM*chunkY); 
+    int localz = worldz - (CHUNK_DIM*chunkZ); 
+    
+    Chunk *c = getChunk(gameState, chunkX, chunkY, chunkZ);
+
+    if(c) {
+            found.chunk = c;
+            assert(localx < CHUNK_DIM);
+            assert(localy < CHUNK_DIM);
+            assert(localz < CHUNK_DIM);
+            int blockIndex = getBlockIndex(localx, localy, localz);
+            assert(blockIndex < arrayCount(c->blocks));
+            if(blockIndex < arrayCount(c->blocks) && c->blocks[blockIndex].exists && c->blocks[blockIndex].flags & flags) {
+                // c->blocks[blockIndex].hitBlock = true;
+                found.block = &c->blocks[blockIndex];
+                found.blockIndex = blockIndex;
+            } else {
+                // found.block = 0;
+            }
+    }
+
+    return found;
+}
+
+float3 findClosestFreePosition(GameState *gameState, float3 startP, float3 defaultDir, float3 *searchOffsets, int searchOffsetCount, int priorityIndex) {
+    float3 result = defaultDir;
+    float closestDist = FLT_MAX;
+    float3 startP_block = convertRealWorldToBlockCoords(startP);
+    bool found = false;
+
+    for(int i = 0; i < searchOffsetCount; ++i) {
+        if(found && i >= priorityIndex) {
+            //NOTE: Prioritise the first 4 positions
+            break;
+        }
+        float3 offset = searchOffsets[i];
+
+        float3 blockP = plus_float3(offset, startP_block);
+
+        BlockChunkPartner blockPtr = blockExists(gameState, blockP.x, blockP.y, blockP.z, BLOCK_EXISTS_COLLISION);
+        if(!blockPtr.block) {
+            float3 dirVector = minus_float3(blockP, startP);
+            float d = float3_magnitude_sqr(dirVector);
+
+            if(d < closestDist) {
+                result = dirVector;
+                closestDist = d;
+                found = true;
+            }
+        }
+    }
+    
+    return result;
+}
+
 void updateEntities(GameState *gameState) {
     Entity *player = &gameState->player;
 
@@ -602,9 +681,10 @@ void updateEntities(GameState *gameState) {
             //NOTE: Update the rotation
             e->T.rotation.y += 100*gameState->dt;
             e->floatTime += gameState->dt;
-            e->offset.y = 0.3f*sin(2*e->floatTime);
+            // e->offset.y = 0.01f*sin(2*e->floatTime);
         }
 
+        float3 accelForFrame = make_float3(0, 0, 0);
         if(e->type == ENTITY_PICKUP_ITEM) {
 
             //NOTE: Pick up the block
@@ -621,8 +701,36 @@ void updateEntities(GameState *gameState) {
                     playSound(&gameState->pickupSound);
                     
                 }
+            } else {
+                //NOTE: Check if inside a block 
+                float3 worldP = convertRealWorldToBlockCoords(e->T.pos);
+
+                // float frac = e->T.pos.y - ((int)e->T.pos.y);
+                
+                if(blockExistsReadOnly(gameState, worldP.x, worldP.y, worldP.z, BLOCK_EXISTS_COLLISION)) {
+                    //NOTE: Pickup block is inside another block so moveout of the way
+                    float3 moveDir = findClosestFreePosition(gameState, e->T.pos, make_float3(0, 1, 0), gameState->searchOffsets, arrayCount(gameState->searchOffsets), arrayCount(gameState->searchOffsets));
+                    moveDir = normalize_float3(moveDir);
+                    e->dP = make_float3(0, 0, 0);
+                    accelForFrame = plus_float3(accelForFrame, scale_float3(100.0f, moveDir));
+
+
+                    pushAlphaCube(gameState->renderer, worldP, BLOCK_CLOUD, make_float4(1, 0, 0, 1.0f));
+                } else if(!blockExistsReadOnly(gameState, worldP.x, worldP.y -1 , worldP.z, BLOCK_EXISTS_COLLISION)) {
+                    //NOTE: check if should apply gravity
+                    accelForFrame.y = -10;
+                    // pushAlphaCube(gameState->renderer, worldP, BLOCK_CLOUD, make_float4(0, 1, 0, 1.0f));
+                }
             }
         }
+        
+
+        //NOTE: Integrate velocity
+        e->dP = plus_float3(e->dP, scale_float3(gameState->dt, accelForFrame)); //NOTE: Already * by dt 
+        //NOTE: Apply drag
+        e->dP = scale_float3(0.95f, e->dP);
+        //NOTE: Get the movement vector for this frame
+        e->T.pos = plus_float3(e->T.pos, scale_float3(gameState->dt, e->dP));
 
         if(e->type == ENTITY_GRASS_SHORT || e->type == ENTITY_GRASS_LONG) {
             float height = 1;
@@ -636,6 +744,7 @@ void updateEntities(GameState *gameState) {
             T = float16_scale(T, e->T.scale);
             T = float16_set_pos(T, plus_float3(e->offset, e->T.pos));
 
+            // pushAlphaCube(gameState->renderer, e->T.pos, BLOCK_CLOUD, make_float4(0, 0, 1, 1.0f));
             pushBlockItem(gameState->renderer, T, e->itemType, make_float4(1, 1, 1, 1));   
         }
     }

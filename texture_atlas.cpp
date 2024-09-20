@@ -2,7 +2,6 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "./stb_image_write.h"
 
-namespace TextureAtlasModule {
     struct TextureAtlas {
         Texture texture;
         
@@ -11,7 +10,7 @@ namespace TextureAtlasModule {
     };
 
 
-    AtlasAsset *addItem(TextureAtlas *atlas, char *name, float4 uv) {
+    AtlasAsset *textureAtlas_addItem(TextureAtlas *atlas, char *name, float4 uv) {
         uint32_t hash = get_crc32_for_string(name);
 
         hash %= arrayCount(atlas->items);
@@ -36,7 +35,7 @@ namespace TextureAtlasModule {
         return a;
     }
 
-    AtlasAsset *getItem(TextureAtlas *atlas, char *name) {
+    AtlasAsset *textureAtlas_getItem(TextureAtlas *atlas, char *name) {
         AtlasAsset *result = 0;
 
         uint32_t hash = get_crc32_for_string(name);
@@ -220,7 +219,7 @@ namespace TextureAtlasModule {
                 assert(t.type == TOKEN_FLOAT);
                 uv.w = t.floatVal;
 
-                addItem(&result, assetName, uv);
+                textureAtlas_addItem(&result, assetName, uv);
             }
         }
 
@@ -228,4 +227,3 @@ namespace TextureAtlasModule {
 
         return result;
     }
-};

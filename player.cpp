@@ -8,38 +8,6 @@ float3 getBlockWorldPos(BlockChunkPartner b) {
     return p;
 }
 
-BlockChunkPartner blockExists(GameState *gameState, int worldx, int worldy, int worldz, BlockFlags flags) {
-    BlockChunkPartner found = {};
-    found.block = 0;
-
-    int chunkX = worldx / CHUNK_DIM;
-    int chunkY = worldy / CHUNK_DIM;
-    int chunkZ = worldz / CHUNK_DIM;
-
-    int localx = worldx - (CHUNK_DIM*chunkX); 
-    int localy = worldy - (CHUNK_DIM*chunkY); 
-    int localz = worldz - (CHUNK_DIM*chunkZ); 
-    
-    Chunk *c = getChunk(gameState, chunkX, chunkY, chunkZ);
-
-    if(c) {
-            assert(localx < CHUNK_DIM);
-            assert(localy < CHUNK_DIM);
-            assert(localz < CHUNK_DIM);
-            int blockIndex = getBlockIndex(localx, localy, localz);
-            assert(blockIndex < arrayCount(c->blocks));
-            if(blockIndex < arrayCount(c->blocks) && c->blocks[blockIndex].exists && c->blocks[blockIndex].flags & flags) {
-                // c->blocks[blockIndex].hitBlock = true;
-                found.block = &c->blocks[blockIndex];
-                found.blockIndex = blockIndex;
-                found.chunk = c;
-            } else {
-                // found.block = 0;
-            }
-    }
-
-    return found;
-}
 
 BlockChunkPartner castRayAgainstBlock(GameState *gameState, float3 dir, float length, float3 start, BlockFlags blockFlags = BLOCK_EXISTS) {
     int blockRadius = length;
@@ -52,9 +20,10 @@ BlockChunkPartner castRayAgainstBlock(GameState *gameState, float3 dir, float le
             for(int y = -blockRadius; y <= blockRadius; ++y) {
                 float3 pos = start;
                 //NOTE: Get the block pos in world
-                int worldx = (int)pos.x + x;
-                int worldy = (int)pos.y + y;
-                int worldz = (int)pos.z + z;
+                float3 blockPos = convertRealWorldToBlockCoords(pos);
+                int worldx = (int)blockPos.x + x;
+                int worldy = (int)blockPos.y + y;
+                int worldz = (int)blockPos.z + z;
 
                 BlockChunkPartner blockTemp = blockExists(gameState, worldx, worldy, worldz, blockFlags);
 
@@ -119,11 +88,11 @@ void updatePlayerPhysics(GameState *gameState, Entity *e, float3 movementForFram
         for(int z = -blockRadius; z <= blockRadius; ++z) {
             for(int x = -blockRadius; x <= blockRadius; ++x) {
                 for(int y = -blockRadius; y <= blockRadius; ++y) {
-                    float3 pos = e->T.pos;
+                    float3 roundedPos = convertRealWorldToBlockCoords(e->T.pos);
                     //NOTE: Get the block pos in world
-                    int worldx = (int)pos.x + x;
-                    int worldy = (int)pos.y + y;
-                    int worldz = (int)pos.z + z;
+                    int worldx = ((int)roundedPos.x) + x;
+                    int worldy = ((int)roundedPos.y) + y;
+                    int worldz = ((int)roundedPos.z) + z;
                     
                     BlockChunkPartner blockPtr = blockExists(gameState, worldx, worldy, worldz, BLOCK_EXISTS_COLLISION);
                     if(blockPtr.block) {
@@ -134,13 +103,12 @@ void updatePlayerPhysics(GameState *gameState, Entity *e, float3 movementForFram
                         float3 hitPoint;
                         float3 normalVector;
                         float tAt;
-                        if(easyMath_rayVsAABB3f(pos, dpVector, b, &hitPoint, &tAt, &normalVector)) {
+                        if(easyMath_rayVsAABB3f(e->T.pos, dpVector, b, &hitPoint, &tAt, &normalVector)) {
                             
                             float slopeFactor = 0.3f;
                             float distToGround = 0.1f;
                             if(tAt < distToGround && float3_dot(make_float3(0, 1, 0), normalVector) > slopeFactor) {
                                 e->grounded = true;
-
                             }
 
                             if(tAt <= float3_magnitude(dpVector) && tAt < shortestT) {
@@ -176,6 +144,14 @@ void updatePlayerPhysics(GameState *gameState, Entity *e, float3 movementForFram
                 playSound(&gameState->fallBigSound);
             }
 
+            if(shortestNormalVector.x == 0 && shortestNormalVector.y == 0 && shortestNormalVector.z == 0) {
+                //NOTE: Inside the block
+                float3 moveDir = findClosestFreePosition(gameState, e->T.pos, make_float3(0, 1, 0), gameState->searchOffsets, arrayCount(gameState->searchOffsets), arrayCount(gameState->searchOffsets));
+                moveDir = normalize_float3(moveDir);
+                e->dP = plus_float3(e->dP, scale_float3(10.0f, moveDir));
+            }   
+
+            //NOTE: Auto jump code - see if hit the sides 
             if(float3_dot(make_float3(1, 0, 0), shortestNormalVector) > 0.0f 
             || float3_dot(make_float3(-1, 0, 0), shortestNormalVector) > 0.0f
             || float3_dot(make_float3(0, 0, -1), shortestNormalVector) > 0.0f
@@ -478,15 +454,17 @@ void updatePlayer(GameState *gameState, Entity *e) {
 
     if(gameState->mouseLeftBtn == MOUSE_BUTTON_RELEASED) {
         if(gameState->placeBlockTimer < 0.2f) {
-            //NOTE: Check if user has any blocks in their inventory hotspot they can use
-            if(gameState->playerInventory[gameState->currentInventoryHotIndex].count > 0) {
-                //NOTE: Placing a block down
-                bool placed = placeBlock(gameState, lookingAxis, e, gameState->playerInventory[gameState->currentInventoryHotIndex].type);
-                if(placed) {
-                    //NOTE: Decrement their inventory count
-                    gameState->playerInventory[gameState->currentInventoryHotIndex].count--;
-                }
-            }
+            bool placed = placeBlock(gameState, lookingAxis, e, BLOCK_GRASS);
+            // //NOTE: Check if user has any blocks in their inventory hotspot they can use
+            // if(gameState->playerInventory[gameState->currentInventoryHotIndex].count > 0) 
+            // {
+            //     //NOTE: Placing a block down
+            //     bool placed = placeBlock(gameState, lookingAxis, e, gameState->playerInventory[gameState->currentInventoryHotIndex].type);
+            //     if(placed) {
+            //         //NOTE: Decrement their inventory count
+            //         gameState->playerInventory[gameState->currentInventoryHotIndex].count--;
+            //     }
+            // }
         }
 
         if(gameState->currentMiningBlock) {

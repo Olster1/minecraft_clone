@@ -210,5 +210,9 @@ void initPickupItem(Chunk *chunk, float3 pos, BlockType itemType, int randomStar
         e->grounded = false;
         e->itemType = itemType;
         e->flags = SHOULD_ROTATE;
+        e->dP.x = randomBetween(-2, 2);
+        e->dP.z = randomBetween(-2, 2);
+        e->dP.y = 5;
+        
     }
 }

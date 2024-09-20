@@ -129,6 +129,7 @@ void fillChunk_multiThread(void *data_) {
                     int blockIndex = getBlockIndex(x, y, z);
                     if(blockIndex < arrayCount(chunk->blocks)) {
                         chunk->blocks[blockIndex] = spawnBlock(x, y, z, type, flags);
+                        assert(chunk->blocks[blockIndex].flags != 0);
                     }
 
                     int treeProb = (int)(2*((float)rand() / (float)RAND_MAX));

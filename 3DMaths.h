@@ -30,6 +30,15 @@ int MathMin(int a, int b) {
 
 }
 
+size_t MathMax_sizet(size_t a, size_t b) {
+	if(a < b) {
+		return b;
+	} else {
+		return a;
+	}
+
+}
+
 inline float ATan2_0toTau(float Y, float X) {
     float Result = (float)atan2(Y, X);
     if(Result < 0) {

@@ -1,5 +1,3 @@
-using namespace TextureAtlasModule;
-
 struct EntityChunkInfo {
     EntityID entityID;
     Chunk *chunk;
@@ -98,6 +96,10 @@ struct GameState {
     KeyStates keys;
 
     AOOffset aoOffsets[24];
+
+    float3 searchOffsets[26];
+    float3 searchOffsetsSmall[6];
+    
 };
 
 void createAOOffsets(GameState *gameState) {
@@ -125,6 +127,31 @@ void createAOOffsets(GameState *gameState) {
         gameState->aoOffsets[i].offsets[1] = sizedOffset; 
         gameState->aoOffsets[i].offsets[2] = plus_float3(sizedOffset, masks[1]);
     }
+}
+
+void createSearchOffsets(GameState *gameState) {
+    int index = 0;
+    for(int z = -1; z <= 1; z++) {
+        for(int y = -1; y <= 1; y++) {
+            for(int x = -1; x <= 1; x++) {
+                if(x == 0 && y == 0 && z == 0) {
+                    continue;
+                } else {
+                    gameState->searchOffsets[index++] = make_float3(x, y, z);
+                }
+
+            }
+        }
+    }
+    assert(index == 26);
+
+    gameState->searchOffsetsSmall[0] = make_float3(1, 0, 0); 
+    gameState->searchOffsetsSmall[0] = make_float3(0, 0, 1); 
+    gameState->searchOffsetsSmall[0] = make_float3(-1, 0, 0); 
+    gameState->searchOffsetsSmall[0] = make_float3(0, 0, -1); 
+
+    gameState->searchOffsetsSmall[0] = make_float3(0, 1, 0); 
+    gameState->searchOffsetsSmall[0] = make_float3(0, -1, 0); 
 }
 
 void initGameState(GameState *gameState) {
@@ -199,7 +226,9 @@ void initGameState(GameState *gameState) {
 
     // createTextureAtlas(gameState->renderer, "./sprites/");
     gameState->spriteTextureAtlas = readTextureAtlas("./texture_atlas.json", "./texture_atlas.png");
-    gameState->renderer->atlasTexture = gameState->spriteTextureAtlas.texture.handle;
+    // gameState->renderer->atlasTexture = gameState->spriteTextureAtlas.texture.handle;
+
+    createSearchOffsets(gameState);
 
     gameState->inited = true;
 

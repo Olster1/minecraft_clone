@@ -38,7 +38,8 @@ void *pushSize(Arena *arena, size_t size) {
     if(!arena->pieces || ((arena->pieces->currentSize + size) > arena->pieces->totalSize)){ //doesn't fit in arena
         MemoryPiece *piece = arena->piecesFreeList; //get one of the free list
 
-        size_t extension = MathMin(Kilobytes(1028), size);
+        size_t minSizeOfPiece = Kilobytes(1028);
+        size_t extension = MathMax_sizet(minSizeOfPiece, size);
         if(piece)  {
             MemoryPiece **piecePtr = &arena->piecesFreeList;
             assert(piece->totalSize > 0);

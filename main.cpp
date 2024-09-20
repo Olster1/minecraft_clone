@@ -110,7 +110,7 @@ void drawHUD(GameState *gameState) {
         }
 
         pushHUDOutline(gameState->renderer, screenP, scale, make_float4(1, 1, 1, 1));
-        // pushSprite(gameState->renderer, getItem(&gameState->spriteTextureAtlas, "pumpkin.png"), screenP, scale, make_float4(1, 1, 1, 1));
+        // pushSprite(gameState->renderer, textureAtlas_getItem(&gameState->spriteTextureAtlas, "pumpkin.png"), screenP, scale, make_float4(1, 1, 1, 1));
         if(gameState->inventoryCount >= i && gameState->playerInventory[i].count > 0) {
             //NOTE: Draw item if in slot
             InventoryItem *item = &gameState->playerInventory[i];
@@ -203,10 +203,12 @@ void updateGame(GameState *gameState) {
     float16 screenT = make_perspective_matrix_origin_center(gameState->camera.fov, MATH_3D_NEAR_CLIP_PlANE, MATH_3D_FAR_CLIP_PlANE, 1.0f / gameState->aspectRatio_y_over_x);
     float16 cameraT = getCameraX(gameState->camera.T);
     float16 cameraTWithoutTranslation = getCameraX_withoutTranslation(gameState->camera.T);
+
+    float3 worldP = convertRealWorldToBlockCoords(gameState->camera.T.pos);
     
-    int chunkX = (int)gameState->camera.T.pos.x / CHUNK_DIM;
-    int chunkY = (int)gameState->camera.T.pos.y / CHUNK_DIM;
-    int chunkZ = (int)gameState->camera.T.pos.z / CHUNK_DIM;
+    int chunkX = (int)worldP.x / CHUNK_DIM;
+    int chunkY = (int)worldP.y / CHUNK_DIM;
+    int chunkZ = (int)worldP.z / CHUNK_DIM;
     
     // Chunk *chunk = getChunk(gameState, chunkX, chunkY, chunkZ);
     // drawChunk(gameState, chunk);

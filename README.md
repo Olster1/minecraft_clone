@@ -6,9 +6,10 @@ Uses OpenGL 3.3 and SDL for platform layer.
 
 ## Goals
 - [x] Collision & physics
-- [x] Block mining (need to add gravity affected pickup blocks)
+- [x] Block mining
 - [x] Clouds & Sky 
 - [x] Ambient Occulsion of blocks mult-threaded
+- [x] Multi-threaded chunk generation
 - [x] Tree & grasses generation
 - [x] Water generation with alpha 
 - [ ] Better world generation with snow and cliffs 
@@ -19,7 +20,6 @@ Uses OpenGL 3.3 and SDL for platform layer.
 - [ ] Coal & Ore generation 
 - [ ] Day & Night cycle
 - [ ] Greedy meshing
-- [ ] Handle when stuck in a block collision resolution
 - [ ] Release game on itch.io as professional as possible - just exe & asset bundle 
 
 ## WHY's

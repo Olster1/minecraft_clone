@@ -48,6 +48,15 @@ BlockChunkPartner castRayAgainstBlock(GameState *gameState, float3 dir, float le
     return block;
 }
 
+void updateRecoverMovement(GameState *gameState, Entity *e) {
+    //NOTE: Apply drag
+    e->recoverDP = scale_float3(0.95f, e->recoverDP);
+
+    //NOTE:Integrate velocity
+    e->T.pos = plus_float3(e->T.pos, scale_float3(gameState->dt, e->recoverDP));
+
+}
+
 void updatePlayerPhysics(GameState *gameState, Entity *e, float3 movementForFrame) {
     int physicsIterations = 4;
     bool didHit = false;
@@ -71,6 +80,8 @@ void updatePlayerPhysics(GameState *gameState, Entity *e, float3 movementForFram
     // float lengthLeft = float3_magnitude(dpVector);
 
     // printf("%f %f %f\n", dpVector.x, dpVector.y, dpVector.z);
+
+    updateRecoverMovement(gameState, e);
 
     for(int i = 0; i < physicsIterations; ++i) {
         // dpVector = normalize_float3(dpVector);
@@ -144,12 +155,7 @@ void updatePlayerPhysics(GameState *gameState, Entity *e, float3 movementForFram
                 playSound(&gameState->fallBigSound);
             }
 
-            if(shortestNormalVector.x == 0 && shortestNormalVector.y == 0 && shortestNormalVector.z == 0) {
-                //NOTE: Inside the block
-                float3 moveDir = findClosestFreePosition(gameState, e->T.pos, make_float3(0, 1, 0), gameState->searchOffsets, arrayCount(gameState->searchOffsets), arrayCount(gameState->searchOffsets));
-                moveDir = normalize_float3(moveDir);
-                e->dP = plus_float3(e->dP, scale_float3(10.0f, moveDir));
-            }   
+            
 
             //NOTE: Auto jump code - see if hit the sides 
             if(float3_dot(make_float3(1, 0, 0), shortestNormalVector) > 0.0f 
@@ -171,9 +177,15 @@ void updatePlayerPhysics(GameState *gameState, Entity *e, float3 movementForFram
             d = scale_float3(float3_dot(dpVector, shortestNormalVector), shortestNormalVector);
             dpVector = minus_float3(dpVector, d);
 
-            // printf("%f %f %f\n", shortestNormalVector.x, shortestNormalVector.y, shortestNormalVector.z);
-            
-            
+            if(shortestNormalVector.x == 0 && shortestNormalVector.y == 0 && shortestNormalVector.z == 0) {
+                //NOTE: Inside the block
+                float3 moveDir = findClosestFreePosition(gameState, e->T.pos, make_float3(0, 1, 0), gameState->searchOffsets, arrayCount(gameState->searchOffsets), arrayCount(gameState->searchOffsets));
+                moveDir = normalize_float3(moveDir);
+                e->recoverDP = plus_float3(e->recoverDP, scale_float3(1.0f, moveDir));
+            } else {
+                //NOTE: Not in a block so reset the recover dP
+                e->recoverDP = make_float3(0, 0, 0);
+            }   
         }  
     }
 }

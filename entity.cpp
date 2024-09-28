@@ -100,6 +100,7 @@ struct Entity {
     
     TransformX T;
     float3 dP;
+    float3 recoverDP; //NOTE: This is a seperate dP that gets applied no matter what i.e. it doesn't get stopped by collisions. It's so if an entity gets stuck in a block it can move out of it.
     EntityType type;
 
     Rect3f collisionBox;
@@ -168,7 +169,8 @@ struct Camera {
 void initBaseEntity(Entity *e, int randomStartUpID) {
     e->id = makeEntityId(randomStartUpID);
     e->T.rotation = make_float3(0, 0, 0);
-    e->dP = make_float3(0, 0, 0);
+    e->recoverDP = e->dP = make_float3(0, 0, 0);
+    
 }
 
 Entity *initPlayer(Entity *e, int randomStartUpID) {

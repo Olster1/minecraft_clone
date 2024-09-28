@@ -255,6 +255,9 @@ void updateGame(GameState *gameState) {
 
     if(gameState->keys.keys[KEY_1] == MOUSE_BUTTON_PRESSED) {
         gameState->camera.followingPlayer = !gameState->camera.followingPlayer;
+        if(gameState->camera.followingPlayer) {
+            gameState->player.T.pos = minus_float3(gameState->camera.T.pos, gameState->cameraOffset);
+        }
         gameState->currentInventoryHotIndex = 0;
     }
     if(gameState->keys.keys[KEY_2] == MOUSE_BUTTON_PRESSED) {

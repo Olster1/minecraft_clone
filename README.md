@@ -12,14 +12,16 @@ Uses OpenGL 3.3 and SDL for platform layer.
 - [x] Multi-threaded chunk generation
 - [x] Tree & grasses generation
 - [x] Water generation with alpha 
-- [ ] Better world generation with snow and cliffs 
-- [ ] Cows & Sheep Mobs
-- [ ] Skeletal Animation of player & mobs
+- [ ] Cows, Sheep & Zombie Mobs (learn about loading animation files with cgltf - Game Engine Architecture book)
+- [ ] Attacking mobs 
 - [ ] Health, Stamina & Item Hotbar
 - [ ] Cave generation
-- [ ] Coal & Ore generation 
+- [ ] Coal & Ore generation & better world generation with snow and cliffs (learn more about simplex noise & SIMD library implementation of it)
 - [ ] Day & Night cycle
 - [ ] Greedy meshing
+- [ ] Shadow Mapping
+- [ ] Point & Directional lights
+- [ ] Server side application to run on a Rasberry Pi 4 that accepts TCP (block transactions) & UDP (entity positions) packets using Berkely Sockets API (learn about writing a server and running it, and learn about cyber security concepts in practice)
 - [ ] Release game on itch.io as professional as possible - just exe & asset bundle 
 
 ## WHY's

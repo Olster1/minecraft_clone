@@ -713,14 +713,14 @@ void updateEntities(GameState *gameState) {
                     moveDir = normalize_float3(moveDir);
                     e->dP = make_float3(0, 0, 0);
                     accelForFrame = plus_float3(accelForFrame, scale_float3(100.0f, moveDir));
-
-
-                    pushAlphaCube(gameState->renderer, worldP, BLOCK_CLOUD, make_float4(1, 0, 0, 1.0f));
                 } else if(!blockExistsReadOnly(gameState, worldP.x, worldP.y -1 , worldP.z, BLOCK_EXISTS_COLLISION)) {
                     //NOTE: check if should apply gravity
                     accelForFrame.y = -10;
                     // pushAlphaCube(gameState->renderer, worldP, BLOCK_CLOUD, make_float4(0, 1, 0, 1.0f));
                 }
+
+                //NOTE: Apply magnetic force when near player
+                
             }
         }
         

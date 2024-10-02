@@ -99,6 +99,12 @@ struct GameState {
 
     float3 searchOffsets[26];
     float3 searchOffsetsSmall[6];
+
+    Texture perlinTestTexture;
+
+    GuiState guiState;
+    bool useCameraMovement;
+    float3 perlinNoiseValue;
     
 };
 
@@ -163,6 +169,8 @@ void initGameState(GameState *gameState) {
     gameState->camera.runShakeTimer = -1;
 
     gameState->currentInventoryHotIndex = 0;
+
+    
 
     srand(time(NULL));
 
@@ -229,6 +237,13 @@ void initGameState(GameState *gameState) {
     // gameState->renderer->atlasTexture = gameState->spriteTextureAtlas.texture.handle;
 
     createSearchOffsets(gameState);
+
+    gameState->perlinTestTexture = createGPUTexture(PERLIN_SIZE, PERLIN_SIZE, 0);
+
+    gameState->guiState.grabbedId = 0;
+
+    gameState->useCameraMovement = true;
+    gameState->perlinNoiseValue.x = 0.5f;
 
     gameState->inited = true;
 

@@ -80,6 +80,10 @@ struct float3
 			float x, y, z;	
 		};
 		struct {
+			float2 xy;
+			float ignore;	
+		};
+		struct {
 			float E[3];	
 		};
 	};

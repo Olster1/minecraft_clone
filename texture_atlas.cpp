@@ -168,6 +168,8 @@
         int writeResult = stbi_write_png("./texture_atlas.png", outputW, outputH, 4, pixelBuffer, stride_in_bytes);
 
         free(pixelBuffer);
+
+        deleteFrameBuffer(&frameBuffer);
         frameBuffer.handle = 0;
         rendererBindFrameBuffer(&frameBuffer);
 

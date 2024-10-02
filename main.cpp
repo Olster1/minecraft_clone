@@ -5,6 +5,7 @@
 #include "./easy_string.h"
 #include "./easy_files.h"
 #include "./easy_lex.h"
+#include "./imgui.h"
 
 #include "./transform.cpp"
 #include "./entity.cpp"
@@ -58,6 +59,8 @@ Renderer *initRenderer(Texture grassTexture, Texture breakBlockTexture, Texture 
 #include "./chunk.cpp"
 #include "./player.cpp"
 #include "./camera.cpp"
+#include "./perlin_noise_test.cpp"
+#include "./imgui.cpp"
 
 
 TimeOfDayValues getTimeOfDayValues(GameState *gameState) {
@@ -145,6 +148,11 @@ void drawHUD(GameState *gameState) {
         
     }
     
+}
+
+void updateAndDrawDebugCode(GameState *gameState) {
+    perlinNoiseDrawTests(gameState, gameState->camera.T.pos.x, gameState->camera.T.pos.z);
+    gameState->perlinNoiseValue.x = gui_drawSlider(gameState, &gameState->guiState, gameState->renderer, "Perlin Noise Slider", gameState->perlinNoiseValue.x);
 }
 
 void updateGame(GameState *gameState) {
@@ -245,8 +253,10 @@ void updateGame(GameState *gameState) {
     // pushTriangle(gameState->renderer, make_float3(1000, 60, 1000), make_float4(1, 0, 1, 1));
 
     drawHUD(gameState);
+
+    updateAndDrawDebugCode(gameState);
     
-    rendererFinish(gameState->renderer, screenT, cameraT, screenGuiT, textGuiT, lookingAxis, cameraTWithoutTranslation, timeOfDayValues);
+    rendererFinish(gameState->renderer, screenT, cameraT, screenGuiT, textGuiT, lookingAxis, cameraTWithoutTranslation, timeOfDayValues, gameState->perlinTestTexture.handle);
 
     //NOTE: End Mouse interaction if release
     if(gameState->mouseLeftBtn == MOUSE_BUTTON_RELEASED && gameState->currentInteraction.isValid) {
@@ -262,6 +272,7 @@ void updateGame(GameState *gameState) {
     }
     if(gameState->keys.keys[KEY_2] == MOUSE_BUTTON_PRESSED) {
         gameState->currentInventoryHotIndex = 1;
+        gameState->useCameraMovement = !gameState->useCameraMovement;
     }
     if(gameState->keys.keys[KEY_3] == MOUSE_BUTTON_PRESSED) {
         gameState->currentInventoryHotIndex = 2;

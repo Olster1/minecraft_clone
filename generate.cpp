@@ -4,6 +4,14 @@ struct FillChunkData {
     Chunk *chunk;
 };
 
+float getTerrainHeight(int worldX, int worldZ) {
+    float perlinValueLow = perlin2d(worldX, worldZ, 0.00522, 16); //SimplexNoise_fractal_2d(16, worldX, worldZ, 0.00522);
+    float terrainAmplitude = 100;
+    float terrainHeight = perlinValueLow*terrainAmplitude; 
+
+    return terrainHeight;
+}
+
 void getAOMask_multiThreaded(void *data_);
 
 void addBlock(GameState *gameState, float3 worldP, BlockType type, BlockFlags flags) {
@@ -93,12 +101,9 @@ void fillChunk_multiThread(void *data_) {
             int worldX = x + chunk->x*CHUNK_DIM;
             int worldZ = z + chunk->z*CHUNK_DIM;
 
-            float perlinValueLow = perlin2d(worldX, worldZ, 0.00522, 16); //SimplexNoise_fractal_2d(16, worldX, worldZ, 0.00522);
-            float perlinValueHigh = 0;//perlin2d(worldX, worldZ, 10, 4);
-            
             float waterElevation = WATER_ELEVATION;
-            float terrainAmplitude = 100;
-            float terrainHeight = perlinValueLow*terrainAmplitude + perlinValueHigh; 
+
+            float terrainHeight = getTerrainHeight(worldX, worldZ);
 
             for(int y = 0; y < CHUNK_DIM; ++y) {
                 BlockFlags flags = BLOCK_EXISTS_COLLISION;

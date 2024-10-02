@@ -30,14 +30,14 @@ void renderCheckError_(int lineNumber, char *fileName) {
 
 struct FrameBuffer {
     uint32_t handle;
-
+    uint32_t textureHandle;
 };
 
 void rendererBindFrameBuffer(FrameBuffer *b) {
     glBindFramebuffer(GL_FRAMEBUFFER, b->handle);  
 }
 
-FrameBuffer createFrameBuffer(int width, int height) {
+FrameBuffer createFrameBuffer(int width, int height, void *data = 0) {
     FrameBuffer result;
     glGenFramebuffers(1, &result.handle);
     glBindFramebuffer(GL_FRAMEBUFFER, result.handle);  
@@ -45,8 +45,10 @@ FrameBuffer createFrameBuffer(int width, int height) {
     unsigned int texture;
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
+
+    result.textureHandle = texture;
     
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);  
@@ -62,6 +64,10 @@ FrameBuffer createFrameBuffer(int width, int height) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);  
 
     return result;
+}
+
+void deleteFrameBuffer(FrameBuffer *buffer) {
+    glDeleteFramebuffers(1, &buffer->handle);
 }
 
 Shader loadShader(char *vertexShader, char *fragShader) {
@@ -328,6 +334,34 @@ struct Texture {
     uint32_t handle;
 };
 
+
+void deleteTexture(Texture *t) {
+    glDeleteTextures(1, &t->handle);
+}
+
+Texture createGPUTexture(int width, int height, void *data = 0) {
+    Texture result;
+    result.w = width;
+    result.h = height;
+
+    unsigned int texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);  
+
+
+    glBindTexture(GL_TEXTURE_2D, 0); 
+
+    result.handle = texture;   
+
+    return result;
+}
+
 Texture loadCubeMapTextureToGPU(char *folderName) {
     Texture result = {};
 
@@ -570,7 +604,7 @@ void drawModels(ModelBuffer *model, Shader *shader, uint32_t textureId, int inst
     
 }
 
-void rendererFinish(Renderer *renderer, float16 projectionTransform, float16 modelViewTransform, float16 projectionScreenTransform, float16 textScreenTransform, float3 lookingAxis, float16 cameraTransformWithoutTranslation, TimeOfDayValues timeOfDay) {
+void rendererFinish(Renderer *renderer, float16 projectionTransform, float16 modelViewTransform, float16 projectionScreenTransform, float16 textScreenTransform, float3 lookingAxis, float16 cameraTransformWithoutTranslation, TimeOfDayValues timeOfDay, uint32_t perlinNoiseHandle) {
 
     if(renderer->cubeCount > 0) {
         //NOTE: Draw Cubes
@@ -630,6 +664,16 @@ void rendererFinish(Renderer *renderer, float16 projectionTransform, float16 mod
         drawModels(&renderer->quadModel, &renderer->fontTextureShader, renderer->fontAtlasTexture, renderer->glyphCount, textScreenTransform, float16_identity(), lookingAxis, renderer->underWater, timeOfDay);
 
         renderer->glyphCount = 0;
+    }
+
+    {
+        glDepthMask (GL_FALSE);
+        pushAtlasQuad_(renderer, make_float3(40, -40, 0), make_float3(20, 20, 1), make_float3(0, 0, 0), make_float4(0, 1, 0, 1), make_float4(1, 1, 1, 1), true);
+        //NOTE: Draw the perlin noise 
+        updateInstanceData(renderer->quadModel.instanceBufferhandle, renderer->atlasHUDQuads, renderer->atlasQuadHUDCount*sizeof(InstanceDataWithRotation));
+        drawModels(&renderer->quadModel, &renderer->quadTextureShader, perlinNoiseHandle, renderer->atlasQuadHUDCount, projectionScreenTransform, float16_identity(), lookingAxis, renderer->underWater, timeOfDay);
+        renderer->atlasQuadHUDCount = 0;
+        glDepthMask (GL_TRUE);
     }
 
 

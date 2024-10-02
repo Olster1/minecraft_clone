@@ -3,7 +3,7 @@ void updateCamera(GameState *gameState) {
         float speed = 10;
         float rotSpeed = 13.0f;
 
-        float2 mouseDelta = minus_float2(gameState->mouseP_screenSpace, gameState->lastMouseP) ;
+        float2 mouseDelta = minus_float2(gameState->mouseP_screenSpace, gameState->lastMouseP);
 
         gameState->camera.T.rotation.y += gameState->dt*rotSpeed*-mouseDelta.x;
         gameState->camera.T.rotation.x += gameState->dt*rotSpeed*-mouseDelta.y;
@@ -25,7 +25,7 @@ void updateCamera(GameState *gameState) {
         if(gameState->keys.keys[KEY_UP]) {
             gameState->camera.T.pos = plus_float3(gameState->camera.T.pos, scale_float3(gameState->dt*speed, zAxis));
         }
-    } else {
+    } else if(gameState->useCameraMovement) {
         gameState->camera.T = gameState->player.T;
         gameState->camera.T.pos = plus_float3(gameState->cameraOffset, gameState->camera.T.pos);
 

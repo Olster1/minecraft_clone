@@ -155,7 +155,7 @@ int main(int argc, char **argv) {
   initBackendRenderer();
 
   //NOTE: Hide the cursor
-  SDL_ShowCursor(SDL_DISABLE);
+  // SDL_ShowCursor(SDL_DISABLE);
 
   SDL_Event event;
   SDL_Event e;
@@ -239,7 +239,12 @@ int main(int argc, char **argv) {
 
     //NOTE: For 3d to move camera aroumd
     gameState->lastMouseP = make_float2(0.5f*gameState->screenWidth, -0.5f*gameState->screenWidth);
-    SDL_WarpMouseInWindow(window, 0.5f*gameState->screenWidth, 0.5f*gameState->screenWidth);
+    if(gameState->useCameraMovement) {
+      SDL_WarpMouseInWindow(window, 0.5f*gameState->screenWidth, 0.5f*gameState->screenWidth);
+    } else {
+      gameState->lastMouseP = gameState->mouseP_screenSpace;
+    }
+    
               
   }
 

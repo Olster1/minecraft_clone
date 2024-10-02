@@ -8,8 +8,14 @@ void perlinNoiseDrawTests(GameState *gameState, int originWorldX, int originWorl
             int worldX = originWorldX + j;
             int worldZ = originWorldZ + i;
 
-            float t = getTerrainHeight(worldX, worldZ);
-            uint8_t color = (255 * (t / 100));
+            float t = perlin2d(worldX, worldZ, gameState->perlinNoiseValue.x*gameState->perlinNoiseValue.x, 16);
+            if(t > gameState->perlinNoiseValue.y) {
+                t = 1;
+            } else {
+                t = 0;
+            }
+
+            uint8_t color = (255 * t);
             uint32_t v = (0xFF << 24) | (color << 16) | (color << 8) | (color << 0);
             perlinBuffer[(i*PERLIN_SIZE) + j] = v;
         }

@@ -4,8 +4,8 @@ struct FillChunkData {
     Chunk *chunk;
 };
 
-float getTerrainHeight(int worldX, int worldZ) {
-    float perlinValueLow = perlin2d(worldX, worldZ, 0.00522, 16); //SimplexNoise_fractal_2d(16, worldX, worldZ, 0.00522);
+float getTerrainHeight(int worldX, int worldZ, float freq = 0.00522, float octaves = 16) {
+    float perlinValueLow = perlin2d(worldX, worldZ, freq, octaves); //SimplexNoise_fractal_2d(16, worldX, worldZ, 0.00522);
     float terrainAmplitude = 100;
     float terrainHeight = perlinValueLow*terrainAmplitude; 
 
@@ -35,6 +35,16 @@ void addBlock(GameState *gameState, float3 worldP, BlockType type, BlockFlags fl
             assert(false);
         }
     } 
+}
+
+bool isTreeLocation(int worldX, int worldZ) {
+    float t = perlin2d(worldX, worldZ, 0.8f, 16);
+    return t < 0.25f;
+}
+
+bool isBushLocation(int worldX, int worldZ) {
+    float t = perlin2d(worldX, worldZ, 0.7f, 16);
+    return t < 0.5f;
 }
 
 
@@ -137,15 +147,17 @@ void fillChunk_multiThread(void *data_) {
                         assert(chunk->blocks[blockIndex].flags != 0);
                     }
 
-                    int treeProb = (int)(2*((float)rand() / (float)RAND_MAX));
+                    // int treeProb = (int)(2*((float)rand() / (float)RAND_MAX));
                     float prob = (float)rand() / (float)RAND_MAX;
 
-                    if(worldY > waterElevation && isTop && !(worldX % 4 - treeProb) && !(worldZ % 4 - treeProb) && prob > 0.5f) {
+                    // !(worldX % 4 - treeProb) && !(worldZ % 4 - treeProb) && prob > 0.5f
+
+                    if(worldY > waterElevation && isTop && isTreeLocation(worldX, worldZ)) {
                         generateTree_multiThread(gameState, chunk, make_float3(worldX, worldY + 1, worldZ));
                     } else if(worldY > waterElevation) {
                         int grassProb = (int)(2*((float)rand() / (float)RAND_MAX));
                         prob = (float)rand() / (float)RAND_MAX;
-                        if(isTop && !(worldX % 2 - grassProb) && !(worldZ % 2 - grassProb) && prob > 0.5f) {
+                        if(isTop && isBushLocation(worldX, worldZ)) {
                             EntityType grassType = ENTITY_GRASS_LONG;
                             float height = 2;
                             prob = (float)rand() / (float)RAND_MAX;

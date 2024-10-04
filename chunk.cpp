@@ -55,6 +55,7 @@ enum BlockFlags {
     BLOCK_NOT_PICKABLE = 1 << 3, //NOTE: Whether it destroys without dropping itself to be picked up i.e. grass just gets destroyed.
     BLOCK_FLAGS_NO_MINE_OUTLINE = 1 << 4, //NOTE: Whether it shows the mining outline
     BLOCK_FLAGS_AO = 1 << 5, //NOTE: Whether it shows the mining outline
+    BLOCK_FLAGS_UNSAFE_UNDER = 1 << 6, //NOTE: Whether the block should be destroyed if underneath block destroyed
 };
 
 struct AoMaskData {
@@ -637,6 +638,15 @@ float3 findClosestFreePosition(GameState *gameState, float3 startP, float3 defau
     return result;
 }
 
+
+void updateRecoverMovement(GameState *gameState, Entity *e) {
+    //NOTE: Apply drag
+    e->recoverDP = scale_float3(0.95f, e->recoverDP);
+
+    //NOTE:Integrate velocity
+    e->T.pos = plus_float3(e->T.pos, scale_float3(gameState->dt, e->recoverDP));
+}
+
 void updateEntities(GameState *gameState) {
     Entity *player = &gameState->player;
 
@@ -704,26 +714,37 @@ void updateEntities(GameState *gameState) {
             } else {
                 //NOTE: Check if inside a block 
                 float3 worldP = convertRealWorldToBlockCoords(e->T.pos);
-
-                // float frac = e->T.pos.y - ((int)e->T.pos.y);
                 
                 if(blockExistsReadOnly(gameState, worldP.x, worldP.y, worldP.z, BLOCK_EXISTS_COLLISION)) {
                     //NOTE: Pickup block is inside another block so moveout of the way
                     float3 moveDir = findClosestFreePosition(gameState, e->T.pos, make_float3(0, 1, 0), gameState->searchOffsets, arrayCount(gameState->searchOffsets), arrayCount(gameState->searchOffsets));
                     moveDir = normalize_float3(moveDir);
-                    e->dP = make_float3(0, 0, 0);
-                    accelForFrame = plus_float3(accelForFrame, scale_float3(100.0f, moveDir));
+                    accelForFrame = scale_float3(gameState->dt*500, moveDir);
+
+                    if(accelForFrame.y < 0) {
+                        accelForFrame.y = 0;
+                    }
                 } else if(!blockExistsReadOnly(gameState, worldP.x, worldP.y -1 , worldP.z, BLOCK_EXISTS_COLLISION)) {
-                    //NOTE: check if should apply gravity
+                    //NOTE: check if should apply gravity - that there isn't a block underneath it
                     accelForFrame.y = -10;
-                    // pushAlphaCube(gameState->renderer, worldP, BLOCK_CLOUD, make_float4(0, 1, 0, 1.0f));
                 }
 
                 //NOTE: Apply magnetic force when near player
+                float3 dir = minus_float3(gameState->player.T.pos, e->T.pos);
+                float radiusSqr = 3*3;
+                float dirSqr = float3_magnitude_sqr(dir);
                 
+                if(dirSqr < radiusSqr) {
+                    float f = (dirSqr / radiusSqr);
+                    float scaleFactor = 30*(1.0f - clamp(0, 1, f*f));
+                    //NOTE: In radius so apply force
+                    dir = normalize_float3(dir);
+                    // accelForFrame = plus_float3(accelForFrame, scale_float3(scaleFactor, dir));
+                }
             }
         }
-        
+
+        updateRecoverMovement(gameState, e);
 
         //NOTE: Integrate velocity
         e->dP = plus_float3(e->dP, scale_float3(gameState->dt, accelForFrame)); //NOTE: Already * by dt 

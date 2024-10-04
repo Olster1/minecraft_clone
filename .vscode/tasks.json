@@ -2,13 +2,13 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Minecraft",
+            "label": "minecraft",
             "type": "cppbuild",
             "command": "gcc",
             "args": [
                 "-g",
                 "-DDEBUG_BUILD=1",
-                "-o", "${workspaceFolder}/Minecraft",
+                "-o", "${workspaceFolder}/minecraft",
                 "${workspaceFolder}/platform_layer.cpp",
                 "-Wno-deprecated-declarations",
                 "-Wno-c++11-compat-deprecated-writable-strings",

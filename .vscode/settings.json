@@ -21,6 +21,7 @@
         "vector": "cpp",
         "map": "cpp",
         "unordered_map": "cpp",
-        "typeinfo": "cpp"
+        "typeinfo": "cpp",
+        "ios": "cpp"
     }
 }

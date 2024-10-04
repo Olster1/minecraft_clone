@@ -44,9 +44,13 @@ bool isTreeLocation(int worldX, int worldZ) {
 
 bool isBushLocation(int worldX, int worldZ) {
     float t = perlin2d(worldX, worldZ, 0.7f, 16);
-    return t < 0.5f;
+    return t < 0.4f;
 }
 
+bool isBigBush(int worldX, int worldZ) {
+    float t = perlin2d(worldX, worldZ, 0.9f, 16);
+    return t < 0.5f;
+}
 
 void generateTree_multiThread(GameState *gameState, Chunk *chunk, float3 worldP) {
     int treeHeight = (int)(3*((float)rand() / (float)RAND_MAX)) + 3;
@@ -147,21 +151,14 @@ void fillChunk_multiThread(void *data_) {
                         assert(chunk->blocks[blockIndex].flags != 0);
                     }
 
-                    // int treeProb = (int)(2*((float)rand() / (float)RAND_MAX));
-                    float prob = (float)rand() / (float)RAND_MAX;
-
-                    // !(worldX % 4 - treeProb) && !(worldZ % 4 - treeProb) && prob > 0.5f
-
                     if(worldY > waterElevation && isTop && isTreeLocation(worldX, worldZ)) {
                         generateTree_multiThread(gameState, chunk, make_float3(worldX, worldY + 1, worldZ));
                     } else if(worldY > waterElevation) {
-                        int grassProb = (int)(2*((float)rand() / (float)RAND_MAX));
-                        prob = (float)rand() / (float)RAND_MAX;
                         if(isTop && isBushLocation(worldX, worldZ)) {
                             EntityType grassType = ENTITY_GRASS_LONG;
                             float height = 2;
-                            prob = (float)rand() / (float)RAND_MAX;
-                            if(prob < 0.5f) {
+                            bool bigBush = isBigBush(worldX, worldZ);
+                            if(!bigBush) {
                                 grassType = ENTITY_GRASS_SHORT;
                                 height = 1;
                             }
@@ -178,13 +175,11 @@ void fillChunk_multiThread(void *data_) {
                             //NOTE: New way by making a block entity
                             int blockIndex = getBlockIndex(localX, localY, localZ);
                             if(blockIndex < arrayCount(chunk->blocks)) {
-                                chunk->blocks[blockIndex] = spawnBlock(localX, localY, localZ, BLOCK_GRASS_ENTITY, (BlockFlags)(flags | BLOCK_NOT_PICKABLE | BLOCK_FLAGS_NO_MINE_OUTLINE));
+                                chunk->blocks[blockIndex] = spawnBlock(localX, localY, localZ, BLOCK_GRASS_ENTITY, (BlockFlags)(flags | BLOCK_NOT_PICKABLE | BLOCK_FLAGS_NO_MINE_OUTLINE | BLOCK_FLAGS_UNSAFE_UNDER));
                                 chunk->blocks[blockIndex].grassHeight = height;
                                 chunk->blocks[blockIndex].flags &= ~(BLOCK_FLAGS_AO | BLOCK_FLAG_STACKABLE | BLOCK_EXISTS_COLLISION);
+                                assert(chunk->blocks[blockIndex].flags & BLOCK_EXISTS);
                             }
-                            
-                            //NOTE: Old way making just entities
-                            //initGrassEntity(c, make_float3(worldX, worldY + 1, worldZ), grassType, gameState->randomStartUpID);
                         }
                     }
                     
@@ -195,7 +190,6 @@ void fillChunk_multiThread(void *data_) {
                     if(blockIndex < arrayCount(chunk->blocks)) {
                         chunk->blocks[blockIndex] = spawnBlock(x, y, z, BLOCK_WATER, flags);
                     }
-
                 }
             }
         }

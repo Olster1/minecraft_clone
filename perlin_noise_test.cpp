@@ -8,7 +8,7 @@ void perlinNoiseDrawTests(GameState *gameState, int originWorldX, int originWorl
             int worldX = originWorldX + j;
             int worldZ = originWorldZ + i;
 
-            float t = perlin2d(worldX, worldZ, gameState->perlinNoiseValue.x*gameState->perlinNoiseValue.x, 16);
+            float t = perlin2d(worldX, worldZ, gameState->perlinNoiseValue.x, 16);
             if(t > gameState->perlinNoiseValue.y) {
                 t = 1;
             } else {

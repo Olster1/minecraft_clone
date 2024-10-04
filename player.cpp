@@ -48,15 +48,6 @@ BlockChunkPartner castRayAgainstBlock(GameState *gameState, float3 dir, float le
     return block;
 }
 
-void updateRecoverMovement(GameState *gameState, Entity *e) {
-    //NOTE: Apply drag
-    e->recoverDP = scale_float3(0.95f, e->recoverDP);
-
-    //NOTE:Integrate velocity
-    e->T.pos = plus_float3(e->T.pos, scale_float3(gameState->dt, e->recoverDP));
-
-}
-
 void updatePlayerPhysics(GameState *gameState, Entity *e, float3 movementForFrame) {
     int physicsIterations = 4;
     bool didHit = false;
@@ -285,6 +276,19 @@ void highlightBlockLookingAt(GameState *gameState, float3 lookingAxis, Entity *e
     }
 }
 
+Particler *getBlockMiningParticler(GameState *gameState, Block *block, float3 blockWorldP) {
+    Particler *p = 0;
+    //NOTE: Get reference to the particler
+    assert(gameState->particlerCount < arrayCount(gameState->particlers));
+    if(gameState->particlerCount < arrayCount(gameState->particlers)) {
+        float lifespan = 0.5f;
+        float spawnRatePerSecond = 10;
+        gameState->particlers[gameState->particlerCount++] = initParticler(lifespan, spawnRatePerSecond, make_rect3f_center_dim(plus_float3(blockWorldP, make_float3(0, 0.5f, 0)), make_float3(1, 0.1f, 1)), make_float4(0.5f, 0.75f, 0.5f, 0.75f), makeParticlerId(block));
+        p = &gameState->particlers[gameState->particlerCount - 1];
+    }
+    return p;
+}
+
 
 void mineBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
     float3 cameraPos = plus_float3(gameState->cameraOffset, e->T.pos);
@@ -311,13 +315,7 @@ void mineBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
             
             Particler *p = findParticler(gameState, makeParticlerId(b.block));
             if(!p) {
-                //NOTE: Get reference to the particler
-                assert(gameState->particlerCount < arrayCount(gameState->particlers));
-                if(gameState->particlerCount < arrayCount(gameState->particlers)) {
-                    
-                    gameState->particlers[gameState->particlerCount++] = initParticler(0.1f, 10, make_rect3f_center_dim(plus_float3(blockWorldP, make_float3(0, 0.5f, 0)), make_float3(1, 0.1f, 1)), make_float4(0.5f, 0.75f, 0.5f, 0.75f), makeParticlerId(b.block));
-                    p = &gameState->particlers[gameState->particlerCount - 1];
-                }
+                p = getBlockMiningParticler(gameState, b.block, blockWorldP);
             }
 
             assert(p);
@@ -332,7 +330,7 @@ void mineBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
             if(b.block->timeLeft <= 0) {
                 //NOTE: Add block to pickup 
                 if(!(b.block->flags & BLOCK_NOT_PICKABLE)) {
-                    initPickupItem(b.chunk, getBlockWorldPos(b), b.block->type, gameState->randomStartUpID);
+                    initPickupItem(b.chunk, blockWorldP, b.block->type, gameState->randomStartUpID);
                 }
                 
                 //NOTE: Destory the block
@@ -340,10 +338,19 @@ void mineBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
 
                 playSound(&gameState->blockFinishSound);
 
-                float3 worldP = getBlockWorldPos(b);
+                float3 worldP = blockWorldP;
                 invalidateSurroundingAoValues(gameState, worldP.x, worldP.y, worldP.z);
 
-                //TODO: Check if we should destroy an above block like grass
+                //NOTE: Check if we should destroy an above block like grass
+                Block *aboveBlock = blockExistsReadOnly(gameState, worldP.x, worldP.y + 1 , worldP.z, BLOCK_FLAGS_UNSAFE_UNDER);
+                if(aboveBlock) {
+                    //NOTE: Destory the block
+                    aboveBlock->exists = false;
+                    float3 blockWorldPAbove = blockWorldP;
+                    blockWorldPAbove.y++;
+                    p = getBlockMiningParticler(gameState, b.block, blockWorldPAbove);
+                    
+                }
 
                 //NOTE: Clear the block
                 b.block = 0;

@@ -37,20 +37,7 @@ void addBlock(GameState *gameState, float3 worldP, BlockType type, BlockFlags fl
     } 
 }
 
-bool isTreeLocation(int worldX, int worldZ) {
-    float t = perlin2d(worldX, worldZ, 0.8f, 16);
-    return t < 0.25f;
-}
-
-bool isBushLocation(int worldX, int worldZ) {
-    float t = perlin2d(worldX, worldZ, 0.7f, 16);
-    return t < 0.4f;
-}
-
-bool isBigBush(int worldX, int worldZ) {
-    float t = perlin2d(worldX, worldZ, 0.9f, 16);
-    return t < 0.5f;
-}
+#include "./perlin_noise_values.cpp"
 
 void generateTree_multiThread(GameState *gameState, Chunk *chunk, float3 worldP) {
     int treeHeight = (int)(3*((float)rand() / (float)RAND_MAX)) + 3;

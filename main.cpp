@@ -151,9 +151,12 @@ void drawHUD(GameState *gameState) {
 }
 
 void updateAndDrawDebugCode(GameState *gameState) {
-    perlinNoiseDrawTests(gameState, gameState->camera.T.pos.x, gameState->camera.T.pos.z);
+    perlinNoiseDrawTests(gameState, gameState->camera.T.pos.x, gameState->camera.T.pos.y, gameState->camera.T.pos.z);
     gameState->perlinNoiseValue.x = gui_drawSlider(gameState, &gameState->guiState, gameState->renderer, "Perlin Noise Slider x", gameState->perlinNoiseValue.x);
     gameState->perlinNoiseValue.y = gui_drawSlider(gameState, &gameState->guiState, gameState->renderer, "Perlin Noise Slider y", gameState->perlinNoiseValue.y, 3);
+    gameState->perlinNoiseValue.z = gui_drawSlider(gameState, &gameState->guiState, gameState->renderer, "Perlin Noise Slider z", gameState->perlinNoiseValue.z, 6);
+
+    printf("%f %f %f\n", gameState->perlinNoiseValue.x, gameState->perlinNoiseValue.y, gameState->perlinNoiseValue.z);
 }
 
 void updateGame(GameState *gameState) {

@@ -1,3 +1,4 @@
+//NOTE: Helper funciton since the simplex lib I'm using for 3d noise maps between -1 -> 1, and we want 0 -> 1
 float mapSimplexNoiseTo01(float value) {
     value += 1;
     value *= 0.5f;
@@ -23,9 +24,11 @@ bool isBigBush(int worldX, int worldZ) {
 }
 
 bool isIronLocation(int worldX, int worldY, int worldZ) {
+    //NOTE: Bigger frequency noise overlay
     float t0 = SimplexNoise_fractal_3d(16, worldX, worldY, worldZ, 0.007143);
     t0 = mapSimplexNoiseTo01(t0);
     
+    //NOTE: Smaller frequency for individual iron blocks 
     float t = SimplexNoise_fractal_3d(16, worldX, worldY, worldZ, 0.128572);
     t = mapSimplexNoiseTo01(t);
 

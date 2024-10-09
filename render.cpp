@@ -244,23 +244,30 @@ float2 getUVCoordForBlock(BlockType type) {
     float2 uv = make_float2(0, 0);
      if(type == BLOCK_GRASS) {
         uv.x = 0;
-        uv.y = 0.2f;
+        uv.y = 0.1f;
     } else if(type == BLOCK_SOIL) {
-        uv.x = 0.2f;
-        uv.y = 0.4f;
+        uv.x = 0.1f;
+        uv.y = 0.2f;
     } else if(type == BLOCK_STONE) {
-        uv.x = 0.4f;
-        uv.y = 0.6f;
+        uv.x = 0.2f;
+        uv.y = 0.3f;
     } else if(type == BLOCK_TREE_LEAVES) {
-        uv.x = 0.6f;
-        uv.y = 0.8f;
+        uv.x = 0.3f;
+        uv.y = 0.4f;
     } else if(type == BLOCK_TREE_WOOD) {
-        uv.x = 0.8f;
-        uv.y = 1.0f;
+        uv.x = 0.4f;
+        uv.y = 0.5f;
     } else if(type == BLOCK_WATER) {
+        uv.x = 0.3f;
+        uv.y = 0.4f;
+    } else if(type == BLOCK_COAL) {
         uv.x = 0.6f;
-        uv.y = 0.8f;
+        uv.y = 0.7f;
+    } else if(type == BLOCK_IRON) {
+        uv.x = 0.5f;
+        uv.y = 0.6f;
     }
+    
     return uv;
 }
 

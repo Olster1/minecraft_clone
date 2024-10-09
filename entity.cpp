@@ -19,6 +19,8 @@ enum BlockType {
     BLOCK_TREE_LEAVES,
     BLOCK_WATER,
     BLOCK_GRASS_ENTITY,
+    BLOCK_COAL,
+    BLOCK_IRON
 };
 
 struct TimeOfDayValues {

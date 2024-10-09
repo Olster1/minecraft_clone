@@ -156,7 +156,7 @@ void updateAndDrawDebugCode(GameState *gameState) {
     gameState->perlinNoiseValue.y = gui_drawSlider(gameState, &gameState->guiState, gameState->renderer, "Perlin Noise Slider y", gameState->perlinNoiseValue.y, 3);
     gameState->perlinNoiseValue.z = gui_drawSlider(gameState, &gameState->guiState, gameState->renderer, "Perlin Noise Slider z", gameState->perlinNoiseValue.z, 6);
 
-    printf("%f %f %f\n", gameState->perlinNoiseValue.x, gameState->perlinNoiseValue.y, gameState->perlinNoiseValue.z);
+    // printf("%f %f %f\n", gameState->perlinNoiseValue.x, gameState->perlinNoiseValue.y, gameState->perlinNoiseValue.z);
 }
 
 void updateGame(GameState *gameState) {

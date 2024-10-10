@@ -467,7 +467,7 @@ static inline bool easyMath_rayVsAABB3f(float3 origin, float3 dir, Rect3f b, flo
     if(inside)  {
         *hitPoint = origin;
 		*tAt = 0;
-		printf("STUCK IN BLOCK\n");
+		// printf("STUCK IN BLOCK\n");
 		*normal = make_float3(0, 0, 0);
         return true;
     }

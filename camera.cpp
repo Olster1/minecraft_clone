@@ -1,6 +1,11 @@
 void updateCamera(GameState *gameState) {
     if(!gameState->camera.followingPlayer) {
+        gameState->player.T = gameState->camera.T;
         float speed = 10;
+
+        if(gameState->keys.keys[KEY_SHIFT]) {
+            speed = 60;
+        }
         float rotSpeed = 13.0f;
 
         float2 mouseDelta = minus_float2(gameState->mouseP_screenSpace, gameState->lastMouseP);

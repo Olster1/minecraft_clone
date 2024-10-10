@@ -140,7 +140,7 @@ void updatePlayerPhysics(GameState *gameState, Entity *e, float3 movementForFram
         if(hit) {
             didHit = true;
 
-            if(e->dP.y < -20 && float3_dot(make_float3(0, 1, 0), shortestNormalVector) > 0.0f) {
+            if((e->dP.y < -20 && float3_dot(make_float3(0, 1, 0), shortestNormalVector) > 0.0f) && gameState->camera.followingPlayer) {
                 //NOTE: Big fall so shake the camera
                 gameState->camera.shakeTimer = MAX_SHAKE_TIMER;
                 playSound(&gameState->fallBigSound);
@@ -292,7 +292,7 @@ Particler *getBlockMiningParticler(GameState *gameState, Block *block, float3 bl
 
 void mineBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
     float3 cameraPos = plus_float3(gameState->cameraOffset, e->T.pos);
-     BlockChunkPartner b = castRayAgainstBlock(gameState, lookingAxis, DISTANCE_CAN_PLACE_BLOCK, cameraPos);
+    BlockChunkPartner b = castRayAgainstBlock(gameState, lookingAxis, DISTANCE_CAN_PLACE_BLOCK, cameraPos);
 
         if(b.block) {
             //NOTE: Play sound
@@ -304,23 +304,28 @@ void mineBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
             b.block->hitBlock = true;
             b.block->timeLeft -= gameState->dt;
 
+            if(!gameState->camera.followingPlayer) {
+                b.block->timeLeft = 0;
+            }
+
             //NOTE: Show progress on mining the block
             float percent = 1.0f - fmax(0, b.block->timeLeft / b.block->maxTime);
 
             float3 blockWorldP = getBlockWorldPos(b);
             if(!(b.block->flags & BLOCK_FLAGS_NO_MINE_OUTLINE)) {
-                //NOTE: the destruction outline
+                //NOTE: the destruction overlay
                 pushAlphaItem(gameState->renderer, blockWorldP, make_float3(1.001f, 1.001f, 1.001f), make_float4(1, 1, 1, 0.7f), percent);
             }
-            
-            Particler *p = findParticler(gameState, makeParticlerId(b.block));
-            if(!p) {
-                p = getBlockMiningParticler(gameState, b.block, blockWorldP);
-            }
-
-            assert(p);
-            if(p) {
-                p->lifeAt = 0; //NOTE: doesn't die while were still mining
+            Particler *p;
+            if(gameState->camera.followingPlayer) {
+                p = findParticler(gameState, makeParticlerId(b.block));
+                if(!p) {
+                    p = getBlockMiningParticler(gameState, b.block, blockWorldP);
+                }
+                assert(p);
+                if(p) {
+                    p->lifeAt = 0; //NOTE: doesn't die while were still mining
+                }
             }
 
             gameState->showCircleTimer = 0;
@@ -329,14 +334,16 @@ void mineBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
             //NOTE: Check if block was successfully mined
             if(b.block->timeLeft <= 0) {
                 //NOTE: Add block to pickup 
-                if(!(b.block->flags & BLOCK_NOT_PICKABLE)) {
+                if(!(b.block->flags & BLOCK_NOT_PICKABLE) && gameState->camera.followingPlayer) {
                     initPickupItem(b.chunk, blockWorldP, b.block->type, gameState->randomStartUpID);
                 }
                 
                 //NOTE: Destory the block
                 b.chunk->blocks[b.blockIndex].exists = false;
 
-                playSound(&gameState->blockFinishSound);
+                if(gameState->camera.followingPlayer) {
+                    playSound(&gameState->blockFinishSound);
+                }
 
                 float3 worldP = blockWorldP;
                 invalidateSurroundingAoValues(gameState, worldP.x, worldP.y, worldP.z);
@@ -348,7 +355,7 @@ void mineBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
                     aboveBlock->exists = false;
                     float3 blockWorldPAbove = blockWorldP;
                     blockWorldPAbove.y++;
-                    p = getBlockMiningParticler(gameState, b.block, blockWorldPAbove);
+                    getBlockMiningParticler(gameState, b.block, blockWorldPAbove);
                     
                 }
 

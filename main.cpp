@@ -156,7 +156,7 @@ void updateAndDrawDebugCode(GameState *gameState) {
     gameState->perlinNoiseValue.y = gui_drawSlider(gameState, &gameState->guiState, gameState->renderer, "Perlin Noise Slider y", gameState->perlinNoiseValue.y, 3);
     gameState->perlinNoiseValue.z = gui_drawSlider(gameState, &gameState->guiState, gameState->renderer, "Perlin Noise Slider z", gameState->perlinNoiseValue.z, 6);
 
-    // printf("%f %f %f\n", gameState->perlinNoiseValue.x, gameState->perlinNoiseValue.y, gameState->perlinNoiseValue.z);
+    printf("%f %f %f\n", gameState->perlinNoiseValue.x, gameState->perlinNoiseValue.y, gameState->perlinNoiseValue.z);
 }
 
 void updateGame(GameState *gameState) {
@@ -227,13 +227,12 @@ void updateGame(GameState *gameState) {
     // printf("%d %d %d\n", chunkX, chunkY, chunkZ);
 
     int chunkRadiusY = 1;
-    int chunkRadiusXZ = 3;
+    int chunkRadiusXZ = 5;
     
     for(int z = -chunkRadiusXZ; z <= chunkRadiusXZ; ++z) {
         for(int x = -chunkRadiusXZ; x <= chunkRadiusXZ; ++x) {
             for(int y = -chunkRadiusY; y <= chunkRadiusY; ++y) {
                 Chunk *chunk = getChunk(gameState, chunkX + x, chunkY + y, chunkZ + z);
-
                 if(chunk) {
                     drawChunk(gameState, chunk);
                 }
@@ -258,7 +257,7 @@ void updateGame(GameState *gameState) {
 
     drawHUD(gameState);
 
-    updateAndDrawDebugCode(gameState);
+    // updateAndDrawDebugCode(gameState);
     
     rendererFinish(gameState->renderer, screenT, cameraT, screenGuiT, textGuiT, lookingAxis, cameraTWithoutTranslation, timeOfDayValues, gameState->perlinTestTexture.handle);
 

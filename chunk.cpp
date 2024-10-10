@@ -739,7 +739,7 @@ void updateEntities(GameState *gameState) {
                     float scaleFactor = 30*(1.0f - clamp(0, 1, f*f));
                     //NOTE: In radius so apply force
                     dir = normalize_float3(dir);
-                    // accelForFrame = plus_float3(accelForFrame, scale_float3(scaleFactor, dir));
+                    accelForFrame = plus_float3(accelForFrame, scale_float3(scaleFactor, dir));
                 }
             }
         }

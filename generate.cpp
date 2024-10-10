@@ -4,14 +4,6 @@ struct FillChunkData {
     Chunk *chunk;
 };
 
-float getTerrainHeight(int worldX, int worldZ, float freq = 0.00522, float octaves = 16) {
-    float perlinValueLow = perlin2d(worldX, worldZ, freq, octaves); //SimplexNoise_fractal_2d(16, worldX, worldZ, 0.00522);
-    float terrainAmplitude = 100;
-    float terrainHeight = perlinValueLow*terrainAmplitude; 
-
-    return terrainHeight;
-}
-
 void getAOMask_multiThreaded(void *data_);
 
 void addBlock(GameState *gameState, float3 worldP, BlockType type, BlockFlags flags) {
@@ -117,16 +109,24 @@ void fillChunk_multiThread(void *data_) {
                     bool isTop = false;
 
                     if(underWater) {
+                        //NOTE: Vary underwater terrain (grass can't grow underwater)
                         float value = SimplexNoise_fractal_3d(8, worldX, worldY, worldZ, 0.1f);
                         type = BLOCK_SOIL;
-                        if(value < 0) {
+                        if(value < 0.5f) {
                             type = BLOCK_STONE;
                         }
                     } else if(worldY < (terrainHeight - 1)) {
                         if(worldY >= ((terrainHeight - 1) - subSoilDepth)) {
                             type = BLOCK_SOIL;
                         } else {
-                            type = BLOCK_STONE;
+                            if(isIronLocation(worldX, worldY, worldZ)) {
+                                type = BLOCK_IRON;
+                            } else if(isCoalLocation(worldX, worldY, worldZ)) {
+                                type = BLOCK_COAL;
+                            } else {
+                                type = BLOCK_STONE;
+                            }
+                            
                         }
                     } else {
                         isTop = true;

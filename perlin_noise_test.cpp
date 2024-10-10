@@ -15,12 +15,12 @@ void perlinNoiseDrawTests(GameState *gameState, int originWorldX, int originWorl
                 // float t = SimplexNoise_fractal_3d(16, worldX, worldY, worldZ, gameState->perlinNoiseValue.x);
 
                 float t0 = SimplexNoise_fractal_3d(16, worldX, worldY, worldZ, gameState->perlinNoiseValue.x);
-                t0 = mapSimplexNoiseTo01(t0);
+                float t = mapSimplexNoiseTo01(t0);
 
-                float t = SimplexNoise_fractal_3d(16, worldX, worldY, worldZ, gameState->perlinNoiseValue.y);
-                t = mapSimplexNoiseTo01(t);
+                // float t = SimplexNoise_fractal_3d(16, worldX, worldY, worldZ, gameState->perlinNoiseValue.y);
+                // t = mapSimplexNoiseTo01(t);
 
-                t = t * t0;
+                // t = t * t0;
 
 
                 if(t > gameState->perlinNoiseValue.z) {  

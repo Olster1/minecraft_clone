@@ -7,7 +7,7 @@
 #define SHOW_CIRCLE_DELAY 2
 #define STAMINA_DRAIN_SPEED 0.1f
 #define STAMINA_RECHARGE_SPEED 0.1f
-#define CLOUD_EVELVATION 80 //NOTE: This is 192 in actual minecraft - Clouds always float westward between layer 192 and 196
+#define CLOUD_EVELVATION 100 //NOTE: This is 192 in actual minecraft - Clouds always float westward between layer 192 and 196
 #define WATER_ELEVATION 40 //NOTE: This is 62 in actual minecraft
 
 //NOTE: DEBUGGING CONSTANTS

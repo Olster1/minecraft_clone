@@ -182,7 +182,7 @@ void updatePlayerPhysics(GameState *gameState, Entity *e, float3 movementForFram
 }
 
 void cancelMiningInteraction(GameState *gameState) {
-    gameState->currentMiningBlock->timeLeft = gameState->currentMiningBlock->maxTime;
+    gameState->currentMiningBlock->timeLeft = getBlockTime(gameState->currentMiningBlock->type);
     gameState->currentMiningBlock = 0;
 
     if(gameState->miningSoundPlaying) {
@@ -272,7 +272,7 @@ void highlightBlockLookingAt(GameState *gameState, float3 lookingAxis, Entity *e
     BlockChunkPartner b = castRayAgainstBlock(gameState, lookingAxis, DISTANCE_CAN_PLACE_BLOCK, plus_float3(gameState->cameraOffset, e->T.pos));
 
     if(b.block) {
-        b.block->hitBlock = true;
+        // b.block->hitBlock = true;
     }
 }
 
@@ -301,7 +301,7 @@ void mineBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
                 gameState->miningSoundPlaying->nextSound = gameState->miningSoundPlaying;
             }
 
-            b.block->hitBlock = true;
+            // b.block->hitBlock = true;
             b.block->timeLeft -= gameState->dt;
 
             if(!gameState->camera.followingPlayer) {
@@ -309,7 +309,7 @@ void mineBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
             }
 
             //NOTE: Show progress on mining the block
-            float percent = 1.0f - fmax(0, b.block->timeLeft / b.block->maxTime);
+            float percent = 1.0f - fmax(0, b.block->timeLeft / getBlockTime(b.block->type));
 
             float3 blockWorldP = getBlockWorldPos(b);
             if(!(b.block->flags & BLOCK_FLAGS_NO_MINE_OUTLINE)) {

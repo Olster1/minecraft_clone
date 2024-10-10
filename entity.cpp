@@ -18,9 +18,14 @@ enum BlockType {
     BLOCK_TREE_WOOD,
     BLOCK_TREE_LEAVES,
     BLOCK_WATER,
-    BLOCK_GRASS_ENTITY,
+    BLOCK_GRASS_SHORT_ENTITY,
+    BLOCK_GRASS_TALL_ENTITY,
     BLOCK_COAL,
-    BLOCK_IRON
+    BLOCK_IRON,
+
+
+    //NOTHING PAST HERE
+    BLOCK_TYPE_COUNT
 };
 
 struct TimeOfDayValues {
@@ -28,25 +33,27 @@ struct TimeOfDayValues {
     float4 skyColorB;
 };
 
-struct Block {
+struct CompressedBlock {
+    uint64_t type;
     //NOTE: Local to the Chunk they're in
     int x;
     int y;
     int z;
-
-    bool hitBlock;
-    float timeLeft;
-    float maxTime;
-    bool exists;
     uint64_t flags;
+    volatile uint64_t aoMask; //NOTE: Multiple threads can change this
+};
 
+struct Block {
+    //NOTE: Local to the Chunk they're in
+    BlockType type;
+    int x;
+    int y;
+    int z;
+    uint64_t flags;
     volatile uint64_t aoMask; //NOTE: Multiple threads can change this
 
-    void *data;//NOTE: This can be null and is the specific data for each entity 
-
-    float grassHeight;
-
-    BlockType type;
+    float timeLeft;
+    bool exists;
 };
 
 struct CloudBlock {

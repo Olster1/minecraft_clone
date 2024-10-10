@@ -12,6 +12,17 @@ struct AOOffset {
     float3 offsets[3];
 };
 
+enum BlockFlags {
+    BLOCK_FLAGS_NONE = 0,
+    BLOCK_EXISTS_COLLISION = 1 << 0,
+    BLOCK_EXISTS = 1 << 1, //NOTE: All blocks have this
+    BLOCK_FLAG_STACKABLE = 1 << 2, //NOTE: Whether you can put a block ontop of this one
+    BLOCK_NOT_PICKABLE = 1 << 3, //NOTE: Whether it destroys without dropping itself to be picked up i.e. grass just gets destroyed.
+    BLOCK_FLAGS_NO_MINE_OUTLINE = 1 << 4, //NOTE: Whether it shows the mining outline
+    BLOCK_FLAGS_AO = 1 << 5, //NOTE: Whether it shows the mining outline
+    BLOCK_FLAGS_UNSAFE_UNDER = 1 << 6, //NOTE: Whether the block should be destroyed if underneath block destroyed
+};
+
 #define CHUNK_LIST_SIZE 4096
 
 struct GameState {
@@ -105,8 +116,32 @@ struct GameState {
     GuiState guiState;
     bool useCameraMovement;
     float3 perlinNoiseValue;
+
+    uint64_t blockFlags[BLOCK_TYPE_COUNT];
     
 };
+
+void createBlockFlags(GameState *gameState) {
+    for(int i = 0; i < arrayCount(gameState->blockFlags); ++i) {
+        uint64_t flags = BLOCK_EXISTS | BLOCK_FLAGS_AO | BLOCK_FLAG_STACKABLE | BLOCK_EXISTS_COLLISION;
+        BlockType t = (BlockType)i;
+        switch(t) {
+            case BLOCK_WATER: {
+                flags = flags | BLOCK_FLAGS_NONE;
+                flags &= BLOCK_EXISTS_COLLISION;
+            } break;
+            case BLOCK_GRASS_SHORT_ENTITY:
+            case BLOCK_GRASS_TALL_ENTITY: {
+                flags = (BlockFlags)(flags | BLOCK_NOT_PICKABLE | BLOCK_FLAGS_NO_MINE_OUTLINE | BLOCK_FLAGS_UNSAFE_UNDER);
+                flags &= ~(BLOCK_FLAGS_AO | BLOCK_FLAG_STACKABLE | BLOCK_EXISTS_COLLISION);
+            } break;
+            default: {
+                
+            };
+        }
+        gameState->blockFlags[i] = flags;
+    }
+}
 
 void createAOOffsets(GameState *gameState) {
     for(int i = 0; i < arrayCount(global_cubeData); ++i) {
@@ -161,6 +196,7 @@ void createSearchOffsets(GameState *gameState) {
 }
 
 void initGameState(GameState *gameState) {
+    assert(BLOCK_TYPE_COUNT < 255);
     gameState->camera.fov = 60;
     gameState->camera.T.pos = make_float3(1000, 100, 1000);
     gameState->camera.followingPlayer = true;
@@ -170,7 +206,7 @@ void initGameState(GameState *gameState) {
 
     gameState->currentInventoryHotIndex = 0;
 
-    
+    createBlockFlags(gameState);
 
     srand(time(NULL));
 
@@ -222,6 +258,11 @@ void initGameState(GameState *gameState) {
     playSound(&gameState->bgMusic);
 
     gameState->randomStartUpID = rand();
+
+    printf("chunk size: %ld\n", sizeof(Chunk));
+    printf("block size: %ld\n", sizeof(Block));
+    printf("compressed block size: %ld\n", sizeof(CompressedBlock));
+    printf("Entity size: %ld\n", sizeof(Entity));
 
     createAOOffsets(gameState);
 

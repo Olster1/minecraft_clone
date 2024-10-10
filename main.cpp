@@ -95,8 +95,8 @@ TimeOfDayValues getTimeOfDayValues(GameState *gameState) {
     }
 
     TimeOfDayValues result = {};
-    result.skyColorA = a;
-    result.skyColorB = b;
+    result.skyColorA = dayA;
+    result.skyColorB = dayB;
 
     return result;
 

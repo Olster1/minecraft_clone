@@ -40,23 +40,12 @@ float getBlockTime(BlockType type) {
         result = 4.0f;
     } else if(type == BLOCK_TREE_LEAVES) {
         result = 0.1f;
-    } else if(type == BLOCK_GRASS_ENTITY) {
+    } else if(type == BLOCK_GRASS_TALL_ENTITY || type == BLOCK_GRASS_SHORT_ENTITY) {
         result = 0.05f;
     }
 
     return result;
 }
-
-enum BlockFlags {
-    BLOCK_FLAGS_NONE = 0,
-    BLOCK_EXISTS_COLLISION = 1 << 0,
-    BLOCK_EXISTS = 1 << 1, //NOTE: All blocks have this
-    BLOCK_FLAG_STACKABLE = 1 << 2, //NOTE: Whether you can put a block ontop of this one
-    BLOCK_NOT_PICKABLE = 1 << 3, //NOTE: Whether it destroys without dropping itself to be picked up i.e. grass just gets destroyed.
-    BLOCK_FLAGS_NO_MINE_OUTLINE = 1 << 4, //NOTE: Whether it shows the mining outline
-    BLOCK_FLAGS_AO = 1 << 5, //NOTE: Whether it shows the mining outline
-    BLOCK_FLAGS_UNSAFE_UNDER = 1 << 6, //NOTE: Whether the block should be destroyed if underneath block destroyed
-};
 
 struct AoMaskData {
     GameState *gameState;
@@ -81,8 +70,7 @@ Block spawnBlock(int x, int y, int z, BlockType type, BlockFlags flags) {
 
     b.type = type;
 
-    b.maxTime = getBlockTime(type);
-    b.timeLeft = b.maxTime;
+    b.timeLeft = getBlockTime(type);
 
     b.aoMask = getInvalidAoMaskValue();
 
@@ -400,13 +388,17 @@ void drawChunk(GameState *gameState, Chunk *c) {
                     pushWaterQuad(gameState->renderer, worldP, make_float4(1, 1, 1, 0.6f));
                 }
                 
-            } else if(t == BLOCK_GRASS_ENTITY) {
-                pushGrassQuad(gameState->renderer, worldP, b->grassHeight, make_float4(1, 1, 1, 1));
-            } else {
-                if(b->hitBlock) {
-                    // t = BLOCK_SOIL;
-                    color = make_float4(1.0f, 1.0f, 1.0f, 1);
+            } else if(t == BLOCK_GRASS_SHORT_ENTITY || t == BLOCK_GRASS_TALL_ENTITY) {
+                float height = 1;
+                if(t == BLOCK_GRASS_TALL_ENTITY) {
+                    height = 2;
                 }
+                pushGrassQuad(gameState->renderer, worldP, height, make_float4(1, 1, 1, 1));
+            } else {
+                // if(b->hitBlock) {
+                //     // t = BLOCK_SOIL;
+                //     color = make_float4(1.0f, 1.0f, 1.0f, 1);
+                // }
 
                 //NOTE: Calculate the aoMask if haven't yet - top bit is set 
                 if(b->aoMask & getInvalidAoMaskValue()) 
@@ -419,7 +411,7 @@ void drawChunk(GameState *gameState, Chunk *c) {
                 pushCube(gameState->renderer, worldP, t, color, AOMask);
                 // pushAlphaItem(gameState->renderer, worldP, make_float3(1, 1, 1), color);
                 
-                c->blocks[i].hitBlock = false;
+                // c->blocks[i].hitBlock = false;
             }
         }
     }

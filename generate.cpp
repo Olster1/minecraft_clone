@@ -143,11 +143,11 @@ void fillChunk_multiThread(void *data_) {
                     } else if(worldY > waterElevation) {
                         if(isTop && isBushLocation(worldX, worldZ)) {
                             EntityType grassType = ENTITY_GRASS_LONG;
-                            float height = 2;
+                            BlockType grassType1 = BLOCK_GRASS_SHORT_ENTITY;
                             bool bigBush = isBigBush(worldX, worldZ);
                             if(!bigBush) {
                                 grassType = ENTITY_GRASS_SHORT;
-                                height = 1;
+                                grassType1 = BLOCK_GRASS_TALL_ENTITY;
                             }
 
                             int chunkX = worldX / CHUNK_DIM;
@@ -162,8 +162,7 @@ void fillChunk_multiThread(void *data_) {
                             //NOTE: New way by making a block entity
                             int blockIndex = getBlockIndex(localX, localY, localZ);
                             if(blockIndex < arrayCount(chunk->blocks)) {
-                                chunk->blocks[blockIndex] = spawnBlock(localX, localY, localZ, BLOCK_GRASS_ENTITY, (BlockFlags)(flags | BLOCK_NOT_PICKABLE | BLOCK_FLAGS_NO_MINE_OUTLINE | BLOCK_FLAGS_UNSAFE_UNDER));
-                                chunk->blocks[blockIndex].grassHeight = height;
+                                chunk->blocks[blockIndex] = spawnBlock(localX, localY, localZ, grassType1, (BlockFlags)(flags | BLOCK_NOT_PICKABLE | BLOCK_FLAGS_NO_MINE_OUTLINE | BLOCK_FLAGS_UNSAFE_UNDER));
                                 chunk->blocks[blockIndex].flags &= ~(BLOCK_FLAGS_AO | BLOCK_FLAG_STACKABLE | BLOCK_EXISTS_COLLISION);
                                 assert(chunk->blocks[blockIndex].flags & BLOCK_EXISTS);
                             }

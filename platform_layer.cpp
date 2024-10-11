@@ -81,7 +81,7 @@ float getBestDt(float secondsElapsed) {
           closestFrameRate = dt_;
         }
       }
-      // printf("frames per second: %f\n", closestFrameRate);              
+      printf("frames per second: %f\n", closestFrameRate);              
       return closestFrameRate;
 }
 

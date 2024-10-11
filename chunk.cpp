@@ -60,7 +60,6 @@ uint32_t getHashForChunk(int x, int y, int z) {
     hash = hash & (CHUNK_LIST_SIZE - 1);
     assert(hash < CHUNK_LIST_SIZE);
     assert(hash >= 0);
-    hash = 23;
     return hash;
 }
 

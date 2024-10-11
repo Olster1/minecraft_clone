@@ -160,12 +160,31 @@ void updateAndDrawDebugCode(GameState *gameState) {
     printf("%f %f %f\n", gameState->perlinNoiseValue.x, gameState->perlinNoiseValue.y, gameState->perlinNoiseValue.z);
 }
 
+
+void DEBUG_chunkTests(GameState *gameState) {
+    Chunk *c = getChunk_(gameState, 3, 4, 5, true, false);
+    Chunk *d = getChunk_(gameState, 8, 33, 5, true, false);
+    Chunk *b = getChunk_(gameState, 8, 66, 5, true, false);
+
+    assert(c);
+    assert(b);
+    assert(d);
+
+    Chunk *e = getChunk_(gameState, 8, 33, 5, false, false);
+    assert(e);
+    Chunk *f = getChunk_(gameState, 8, 66, 5, false, false);
+    assert(f);
+    Chunk *g = getChunk_(gameState, 3, 4, 5, false, false);
+    assert(g);
+
+}
+
 void updateGame(GameState *gameState) {
     if(!gameState->inited) {
         globalLongTermArena = createArena(Kilobytes(200));
         globalPerFrameArena = createArena(Kilobytes(100));
         perFrameArenaMark = takeMemoryMark(&globalPerFrameArena);
-
+        // DEBUG_chunkTests(gameState);
         initGameState(gameState);
     } else { 
         releaseMemoryMark(&perFrameArenaMark);

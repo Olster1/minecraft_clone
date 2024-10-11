@@ -130,7 +130,7 @@ void createBlockFlags(GameState *gameState) {
         BlockType t = (BlockType)i;
         switch(t) {
             case BLOCK_WATER: {
-                flags = flags | BLOCK_FLAGS_NONE;
+                flags = flags | BLOCK_FLAGS_NONE | BLOCK_FLAGS_NO_MINE_OUTLINE;
                 flags &= ~BLOCK_EXISTS_COLLISION;
             } break;
             case BLOCK_GRASS_SHORT_ENTITY:
@@ -202,6 +202,7 @@ void createSearchOffsets(GameState *gameState) {
 }
 
 void initGameState(GameState *gameState) {
+    
     assert(BLOCK_TYPE_COUNT < 255);
     gameState->camera.fov = 60;
     gameState->camera.T.pos = make_float3(1000, 100, 1000);
@@ -213,6 +214,7 @@ void initGameState(GameState *gameState) {
     gameState->currentInventoryHotIndex = 0;
 
     createBlockFlags(gameState);
+    memset(gameState->chunks, 0, arrayCount(gameState->chunks)*sizeof(Chunk *));
 
     srand(time(NULL));
     gameState->entitiesToAddCount = 0;
@@ -228,8 +230,7 @@ void initGameState(GameState *gameState) {
     loadWavFile(&gameState->blockFinishSound, "./sounds/blockFinish.wav", &gameState->audioSpec);
     loadWavFile(&gameState->fallBigSound, "./sounds/fallbig.wav", &gameState->audioSpec);
     loadWavFile(&gameState->pickupSound, "./sounds/pop.wav", &gameState->audioSpec);
-
-    // loadWavFile(&gameState->bgMusic, "./sounds/sweeden.wav", &gameState->audioSpec);
+    loadWavFile(&gameState->bgMusic, "./sounds/sweeden.wav", &gameState->audioSpec);
 
     gameState->gravityOn = true;
 

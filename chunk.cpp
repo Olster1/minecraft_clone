@@ -60,6 +60,7 @@ uint32_t getHashForChunk(int x, int y, int z) {
     hash = hash & (CHUNK_LIST_SIZE - 1);
     assert(hash < CHUNK_LIST_SIZE);
     assert(hash >= 0);
+    hash = 23;
     return hash;
 }
 
@@ -287,6 +288,7 @@ void resetNeighbouringChunksAO(GameState *gameState, int x, int y, int z) {
 
 Chunk *generateChunk(GameState *gameState, int x, int y, int z, uint32_t hash) {
     Chunk *chunk = (Chunk *)malloc(sizeof(Chunk));
+    assert(chunk);
     memset(chunk, 0, sizeof(Chunk));
 
     chunk->x = x;
@@ -298,15 +300,8 @@ Chunk *generateChunk(GameState *gameState, int x, int y, int z, uint32_t hash) {
     //NOTE: Reset all AO of neighbouring blocks
     resetNeighbouringChunksAO(gameState, x, y, z);
 
-    chunk->next = 0;
-
-    Chunk **chunkPtr = &gameState->chunks[hash];
-
-    if(*chunkPtr) {
-        chunkPtr = &((*chunkPtr)->next);
-    }
-
-    *chunkPtr = chunk;
+    chunk->next = gameState->chunks[hash];
+    gameState->chunks[hash] = chunk;
 
     return chunk;
 }

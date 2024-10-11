@@ -314,7 +314,6 @@ ModelBuffer generateVertexBuffer(Vertex *triangleData, int vertexCount, unsigned
 }
 
 void initBackendRenderer() {
-
     //TODO: Enable the back face culling
     // glEnable(GL_CULL_FACE);
     // glCullFace(GL_FRONT);
@@ -510,7 +509,7 @@ void updateInstanceData(uint32_t bufferHandle, void *data, size_t sizeInBytes) {
     //NOTE(ollie): We were using glBufferData which deletes the old buffer and resends the create a new buffer, but 
     //NOTE(ollie): I saw on Dungeoneer code using glsubbufferdata is faster because it doesn't have to delete it.
     // glBufferSubData(GL_ARRAY_BUFFER, 0, sizeInBytes, data);
-    glBufferData(GL_ARRAY_BUFFER, sizeInBytes, data, GL_DYNAMIC_DRAW); 
+    glBufferData(GL_ARRAY_BUFFER, sizeInBytes, data, GL_STREAM_DRAW); 
     renderCheckError();
 
     
@@ -608,6 +607,7 @@ void rendererFinish(Renderer *renderer, float16 projectionTransform, float16 mod
 
     if(renderer->cubeCount > 0) {
         //NOTE: Draw Cubes
+        // printf("cube size: %lu\n", renderer->cubeCount*sizeof(InstanceData));
         updateInstanceData(renderer->blockModel.instanceBufferhandle, renderer->cubeData, renderer->cubeCount*sizeof(InstanceData));
         drawModels(&renderer->blockModel, &renderer->blockShader, renderer->terrainTextureHandle, renderer->cubeCount, projectionTransform, modelViewTransform, lookingAxis, renderer->underWater, timeOfDay);
 

@@ -101,6 +101,9 @@ struct GameState {
     Entity *entitiesForFrame[MAX_ENTITY_COUNT]; //NOTE: Point to the entities stored on the chunk
     EntityChunkInfo entitiesForFrameChunkInfo[MAX_ENTITY_COUNT]; //NOTE: Point to the entities stored on the chunk
 
+    int entitiesToAddCount;
+    Entity entitiesToAddAfterFrame[MAX_ENTITY_COUNT]; //NOTE: Point to the entities stored on the chunk
+
     int entityToDeleteCount;
     int entitiesToDelete[MAX_ENTITY_COUNT];
 
@@ -128,12 +131,15 @@ void createBlockFlags(GameState *gameState) {
         switch(t) {
             case BLOCK_WATER: {
                 flags = flags | BLOCK_FLAGS_NONE;
-                flags &= BLOCK_EXISTS_COLLISION;
+                flags &= ~BLOCK_EXISTS_COLLISION;
             } break;
             case BLOCK_GRASS_SHORT_ENTITY:
             case BLOCK_GRASS_TALL_ENTITY: {
                 flags = (BlockFlags)(flags | BLOCK_NOT_PICKABLE | BLOCK_FLAGS_NO_MINE_OUTLINE | BLOCK_FLAGS_UNSAFE_UNDER);
                 flags &= ~(BLOCK_FLAGS_AO | BLOCK_FLAG_STACKABLE | BLOCK_EXISTS_COLLISION);
+            } break;
+            case BLOCK_TREE_LEAVES: {
+                flags = (BlockFlags)(flags | BLOCK_EXISTS_COLLISION | BLOCK_FLAGS_NO_MINE_OUTLINE);
             } break;
             default: {
                 
@@ -209,6 +215,7 @@ void initGameState(GameState *gameState) {
     createBlockFlags(gameState);
 
     srand(time(NULL));
+    gameState->entitiesToAddCount = 0;
 
     gameState->timeOfDay = 0.4f;
     
@@ -243,6 +250,8 @@ void initGameState(GameState *gameState) {
 
     gameState->currentMiningBlock = 0;
 
+    // DEBUG_ArrayTests();
+
     gameState->renderer = initRenderer(gameState->grassTexture, breakBlockTexture, atlasTexture);
 
     gameState->mainFont = initFontAtlas("./fonts/Minecraft.ttf");
@@ -261,7 +270,6 @@ void initGameState(GameState *gameState) {
 
     printf("chunk size: %ld\n", sizeof(Chunk));
     printf("block size: %ld\n", sizeof(Block));
-    printf("compressed block size: %ld\n", sizeof(CompressedBlock));
     printf("Entity size: %ld\n", sizeof(Entity));
 
     createAOOffsets(gameState);

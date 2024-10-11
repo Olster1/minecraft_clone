@@ -1,5 +1,6 @@
 #include "./game_defines.h"
 #include "./easy_memory.h"
+#include "./resize_array.cpp"
 #include "./memory_arena.h"
 #include "./easy_string_utf8.h"
 #include "./easy_string.h"

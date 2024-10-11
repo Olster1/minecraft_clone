@@ -6,7 +6,7 @@ struct FillChunkData {
 
 void getAOMask_multiThreaded(void *data_);
 
-void addBlock(GameState *gameState, float3 worldP, BlockType type, BlockFlags flags) {
+void addBlock(GameState *gameState, float3 worldP, BlockType type) {
     int chunkX = (int)worldP.x / CHUNK_DIM;
     int chunkY = (int)worldP.y / CHUNK_DIM;
     int chunkZ = (int)worldP.z / CHUNK_DIM;
@@ -16,13 +16,17 @@ void addBlock(GameState *gameState, float3 worldP, BlockType type, BlockFlags fl
     // assert(c);
    
     if(c) {
+        if(!c->blocks) {
+            c->blocks = (Block *)easyPlatform_allocateMemory(BLOCKS_PER_CHUNK*sizeof(Block), EASY_PLATFORM_MEMORY_ZERO);
+        }
         int localX = worldP.x - (CHUNK_DIM*chunkX); 
         int localY = worldP.y - (CHUNK_DIM*chunkY); 
         int localZ = worldP.z - (CHUNK_DIM*chunkZ); 
 
         int blockIndex = getBlockIndex(localX, localY, localZ);
-        if(blockIndex < arrayCount(c->blocks)) {
-            c->blocks[blockIndex] = spawnBlock(localX, localY, localZ, type, flags);
+        assert(blockIndex < BLOCKS_PER_CHUNK);
+        if(blockIndex < BLOCKS_PER_CHUNK) {
+            c->blocks[blockIndex] = spawnBlock(localX, localY, localZ, type);
         } else {
             assert(false);
         }
@@ -37,16 +41,14 @@ void generateTree_multiThread(GameState *gameState, Chunk *chunk, float3 worldP)
     for(int i = 0; i < treeHeight; ++i) {
         float3 p = plus_float3(worldP, make_float3(0, i, 0));
         //NOTE: Add block
-        addBlock(gameState, p, BLOCK_TREE_WOOD, BLOCK_EXISTS_COLLISION);
+        addBlock(gameState, p, BLOCK_TREE_WOOD);
     }
 
     int z = 0;
     int x = 0;
 
-    BlockFlags leaveFlags = (BlockFlags)(BLOCK_EXISTS_COLLISION | BLOCK_FLAGS_NO_MINE_OUTLINE);
-
     float3 p = plus_float3(worldP, make_float3(x, (treeHeight + 1), z));
-    addBlock(gameState, p, BLOCK_TREE_LEAVES, leaveFlags);
+    addBlock(gameState, p, BLOCK_TREE_LEAVES);
 
     float3 offsets[] = {make_float3(1, treeHeight, 0), make_float3(1, treeHeight, 1), 
                         make_float3(-1, treeHeight, -1), make_float3(1, treeHeight, -1), 
@@ -59,7 +61,7 @@ void generateTree_multiThread(GameState *gameState, Chunk *chunk, float3 worldP)
             float3 o = offsets[i];
             o.y -= j;
             float3 p = plus_float3(worldP, o);
-            addBlock(gameState, p, BLOCK_TREE_LEAVES, leaveFlags);
+            addBlock(gameState, p, BLOCK_TREE_LEAVES);
         }
     }
     treeHeight -=1;
@@ -76,7 +78,7 @@ void generateTree_multiThread(GameState *gameState, Chunk *chunk, float3 worldP)
 
     for(int i = 0; i < arrayCount(offsets2); ++i) {
         float3 p = plus_float3(worldP, offsets2[i]);
-        addBlock(gameState, p, BLOCK_TREE_LEAVES, BLOCK_EXISTS_COLLISION);
+        addBlock(gameState, p, BLOCK_TREE_LEAVES);
     }
 
 }
@@ -99,12 +101,15 @@ void fillChunk_multiThread(void *data_) {
             float terrainHeight = getTerrainHeight(worldX, worldZ);
 
             for(int y = 0; y < CHUNK_DIM; ++y) {
-                BlockFlags flags = BLOCK_EXISTS_COLLISION;
                 int worldY = y + chunk->y*CHUNK_DIM;
 
                 bool underWater = worldY < waterElevation;
 
                 if(worldY < terrainHeight) {
+                    if(!chunk->blocks) {
+                        chunk->blocks = (Block *)easyPlatform_allocateMemory(BLOCKS_PER_CHUNK*sizeof(Block), EASY_PLATFORM_MEMORY_ZERO);
+                    }
+                    
                     BlockType type = BLOCK_GRASS;
                     bool isTop = false;
 
@@ -133,9 +138,10 @@ void fillChunk_multiThread(void *data_) {
                     }
 
                     int blockIndex = getBlockIndex(x, y, z);
-                    if(blockIndex < arrayCount(chunk->blocks)) {
-                        chunk->blocks[blockIndex] = spawnBlock(x, y, z, type, flags);
-                        assert(chunk->blocks[blockIndex].flags != 0);
+                    assert(blockIndex < BLOCKS_PER_CHUNK);
+                    if(blockIndex < BLOCKS_PER_CHUNK) {
+                        chunk->blocks[blockIndex] = spawnBlock(x, y, z, type);
+                        // assert(chunk->blocks[blockIndex].flags != 0);
                     }
 
                     if(worldY > waterElevation && isTop && isTreeLocation(worldX, worldZ)) {
@@ -159,22 +165,23 @@ void fillChunk_multiThread(void *data_) {
                             int localY = (worldY + 1) - (CHUNK_DIM*chunkY); 
                             int localZ = z;
 
-                            //NOTE: New way by making a block entity
                             int blockIndex = getBlockIndex(localX, localY, localZ);
-                            if(blockIndex < arrayCount(chunk->blocks)) {
-                                chunk->blocks[blockIndex] = spawnBlock(localX, localY, localZ, grassType1, (BlockFlags)(flags | BLOCK_NOT_PICKABLE | BLOCK_FLAGS_NO_MINE_OUTLINE | BLOCK_FLAGS_UNSAFE_UNDER));
-                                chunk->blocks[blockIndex].flags &= ~(BLOCK_FLAGS_AO | BLOCK_FLAG_STACKABLE | BLOCK_EXISTS_COLLISION);
-                                assert(chunk->blocks[blockIndex].flags & BLOCK_EXISTS);
+                            assert(blockIndex < BLOCKS_PER_CHUNK);
+                            if(blockIndex < BLOCKS_PER_CHUNK) {
+                                chunk->blocks[blockIndex] = spawnBlock(localX, localY, localZ, grassType1);
                             }
                         }
                     }
                     
                 } else if(worldY < waterElevation) {
-                    flags = BLOCK_FLAGS_NONE;
+                    if(!chunk->blocks) {
+                        chunk->blocks = (Block *)easyPlatform_allocateMemory(BLOCKS_PER_CHUNK*sizeof(Block), EASY_PLATFORM_MEMORY_ZERO);
+                    }
                     //NOTE: Is water so add water
                     int blockIndex = getBlockIndex(x, y, z);
-                    if(blockIndex < arrayCount(chunk->blocks)) {
-                        chunk->blocks[blockIndex] = spawnBlock(x, y, z, BLOCK_WATER, flags);
+                    assert(blockIndex < BLOCKS_PER_CHUNK);
+                    if(blockIndex < BLOCKS_PER_CHUNK) {
+                        chunk->blocks[blockIndex] = spawnBlock(x, y, z, BLOCK_WATER);
                     }
                 }
             }

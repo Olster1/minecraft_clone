@@ -9,6 +9,7 @@ float3 getBlockWorldPos(BlockChunkPartner b) {
 }
 
 
+
 BlockChunkPartner castRayAgainstBlock(GameState *gameState, float3 dir, float length, float3 start, BlockFlags blockFlags = BLOCK_EXISTS) {
     int blockRadius = length;
     float shortestT = FLT_MAX;
@@ -182,7 +183,7 @@ void updatePlayerPhysics(GameState *gameState, Entity *e, float3 movementForFram
 }
 
 void cancelMiningInteraction(GameState *gameState) {
-    gameState->currentMiningBlock->timeLeft = getBlockTime(gameState->currentMiningBlock->type);
+    gameState->currentMiningBlock->timeLeft = getBlockTime((BlockType)gameState->currentMiningBlock->type);
     gameState->currentMiningBlock = 0;
 
     if(gameState->miningSoundPlaying) {
@@ -219,7 +220,7 @@ bool placeBlock(GameState *gameState, float3 lookingAxis, Entity *e, BlockType b
         int worldZ = b.sideNormal.z + b.block->z + (CHUNK_DIM*b.chunk->z);
 
         //NOTE: check if stacking ontop of a block
-        if(b.sideNormal.y < 1 || (b.block->flags & BLOCK_FLAG_STACKABLE)){
+        if(b.sideNormal.y < 1 || (getBlockFlags(gameState, b.block->type) & BLOCK_FLAG_STACKABLE)){
             BlockChunkPartner nxtBlock = blockExists(gameState, worldX, worldY, worldZ, BLOCK_EXISTS_COLLISION);
             
             //NOTE: There's no block there
@@ -230,13 +231,17 @@ bool placeBlock(GameState *gameState, float3 lookingAxis, Entity *e, BlockType b
                 if(!in_rect3f_bounds(blockBounds, e->T.pos)) {
                     //NOTE: place block
                     if(nxtBlock.chunk) {
+                        if(!nxtBlock.chunk->blocks) {
+                            nxtBlock.chunk->blocks = (Block *)easyPlatform_allocateMemory(BLOCKS_PER_CHUNK*sizeof(Block), EASY_PLATFORM_MEMORY_ZERO);
+                        }
+
                         int localX = worldX - (CHUNK_DIM*nxtBlock.chunk->x); 
                         int localY = worldY - (CHUNK_DIM*nxtBlock.chunk->y); 
                         int localZ = worldZ - (CHUNK_DIM*nxtBlock.chunk->z); 
 
                         int blockIndex = getBlockIndex(localX, localY, localZ);
-                        if(blockIndex < arrayCount(nxtBlock.chunk->blocks)) {
-                            nxtBlock.chunk->blocks[blockIndex] = spawnBlock(localX, localY, localZ, blockType, BLOCK_EXISTS_COLLISION);
+                        if(blockIndex < BLOCKS_PER_CHUNK) {
+                            nxtBlock.chunk->blocks[blockIndex] = spawnBlock(localX, localY, localZ, blockType);
                             placed = true;
                             invalidateSurroundingAoValues(gameState, worldX, worldY, worldZ);
                             playSound(&gameState->blockFinishSound);
@@ -309,10 +314,10 @@ void mineBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
             }
 
             //NOTE: Show progress on mining the block
-            float percent = 1.0f - fmax(0, b.block->timeLeft / getBlockTime(b.block->type));
+            float percent = 1.0f - fmax(0, b.block->timeLeft / getBlockTime((BlockType)b.block->type));
 
             float3 blockWorldP = getBlockWorldPos(b);
-            if(!(b.block->flags & BLOCK_FLAGS_NO_MINE_OUTLINE)) {
+            if(!(getBlockFlags(gameState, b.block->type) & BLOCK_FLAGS_NO_MINE_OUTLINE)) {
                 //NOTE: the destruction overlay
                 pushAlphaItem(gameState->renderer, blockWorldP, make_float3(1.001f, 1.001f, 1.001f), make_float4(1, 1, 1, 0.7f), percent);
             }
@@ -334,8 +339,8 @@ void mineBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
             //NOTE: Check if block was successfully mined
             if(b.block->timeLeft <= 0) {
                 //NOTE: Add block to pickup 
-                if(!(b.block->flags & BLOCK_NOT_PICKABLE) && gameState->camera.followingPlayer) {
-                    initPickupItem(b.chunk, blockWorldP, b.block->type, gameState->randomStartUpID);
+                if(!(getBlockFlags(gameState, b.block->type) & BLOCK_NOT_PICKABLE) && gameState->camera.followingPlayer) {
+                    initPickupItem(gameState, b.chunk, blockWorldP, (BlockType)b.block->type, gameState->randomStartUpID);
                 }
                 
                 //NOTE: Destory the block

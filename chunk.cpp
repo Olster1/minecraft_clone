@@ -4,6 +4,44 @@ enum DimensionEnum {
     DIMENSION_Z
 };
 
+
+void initPickupItem(GameState *gameState, Chunk *chunk, float3 pos, BlockType itemType, int randomStartUpID) {
+    if(!chunk->entities) {
+        chunk->entities = initResizeArray(Entity);
+    }
+
+    Entity *e = 0;
+    assert(gameState->entitiesToAddCount < arrayCount(gameState->entitiesToAddAfterFrame));
+    if(gameState->entitiesToAddCount < arrayCount(gameState->entitiesToAddAfterFrame)) {
+        e = &gameState->entitiesToAddAfterFrame[gameState->entitiesToAddCount++];
+    }
+    assert(e);
+    if(e) {
+        initBaseEntity(e, randomStartUpID);
+        e->T.pos = pos;
+        float scale = 0.3f;
+        e->T.scale = make_float3(scale, scale, scale);
+        e->type = ENTITY_PICKUP_ITEM;
+        e->offset = make_float3(0, 0, 0);
+        e->grounded = false;
+        e->itemType = itemType;
+        e->flags = SHOULD_ROTATE;
+        e->dP.x = randomBetween(-2, 2);
+        e->dP.z = randomBetween(-2, 2);
+        e->dP.y = 5;
+    }
+
+}
+
+
+
+BlockFlags getBlockFlags(GameState *gameState, u8 type) {
+    BlockType t = (BlockType)type;
+    assert(t < arrayCount(gameState->blockFlags));
+    return (BlockFlags)gameState->blockFlags[t];
+
+}
+
 float3 convertRealWorldToBlockCoords(float3 p) {
     //NOTE: The origin is at the center of a block
     //NOTE: So 0.5 & 1.4 should both map to 1 - I think the +0.5
@@ -58,7 +96,7 @@ uint64_t getInvalidAoMaskValue() {
     return (((uint64_t)(1)) << 63);
 }
 
-Block spawnBlock(int x, int y, int z, BlockType type, BlockFlags flags) {
+Block spawnBlock(int x, int y, int z, BlockType type) {
     //NOTE: Input positions are local to chunk
     Block b = {};
 
@@ -66,11 +104,9 @@ Block spawnBlock(int x, int y, int z, BlockType type, BlockFlags flags) {
     b.y = y;
     b.z = z;
 
-    b.flags = flags | BLOCK_EXISTS | BLOCK_FLAGS_AO | BLOCK_FLAG_STACKABLE;
-
     b.type = type;
 
-    b.timeLeft = getBlockTime(type);
+    b.timeLeft = getBlockTime((BlockType)type);
 
     b.aoMask = getInvalidAoMaskValue();
 
@@ -219,7 +255,8 @@ void resetChunksAO(GameState *gameState, int x, int y, int z, DimensionEnum dime
     Chunk *c = getChunkReadOnly(gameState, x, y, z);
 
     if(c) {
-        for(int i = 0; i < arrayCount(c->blocks); ++i) {
+        int blockCount = (c->blocks) ? BLOCKS_PER_CHUNK : 0;
+        for(int i = 0; i < blockCount; ++i) {
             Block *b = &c->blocks[i];
 
             if(b->exists) {
@@ -256,7 +293,7 @@ Chunk *generateChunk(GameState *gameState, int x, int y, int z, uint32_t hash) {
     chunk->y = y;
     chunk->z = z;
     chunk->generateState = CHUNK_NOT_GENERATED;
-    chunk->entityCount = 0;
+    chunk->entities = 0;
 
     //NOTE: Reset all AO of neighbouring blocks
     resetNeighbouringChunksAO(gameState, x, y, z);
@@ -287,10 +324,10 @@ Block *blockExistsReadOnly(GameState *gameState, int worldx, int worldy, int wor
     
     Chunk *c = getChunkReadOnly(gameState, chunkX, chunkY, chunkZ);
     Block *found = 0;
-    if(c) {
+    if(c && c->blocks) {
         int blockIndex = getBlockIndex(localx, localy, localz);
-        assert(blockIndex < arrayCount(c->blocks));
-        if(blockIndex < arrayCount(c->blocks) && c->blocks[blockIndex].exists && (c->blocks[blockIndex].flags & flags)) {
+        assert(blockIndex < BLOCKS_PER_CHUNK);
+        if(blockIndex < BLOCKS_PER_CHUNK && c->blocks[blockIndex].exists && (getBlockFlags(gameState, c->blocks[blockIndex].type) & flags)) {
             found = &c->blocks[blockIndex];
         }
     }
@@ -367,8 +404,8 @@ void getAOMask_multiThreaded(void *data_) {
 }
 
 void drawChunk(GameState *gameState, Chunk *c) {
-    
-    for(int i = 0; i < arrayCount(c->blocks); ++i) {
+    int blockCount = (c->blocks) ? BLOCKS_PER_CHUNK : 0;
+    for(int i = 0; i < blockCount; ++i) {
         Block *b = &c->blocks[i];
 
         if(b->exists) {
@@ -379,7 +416,7 @@ void drawChunk(GameState *gameState, Chunk *c) {
 
             float4 color = make_float4(maxColor, maxColor, maxColor, 1);
 
-            BlockType t = b->type;
+            BlockType t = (BlockType)b->type;
 
             if(t == BLOCK_WATER) {
                 //NOTE: Only draw the water quad if there isn't any block above it - notice the +1 on the y coord
@@ -403,7 +440,7 @@ void drawChunk(GameState *gameState, Chunk *c) {
                 //NOTE: Calculate the aoMask if haven't yet - top bit is set 
                 if(b->aoMask & getInvalidAoMaskValue()) 
                 { 
-                    getAOMaskForBlock(gameState, worldP, (BlockFlags)b->flags, b);
+                    getAOMaskForBlock(gameState, worldP, getBlockFlags(gameState, (BlockType)b->type), b);
                 }
 
                 uint64_t AOMask = b->aoMask;
@@ -430,16 +467,18 @@ void drawCloudChunk(GameState *gameState, CloudChunk *c) {
 }
 
 void removeEntityFromChunk(Chunk *chunk, EntityID id) {
-    assert(chunk->entityCount > 0);
+    int entityCount = getArrayLength(chunk->entities);
+    assert(entityCount > 0);
     bool found = false;
 
-    for(int i = 0; i < chunk->entityCount && !found; ++i) {
+    for(int i = 0; i < entityCount && !found; ++i) {
         //NOTE: Check the string pointer is the same
         if(id.stringID == chunk->entities[i].id.stringID) {
             //NOTE: Double check the hash is the same for sanity check
             assert(chunk->entities[i].id.crc32Hash == id.crc32Hash);
             found = true;
-            chunk->entities[i] = chunk->entities[--chunk->entityCount];
+            ResizeArrayHeader *header = getResizeArrayHeader((u8 *)chunk->entities);
+            chunk->entities[i] = chunk->entities[--header->elementsCount];
         }
     }
     assert(found);
@@ -469,18 +508,45 @@ void storeEntitiesAfterFrameUpdate(GameState *gameState) {
             if(!(entChunkX == chunkX && entChunkY == chunkY && entChunkZ == chunkZ)) {
                 //NOTE: entity swapped chunk, so move it to the new chunk
                 Chunk *newChunk = getChunk(gameState, entChunkX, entChunkY, entChunkZ);
-                
-                if(newChunk->entityCount < arrayCount(newChunk->entities)) {
-                    //NOTE: Assign the new entity to the new chunk
-                    newChunk->entities[newChunk->entityCount++] = *e;
 
-                    //NOTE: Remove entity from the old chunk
-                    assert(oldChunk->entityCount > 0);
-                    removeEntityFromChunk(oldChunk, chunkInfo.entityID);
+                if(!newChunk->entities) {
+                    newChunk->entities = initResizeArray(Entity);
                 }
+                
+                //NOTE: Assign the new entity to the new chunk
+                assert(gameState->entitiesToAddCount < arrayCount(gameState->entitiesToAddAfterFrame));
+                if(gameState->entitiesToAddCount < arrayCount(gameState->entitiesToAddAfterFrame)) {
+                    gameState->entitiesToAddAfterFrame[gameState->entitiesToAddCount++] = *e;
+                }
+
+                //NOTE: Remove entity from the old chunk
+                assert(getArrayLength(oldChunk->entities) > 0);
+                removeEntityFromChunk(oldChunk, chunkInfo.entityID);
             }
         }
+    
     }
+
+    for(int i = 0; i < gameState->entitiesToAddCount; ++i) {
+        Entity *e = &gameState->entitiesToAddAfterFrame[i];
+        float3 blockPos = convertRealWorldToBlockCoords(e->T.pos);
+
+        int entChunkX = (int)blockPos.x / CHUNK_DIM;
+        int entChunkY = (int)blockPos.y / CHUNK_DIM;
+        int entChunkZ = (int)blockPos.z / CHUNK_DIM;
+
+        Chunk *newChunk = getChunk(gameState, entChunkX, entChunkY, entChunkZ);
+        
+        if(!newChunk->entities) {
+            newChunk->entities = initResizeArray(Entity);
+        }
+        pushArrayItem(&newChunk->entities, *e, Entity);
+    }
+    gameState->entitiesToAddCount = 0;
+
+    
+
+
 }
 
 
@@ -501,7 +567,8 @@ void loadEntitiesForFrameUpdate(GameState *gameState) {
                 Chunk *chunk = getChunkReadOnly(gameState, chunkX + x, chunkY + y, chunkZ + z);
 
                 if(chunk) {
-                    for(int i = 0; i < chunk->entityCount; ++i) {
+                    int entityChunkCount = getArrayLength(chunk->entities);
+                    for(int i = 0; i < entityChunkCount; ++i) {
                         if(gameState->entityCount < arrayCount(gameState->entitiesForFrame)) {
                             int entityIndex = gameState->entityCount++;
                             gameState->entitiesForFrame[entityIndex] = &chunk->entities[i];
@@ -511,7 +578,6 @@ void loadEntitiesForFrameUpdate(GameState *gameState) {
                             //NOTE: Assign the info to store them back afterwards if they move
                             gameState->entitiesForFrameChunkInfo[entityIndex].entityID = chunk->entities[i].id;
                             gameState->entitiesForFrameChunkInfo[entityIndex].chunk = chunk;
-
                         }
                     }
                 }
@@ -580,14 +646,14 @@ BlockChunkPartner blockExists(GameState *gameState, int worldx, int worldy, int 
     
     Chunk *c = getChunk(gameState, chunkX, chunkY, chunkZ);
 
-    if(c) {
+    if(c && c->blocks) {
             found.chunk = c;
             assert(localx < CHUNK_DIM);
             assert(localy < CHUNK_DIM);
             assert(localz < CHUNK_DIM);
             int blockIndex = getBlockIndex(localx, localy, localz);
-            assert(blockIndex < arrayCount(c->blocks));
-            if(blockIndex < arrayCount(c->blocks) && c->blocks[blockIndex].exists && c->blocks[blockIndex].flags & flags) {
+            assert(blockIndex < BLOCKS_PER_CHUNK);
+            if(blockIndex < BLOCKS_PER_CHUNK && c->blocks[blockIndex].exists && getBlockFlags(gameState, c->blocks[blockIndex].type) & flags) {
                 // c->blocks[blockIndex].hitBlock = true;
                 found.block = &c->blocks[blockIndex];
                 found.blockIndex = blockIndex;
@@ -768,7 +834,7 @@ void updateEntities(GameState *gameState) {
         
         EntityChunkInfo chunkInfo = gameState->entitiesForFrameChunkInfo[index];
 
-        assert(chunkInfo.chunk->entityCount > 0);
+        assert(getArrayLength(chunkInfo.chunk->entities) > 0);
         removeEntityFromChunk(chunkInfo.chunk, chunkInfo.entityID);
     }
 

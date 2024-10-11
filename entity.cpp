@@ -33,27 +33,18 @@ struct TimeOfDayValues {
     float4 skyColorB;
 };
 
-struct CompressedBlock {
-    uint64_t type;
-    //NOTE: Local to the Chunk they're in
-    int x;
-    int y;
-    int z;
-    uint64_t flags;
-    volatile uint64_t aoMask; //NOTE: Multiple threads can change this
-};
-
 struct Block {
+    u8 type;
+
     //NOTE: Local to the Chunk they're in
-    BlockType type;
     int x;
     int y;
     int z;
-    uint64_t flags;
     volatile uint64_t aoMask; //NOTE: Multiple threads can change this
+    //NOTE: Instead of storing this 
+    bool exists;
 
     float timeLeft;
-    bool exists;
 };
 
 struct CloudBlock {
@@ -149,10 +140,9 @@ struct Chunk {
 
     //NOTE: 16 x 16 x 16
     //NOTE: Z Y X
-    Block blocks[BLOCKS_PER_CHUNK];
+    Block *blocks; //NOTE: Could be null
 
-    int entityCount;
-    Entity entities[64]; //NOTE: Max entity count stored on a chunk //TODO: should be a growing array
+    Entity *entities;
 
     Chunk *next;
 };
@@ -195,35 +185,4 @@ Entity *initPlayer(Entity *e, int randomStartUpID) {
     e->flags = 0;
     e->stamina = 1;
     return e;
-}
-
-void initGrassEntity(Chunk *chunk, float3 pos, EntityType type, int randomStartUpID) {
-    if(chunk->entityCount < arrayCount(chunk->entities)) {
-        Entity *e = chunk->entities + chunk->entityCount++;
-        initBaseEntity(e, randomStartUpID);
-        e->type = type;
-        e->T.pos = pos;
-        e->T.scale = make_float3(1, 1, 1);
-        e->offset = make_float3(0, 0, 0);
-        e->flags |= ENTITY_DESTRUCTIBLE;
-    }
-}
-
-void initPickupItem(Chunk *chunk, float3 pos, BlockType itemType, int randomStartUpID) {
-    if(chunk->entityCount < arrayCount(chunk->entities)) {
-        Entity *e = chunk->entities + chunk->entityCount++;
-        initBaseEntity(e, randomStartUpID);
-        e->T.pos = pos;
-        float scale = 0.3f;
-        e->T.scale = make_float3(scale, scale, scale);
-        e->type = ENTITY_PICKUP_ITEM;
-        e->offset = make_float3(0, 0, 0);
-        e->grounded = false;
-        e->itemType = itemType;
-        e->flags = SHOULD_ROTATE;
-        e->dP.x = randomBetween(-2, 2);
-        e->dP.z = randomBetween(-2, 2);
-        e->dP.y = 5;
-        
-    }
 }

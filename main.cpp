@@ -14,7 +14,8 @@
 #include "./opengl.cpp"
 #include "./font.cpp"
 #include "./particles.cpp"
-// #include "./animation.cpp"
+#include "./load_gltf.cpp"
+#include "./animation.cpp"
 
 Renderer *initRenderer(Texture grassTexture, Texture breakBlockTexture, Texture atlasTexture) {
     Renderer *renderer = (Renderer *)malloc(sizeof(Renderer));
@@ -36,6 +37,7 @@ Renderer *initRenderer(Texture grassTexture, Texture breakBlockTexture, Texture 
     renderer->skyboxShader = loadShader(skyboxVertexShader, skyboxFragShader);
     renderer->quadShader = loadShader(quadVertexShader, quadFragShader);
     renderer->blockPickupShader = loadShader(blockPickupVertexShader, blockPickupFragShader);
+    renderer->skeletalModelShader = loadShader(skeletalVertexShader, skeletalFragShader);
     renderer->blockSameTextureShader = loadShader(blockSameTextureVertexShader, blockPickupFragShader);
     renderer->blockColorShader = loadShader(blockVertexShader, blockColorShader);
     
@@ -179,12 +181,23 @@ void DEBUG_chunkTests(GameState *gameState) {
 
 }
 
+static SkeletalModel triangleHandle;
+static Texture modelTexture;
+
 void updateGame(GameState *gameState) {
     if(!gameState->inited) {
         globalLongTermArena = createArena(Kilobytes(200));
         globalPerFrameArena = createArena(Kilobytes(100));
         perFrameArenaMark = takeMemoryMark(&globalPerFrameArena);
         // DEBUG_chunkTests(gameState);
+
+        // triangleHandle = loadGLTF("./models/sparse.gltf");
+        triangleHandle = loadGLTF("./models/fox/Fox.gltf");
+        // triangleHandle = loadGLTF("./models/avocado/Avocado.gltf");
+        // modelTexture = loadTextureToGPU("./models/avocado/Avocado_baseColor.png");
+        modelTexture = loadTextureToGPU("./models/fox/Texture.png");
+        
+
         initGameState(gameState);
     } else { 
         releaseMemoryMark(&perFrameArenaMark);
@@ -281,16 +294,32 @@ void updateGame(GameState *gameState) {
     
     rendererFinish(gameState->renderer, screenT, cameraT, screenGuiT, textGuiT, lookingAxis, cameraTWithoutTranslation, timeOfDayValues, gameState->perlinTestTexture.handle);
 
+    {
+        //NOTE: Draw all the examples on the gltf website
+        float scale = 0.01f;
+        float16 T = float16_scale(float16_identity(), make_float3(scale, scale, scale));
+        T = float16_set_pos(T, gameState->modelLocation);
+        pushModel(gameState->renderer, T, make_float4(1, 1, 1, 1));
+        updateInstanceData(triangleHandle.modelBuffer.instanceBufferhandle, gameState->renderer->modelData, gameState->renderer->modelItemCount*sizeof(InstanceDataWithRotation));
+        drawModels(&triangleHandle.modelBuffer, &gameState->renderer->blockPickupShader, modelTexture.handle, gameState->renderer->modelItemCount, screenT, cameraT, lookingAxis, false, timeOfDayValues);
+        gameState->renderer->modelItemCount = 0;
+    }
+
+
     //NOTE: End Mouse interaction if release
     if(gameState->mouseLeftBtn == MOUSE_BUTTON_RELEASED && gameState->currentInteraction.isValid) {
         gameState->currentInteraction.isValid = false;
+    }
+
+    if(gameState->camera.followingPlayer) {
+            gameState->modelLocation = make_float3(gameState->player.T.pos.x, gameState->player.T.pos.y, gameState->player.T.pos.z + 10);
     }
 
     if(gameState->keys.keys[KEY_1] == MOUSE_BUTTON_PRESSED) {
         gameState->camera.followingPlayer = !gameState->camera.followingPlayer;
         if(gameState->camera.followingPlayer) {
             gameState->player.T.pos = minus_float3(gameState->camera.T.pos, gameState->cameraOffset);
-        }
+        } 
         gameState->currentInventoryHotIndex = 0;
     }
     if(gameState->keys.keys[KEY_2] == MOUSE_BUTTON_PRESSED) {

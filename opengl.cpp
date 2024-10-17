@@ -14,6 +14,8 @@
 #define AO_MASK_ATTRIB_LOCATION 7
 #define SAMPLER_INDEX_ATTRIB_LOCATION 8
 #define MODEL_TRANSFORM_ATTRIB_LOCATION 9
+#define JOINT_WEIGHTS 13
+#define JOINT_INDEXES 14
 
 
 #define renderCheckError() renderCheckError_(__LINE__, (char *)__FILE__)
@@ -119,8 +121,12 @@ Shader loadShader(char *vertexShader, char *fragShader) {
     renderCheckError();
     glBindAttribLocation(result.handle, MODEL_TRANSFORM_ATTRIB_LOCATION, "M");
     renderCheckError();
+    glBindAttribLocation(result.handle, JOINT_WEIGHTS, "jointWeights");
+    renderCheckError();
+    glBindAttribLocation(result.handle, JOINT_INDEXES, "jointIndexes");
+    renderCheckError();
 
-    assert(MODEL_TRANSFORM_ATTRIB_LOCATION < (max_attribs - 1));
+    assert(JOINT_INDEXES < (max_attribs - 1));
 
     glLinkProgram(result.handle);
     renderCheckError();
@@ -201,6 +207,7 @@ void addInstancingAttrib_int32(GLuint attribLoc, int numOfInt32s, size_t offsetF
 enum AttribInstancingType {
     ATTRIB_INSTANCE_TYPE_DEFAULT,
     ATTRIB_INSTANCE_TYPE_MODEL_MATRIX,
+    ATTRIB_INSTANCE_TYPE_MODEL_MATRIX_SKELETAL,
 };
 
 void addInstancingAttribsForShader(AttribInstancingType type) {
@@ -222,7 +229,7 @@ void addInstancingAttribsForShader(AttribInstancingType type) {
         unsigned int samplerIndexOffset = (intptr_t)(&(((InstanceData *)0)->samplerIndex));
         addInstancingAttrib_int32(SAMPLER_INDEX_ATTRIB_LOCATION, 1, offsetForStruct, samplerIndexOffset);
         renderCheckError();
-    } else if(type == ATTRIB_INSTANCE_TYPE_MODEL_MATRIX) {
+    } else if(type == ATTRIB_INSTANCE_TYPE_MODEL_MATRIX || type == ATTRIB_INSTANCE_TYPE_MODEL_MATRIX_SKELETAL) {
         size_t offsetForStruct = sizeof(InstanceDataWithRotation); 
 
         unsigned int uvOffset = (intptr_t)(&(((InstanceDataWithRotation *)0)->uv));
@@ -239,7 +246,7 @@ void addInstancingAttribsForShader(AttribInstancingType type) {
     
 }
 
-ModelBuffer generateVertexBuffer(Vertex *triangleData, int vertexCount, unsigned int *indicesData, int indexCount, AttribInstancingType attribInstancingType = ATTRIB_INSTANCE_TYPE_DEFAULT) {
+ModelBuffer generateVertexBuffer(void *triangleData, int vertexCount, unsigned int *indicesData, int indexCount, AttribInstancingType attribInstancingType = ATTRIB_INSTANCE_TYPE_DEFAULT) {
     ModelBuffer result = {};
     glGenVertexArrays(1, &result.handle);
     renderCheckError();
@@ -254,8 +261,10 @@ ModelBuffer generateVertexBuffer(Vertex *triangleData, int vertexCount, unsigned
     
     glBindBuffer(GL_ARRAY_BUFFER, vertices);
     renderCheckError();
+
+    size_t sizeOfVertex = (attribInstancingType != ATTRIB_INSTANCE_TYPE_MODEL_MATRIX_SKELETAL) ? sizeof(Vertex) : sizeof(VertexWithJoints);
     
-    glBufferData(GL_ARRAY_BUFFER, vertexCount*sizeof(Vertex), triangleData, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vertexCount*sizeOfVertex, triangleData, GL_STATIC_DRAW);
     renderCheckError();
     
     glGenBuffers(1, &indices);
@@ -268,28 +277,69 @@ ModelBuffer generateVertexBuffer(Vertex *triangleData, int vertexCount, unsigned
     renderCheckError();
     
     result.indexCount = indexCount;
-    
-    //NOTE: Assign the attribute locations with the data offsets & types
-    GLint vertexAttrib = VERTEX_ATTRIB_LOCATION;
-    renderCheckError();
-    glEnableVertexAttribArray(vertexAttrib);  
-    renderCheckError();
-    glVertexAttribPointer(vertexAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
-    renderCheckError();
-    
-    GLint texUVAttrib = UV_ATTRIB_LOCATION;
-    glEnableVertexAttribArray(texUVAttrib);  
-    renderCheckError();
-    unsigned int uvByteOffset = (intptr_t)(&(((Vertex *)0)->texUV));
-    glVertexAttribPointer(texUVAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), ((char *)0) + uvByteOffset);
-    renderCheckError();
 
-    GLint normalsAttrib = NORMAL_ATTRIB_LOCATION;
-    glEnableVertexAttribArray(normalsAttrib);  
-    renderCheckError();
-    unsigned int normalOffset = (intptr_t)(&(((Vertex *)0)->normal));
-    glVertexAttribPointer(normalsAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), ((char *)0) + normalOffset);
-    renderCheckError();
+    if(attribInstancingType != ATTRIB_INSTANCE_TYPE_MODEL_MATRIX_SKELETAL) {
+    
+        //NOTE: Assign the attribute locations with the data offsets & types
+        GLint vertexAttrib = VERTEX_ATTRIB_LOCATION;
+        renderCheckError();
+        glEnableVertexAttribArray(vertexAttrib);  
+        renderCheckError();
+        glVertexAttribPointer(vertexAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
+        renderCheckError();
+        
+        GLint texUVAttrib = UV_ATTRIB_LOCATION;
+        glEnableVertexAttribArray(texUVAttrib);  
+        renderCheckError();
+        unsigned int uvByteOffset = (intptr_t)(&(((Vertex *)0)->texUV));
+        glVertexAttribPointer(texUVAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), ((char *)0) + uvByteOffset);
+        renderCheckError();
+
+        GLint normalsAttrib = NORMAL_ATTRIB_LOCATION;
+        glEnableVertexAttribArray(normalsAttrib);  
+        renderCheckError();
+        unsigned int normalOffset = (intptr_t)(&(((Vertex *)0)->normal));
+        glVertexAttribPointer(normalsAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), ((char *)0) + normalOffset);
+        renderCheckError();
+
+    } else {   
+         //NOTE: Assign the attribute locations with the data offsets & types
+        GLint vertexAttrib = VERTEX_ATTRIB_LOCATION;
+        renderCheckError();
+        glEnableVertexAttribArray(vertexAttrib);  
+        renderCheckError();
+        glVertexAttribPointer(vertexAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(VertexWithJoints), 0);
+        renderCheckError();
+        
+        GLint texUVAttrib = UV_ATTRIB_LOCATION;
+        glEnableVertexAttribArray(texUVAttrib);  
+        renderCheckError();
+        unsigned int uvByteOffset = (intptr_t)(&(((VertexWithJoints *)0)->texUV));
+        glVertexAttribPointer(texUVAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(VertexWithJoints), ((char *)0) + uvByteOffset);
+        renderCheckError();
+
+        GLint normalsAttrib = NORMAL_ATTRIB_LOCATION;
+        glEnableVertexAttribArray(normalsAttrib);  
+        renderCheckError();
+        unsigned int normalOffset = (intptr_t)(&(((VertexWithJoints *)0)->normal));
+        glVertexAttribPointer(normalsAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(VertexWithJoints), ((char *)0) + normalOffset);
+        renderCheckError();
+
+        GLint weightAttrib = JOINT_WEIGHTS;
+        glEnableVertexAttribArray(weightAttrib);  
+        renderCheckError();
+        unsigned int weigthOffset = (intptr_t)(&(((VertexWithJoints *)0)->jointWeights));
+        glVertexAttribPointer(weightAttrib, 4, GL_FLOAT, GL_FALSE, sizeof(VertexWithJoints), ((char *)0) + weigthOffset);
+        renderCheckError();
+
+        GLint jointAttrib = JOINT_INDEXES;
+        glEnableVertexAttribArray(jointAttrib);  
+        renderCheckError();
+        unsigned int jointIndexOffset = (intptr_t)(&(((VertexWithJoints *)0)->jointIndexes));
+        glVertexAttribPointer(jointAttrib, 4, GL_FLOAT, GL_FALSE, sizeof(VertexWithJoints), ((char *)0) + jointIndexOffset);
+        renderCheckError();
+        
+    }
 
     // vbo instance buffer
     {
@@ -303,6 +353,34 @@ ModelBuffer generateVertexBuffer(Vertex *triangleData, int vertexCount, unsigned
         
         addInstancingAttribsForShader(attribInstancingType);
     }
+
+    if(attribInstancingType == ATTRIB_INSTANCE_TYPE_MODEL_MATRIX_SKELETAL) {
+        //NOTE: Generate a UBO to store Joint Transforms i.e. skinning matrix
+        GLuint tbo;
+        glGenBuffers(1, &tbo);
+        renderCheckError();
+        glBindBuffer(GL_TEXTURE_BUFFER, tbo);
+        renderCheckError();
+        //NOTE: No data yet
+        glBufferData(GL_TEXTURE_BUFFER, 0, 0, GL_DYNAMIC_DRAW);
+        renderCheckError();
+
+        GLuint texture;
+        glGenTextures(1, &texture);
+        renderCheckError();
+        glBindTexture(GL_TEXTURE_BUFFER, texture);
+        renderCheckError();
+        glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, tbo);  // Create a texture buffer using the TBO
+        renderCheckError();
+
+        result.tboHandle = tbo;
+        result.textureHandle = texture;
+
+        glBindTexture(GL_TEXTURE_BUFFER, 0);
+        renderCheckError();
+        glBindBuffer(GL_TEXTURE_BUFFER, 0);
+        renderCheckError();
+    }
     
     glBindVertexArray(0);
         
@@ -311,6 +389,19 @@ ModelBuffer generateVertexBuffer(Vertex *triangleData, int vertexCount, unsigned
     glDeleteBuffers(1, &indices);
 
     return result;
+}
+
+void updateSkinningTexture(ModelBuffer *modelBuffer, float16 *skinningMatrix, int jointCount) {
+    glBindBuffer(GL_TEXTURE_BUFFER, modelBuffer->tboHandle);
+    renderCheckError();
+
+    size_t sizeInBytes = sizeof(float16)*jointCount;
+    
+    glBufferData(GL_TEXTURE_BUFFER, sizeInBytes, skinningMatrix, GL_STREAM_DRAW); 
+    renderCheckError();
+    
+    glBindBuffer(GL_TEXTURE_BUFFER, 0);
+    renderCheckError();
 }
 
 void initBackendRenderer() {
@@ -604,7 +695,6 @@ void drawModels(ModelBuffer *model, Shader *shader, uint32_t textureId, int inst
 }
 
 void rendererFinish(Renderer *renderer, float16 projectionTransform, float16 modelViewTransform, float16 projectionScreenTransform, float16 textScreenTransform, float3 lookingAxis, float16 cameraTransformWithoutTranslation, TimeOfDayValues timeOfDay, uint32_t perlinNoiseHandle) {
-
     if(renderer->cubeCount > 0) {
         //NOTE: Draw Cubes
         // printf("cube size: %lu\n", renderer->cubeCount*sizeof(InstanceData));

@@ -121,7 +121,9 @@ struct GameState {
     float3 perlinNoiseValue;
 
     uint64_t blockFlags[BLOCK_TYPE_COUNT];
-    
+
+    SkeletalModel foxModel;
+    float3 modelLocation;
 };
 
 void createBlockFlags(GameState *gameState) {
@@ -269,9 +271,9 @@ void initGameState(GameState *gameState) {
 
     gameState->randomStartUpID = rand();
 
-    printf("chunk size: %ld\n", sizeof(Chunk));
-    printf("block size: %ld\n", sizeof(Block));
-    printf("Entity size: %ld\n", sizeof(Entity));
+    // printf("chunk size: %ld\n", sizeof(Chunk));
+    // printf("block size: %ld\n", sizeof(Block));
+    // printf("Entity size: %ld\n", sizeof(Entity));
 
     createAOOffsets(gameState);
 
@@ -279,12 +281,17 @@ void initGameState(GameState *gameState) {
 
     initThreadQueue(&gameState->threadsInfo);
 
-    // loadGLTF("./models/fox/Fox.gltf");
+    gameState->foxModel = loadGLTF("./models/fox/Fox.gltf");
     // loadGLTF("./models/boxAnimated/BoxAnimated.gltf");
 
     // createTextureAtlas(gameState->renderer, "./sprites/");
     gameState->spriteTextureAtlas = readTextureAtlas("./texture_atlas.json", "./texture_atlas.png");
     // gameState->renderer->atlasTexture = gameState->spriteTextureAtlas.texture.handle;
+    
+    GLint maxUniformBlockSize;
+    glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &maxUniformBlockSize);
+    assert((maxUniformBlockSize / sizeof(float16)) > 1000);
+    
 
     createSearchOffsets(gameState);
 

@@ -82,6 +82,8 @@ float getBlockTime(BlockType type) {
         result = 0.05f;
     }
 
+    // result = 0.01f;
+
     return result;
 }
 

@@ -33,6 +33,68 @@ static char *blockPickupVertexShader =
    " uv_frag = vec2(texUV.x, mix(uvAtlas.x, uvAtlas.y, texUV.y));"
 "}";
 
+
+static char *skeletalVertexShader = 
+"#version 330\n"
+//per vertex variables
+"in vec3 vertex;"
+"in vec3 normal;"
+"in vec2 texUV;	"
+
+//per instanced variables
+"in mat4 M;"
+"in vec4 uvAtlas;"
+"in vec4 color;"
+"in vec4 jointIndex;"
+"in vec4 jointWeights;"
+
+//uniform variables
+"uniform mat4 V;"
+"uniform mat4 projection;"
+"uniform samplerBuffer boneMatrixBuffer;"
+
+"mat4 getBoneMatrix(int index) {"
+    "return mat4(texelFetch(boneMatrixBuffer, index * 4),"
+                "texelFetch(boneMatrixBuffer, index * 4 + 1),"
+                "texelFetch(boneMatrixBuffer, index * 4 + 2),"
+                "texelFetch(boneMatrixBuffer, index * 4 + 3));"
+"}"
+
+//outgoing variables
+"out vec4 color_frag;"
+"out vec3 normal_frag_view_space;"
+"out vec2 uv_frag;"
+"out vec3 fragPosInViewSpace;"
+"out vec3 sunAngle;"
+
+"void main() {"
+    "mat4 MV = V * M;"
+    "gl_Position = projection * MV * vec4((vertex), 1);"
+    "color_frag = color;"
+    "normal_frag_view_space = mat3(transpose(inverse(MV))) * normal;"
+    "sunAngle = mat3(transpose(inverse(MV))) * vec3(0.7071, 0, 0.7071);"
+    "fragPosInViewSpace = vec3(MV * vec4(vertex, 1));"
+
+   " uv_frag = vec2(texUV.x, mix(uvAtlas.x, uvAtlas.y, texUV.y));"
+"}";
+
+static char *skeletalFragShader = 
+"#version 330\n"
+"in vec4 color_frag;" 
+"in vec3 normal_frag_view_space;"//viewspace
+"in vec2 uv_frag; "
+"in vec3 sunAngle;"
+"in vec3 fragPosInViewSpace;" //view space
+"uniform sampler2D diffuse;"
+"uniform vec3 lookingAxis;"
+
+"out vec4 color;"
+"void main() {"
+    "vec4 diffSample = texture(diffuse, uv_frag);"
+    "vec4 c = color_frag;"
+    "color = diffSample*c;"
+"}";
+
 static char *blockSameTextureVertexShader = 
 "#version 330\n"
 //per vertex variables

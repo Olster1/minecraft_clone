@@ -12,11 +12,12 @@ Uses OpenGL 3.3 and SDL for platform layer.
 - [x] Multi-threaded chunk generation
 - [x] Tree & grasses generation
 - [x] Water generation with alpha 
+- [x] Health, Stamina & Item Hotbar
+- [x] Coal & Ore generation & better world generation 
 - [ ] Cows, Sheep & Zombie Mobs (learn about loading animation files with cgltf - Game Engine Architecture book)
+- [ ] Snow and cliffs (learn more about simplex noise & SIMD library implementation of it)
 - [ ] Attacking mobs 
-- [ ] Health, Stamina & Item Hotbar
 - [ ] Cave generation
-- [ ] Coal & Ore generation & better world generation with snow and cliffs (learn more about simplex noise & SIMD library implementation of it)
 - [ ] Day & Night cycle
 - [ ] Greedy meshing
 - [ ] Shadow Mapping

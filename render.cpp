@@ -19,6 +19,16 @@ struct Vertex {
     // float weights[32];
 };
 
+struct VertexWithJoints {
+    float3 pos;
+    float2 texUV;
+    float3 normal;
+    float4 jointWeights;
+    float4 jointIndexes;
+};
+
+
+
 Vertex makeVertex(float3 pos, float2 texUV, float3 normal) {
     Vertex v = {};
     
@@ -125,6 +135,9 @@ struct Shader {
 struct ModelBuffer {
     uint32_t handle;
     uint32_t instanceBufferhandle;
+    uint32_t tboHandle; //NOTE: For Skinning Matrix
+    uint32_t textureHandle; //NOTE: For Skinning Matrix
+
     int indexCount;
 };
 
@@ -173,11 +186,15 @@ struct Renderer {
     int alphaItemCount; //NOTE: The blocks that are rotating
     InstanceDataWithRotation alphaItemData[MAX_WORLD_ITEMS_PER_INSTANCE];
 
+    int modelItemCount; //NOTE: The blocks that are rotating
+    InstanceDataWithRotation modelData[MAX_WORLD_ITEMS_PER_INSTANCE];
+
     int glyphCount; 
     InstanceDataWithRotation glyphData[MAX_GLYPHS_PER_RENDER];
 
     Shader blockShader;
     Shader blockPickupShader;
+    Shader skeletalModelShader;
     Shader quadShader;
     Shader quadTextureShader;
     Shader fontTextureShader;
@@ -360,6 +377,19 @@ void pushAlphaItem(Renderer *renderer, float3 worldP, float3 scale, float4 color
 
         cube->uv.x = indexAt / numOfPics;
         cube->uv.y = (indexAt + 1) / numOfPics;
+    } else {
+        assert(false);
+    }
+}
+
+void pushModel(Renderer *renderer, float16 T, float4 color) {
+    if(renderer->modelItemCount < arrayCount(renderer->modelData)) {
+        InstanceDataWithRotation *model = &renderer->modelData[renderer->modelItemCount++];
+
+        model->M = T;
+        model->uv = make_float4(0, 1, 0, 1);
+        model->color = color;
+
     } else {
         assert(false);
     }

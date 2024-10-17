@@ -290,7 +290,7 @@ void initGameState(GameState *gameState) {
     
     GLint maxUniformBlockSize;
     glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &maxUniformBlockSize);
-    assert((maxUniformBlockSize / sizeof(float16)) > 1000);
+    assert((maxUniformBlockSize / sizeof(float16)) > MAX_BONES_PER_MODEL);
     
 
     createSearchOffsets(gameState);

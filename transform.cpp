@@ -4,6 +4,20 @@ struct TransformX {
     float3 rotation;
 };
 
+struct SQT {
+    float3 scale;
+    float4 rotation;
+    float3 translate; 
+};
+
+SQT SQT_identity() {
+    SQT result;
+    result.scale = make_float3(1, 1, 1);
+    result.translate = make_float3(0, 0, 0);
+    result.rotation = make_float4(0, 0, 0, 1);
+    return result;
+}
+
 float16 getModelToViewSpace(TransformX T) {
     float16 i = float16_identity();
 

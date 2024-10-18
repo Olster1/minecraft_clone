@@ -8,6 +8,7 @@
 #include "./easy_lex.h"
 #include "./imgui.h"
 
+#include "./animation.h"
 #include "./transform.cpp"
 #include "./entity.cpp"
 #include "./render.cpp"
@@ -15,7 +16,7 @@
 #include "./font.cpp"
 #include "./particles.cpp"
 #include "./load_gltf.cpp"
-#include "./animation.cpp"
+
 
 Renderer *initRenderer(Texture grassTexture, Texture breakBlockTexture, Texture atlasTexture) {
     Renderer *renderer = (Renderer *)malloc(sizeof(Renderer));
@@ -64,6 +65,7 @@ Renderer *initRenderer(Texture grassTexture, Texture breakBlockTexture, Texture 
 #include "./camera.cpp"
 #include "./perlin_noise_test.cpp"
 #include "./imgui.cpp"
+#include "./animation.cpp"
 
 
 TimeOfDayValues getTimeOfDayValues(GameState *gameState) {
@@ -291,6 +293,10 @@ void updateGame(GameState *gameState) {
     drawHUD(gameState);
 
     // updateAndDrawDebugCode(gameState);
+
+    gameState->player.animationState.animation.animation = &triangleHandle.animations[0];
+
+    buildSkinningMatrix(gameState, &triangleHandle, &gameState->player.animationState);
     
     rendererFinish(gameState->renderer, screenT, cameraT, screenGuiT, textGuiT, lookingAxis, cameraTWithoutTranslation, timeOfDayValues, gameState->perlinTestTexture.handle);
 

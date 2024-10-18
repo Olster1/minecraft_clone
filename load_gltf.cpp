@@ -166,23 +166,7 @@ typedef struct cgltf_buffer
 
 */
 
-struct Joint {
-	int *childIndexes;
-};
 
-struct SkeletalModel {
-    bool valid;
-    ModelBuffer modelBuffer;
-
-	int inverseBindMatrixCount;
-	float16 *inverseBindMatrices;
-
-	int jointCount;
-	Joint *joints;
-
-	int parentJointIndex;
-	
-};
 
 void copyBufferToMemory(void *bufferToCopyTo, uint8_t *ptr, cgltf_buffer_view *buffer_view, cgltf_accessor *accessor, bool isShort, int floatCount) {
 	uint8_t *from = ptr + buffer_view->offset + accessor->offset;
@@ -204,6 +188,46 @@ void copyBufferToMemory(void *bufferToCopyTo, uint8_t *ptr, cgltf_buffer_view *b
 		memcpy(to, from + i, sizeOfElm*floatCount);
 
 		to += sizeOfElm*floatCount;
+	}
+}
+
+void copyDataFromAccessor(void *bufferToCopyTo, uint8_t *ptr, cgltf_buffer_view *buffer_view, cgltf_accessor *accessor, bool isShort, int floatCount) {
+	size_t sizeOfElm = (isShort) ? sizeof(u16) : sizeof(float);
+	copyBufferToMemory(bufferToCopyTo, ptr, buffer_view, accessor, isShort, floatCount);
+	
+	//NOTE: This is if an attribute is sparse 
+	if(accessor->is_sparse) {
+		
+		cgltf_accessor_sparse sparse = accessor->sparse;
+
+		if(sparse.count > 0) {
+
+			//NOTE: Get the indicies out
+			cgltf_buffer_view* indices_buffer_view = sparse.indices_buffer_view;
+			assert(indices_buffer_view);
+			
+			cgltf_buffer* indicies_buffer = indices_buffer_view->buffer;
+			uint8_t *indicies_ptr = (uint8_t *)((uint8_t *)indicies_buffer->data) + indices_buffer_view->offset;
+			assert(cgltf_component_type_r_16u == sparse.indices_component_type);
+
+			//NOTE: Now get the data out 
+			cgltf_buffer_view* values_buffer_view = sparse.values_buffer_view;
+			
+			cgltf_buffer* values_buffer = values_buffer_view->buffer;
+			uint8_t *values_ptr = (uint8_t *)((uint8_t *)values_buffer->data) + values_buffer_view->offset;
+
+			size_t indices_stride = sizeof(unsigned short);
+			size_t value_stride = sizeOfElm*floatCount;
+			
+			for(int i = 0; i < sparse.count; ++i) {
+				int index = (int)(*(indicies_ptr + i*indices_stride));
+
+				void *to = ((uint8_t *)bufferToCopyTo) + sizeOfElm*floatCount*index;
+				void *from = values_ptr + i*value_stride;
+
+				memcpy(to, from, floatCount*sizeOfElm);
+			}
+		}
 	}
 }
 
@@ -271,6 +295,124 @@ SkeletalModel loadGLTF(char *fileName) {
 					}
 				}
 
+				if(data->animations_count > 0) {
+					model.animationCount = data->animations_count;
+					model.animations = (Animation3d *)malloc(sizeof(Animation3d)*data->animations_count);
+
+					assert(data->skins_count == 1);
+					cgltf_skin skin = data->skins[0];
+		
+					for(int i = 0; i < data->animations_count; ++i) {
+						cgltf_animation* animation = &data->animations[i];
+						Animation3d *animation3d = &model.animations[i];
+						
+						animation3d->name = easyString_copyToHeap(animation->name);
+						animation3d->boneCount = animation->channels_count;
+
+						animation3d->boneAnimations = (BoneAnimation *)malloc(sizeof(BoneAnimation)*animation3d->boneCount);
+
+						for(int k = 0; k < animation->channels_count; ++k) {
+							cgltf_animation_channel *channel = &animation->channels[k];
+							BoneAnimation *boneAnimation = &animation3d->boneAnimations[k];
+							if(channel->target_path == cgltf_animation_path_type_rotation) {
+								boneAnimation->type = BONE_ANIMATION_ROTATION;
+							} else if(channel->target_path == cgltf_animation_path_type_translation) {
+								boneAnimation->type = BONE_ANIMATION_TRANSLATION;
+							} else if(channel->target_path == cgltf_animation_path_type_scale) {
+								boneAnimation->type = BONE_ANIMATION_SCALE;
+							} else {
+								//NOTE: Don't support morph target animations
+								assert(false);
+							}
+
+							int boneIndex = -1;
+							//NOTE: Find the index of the bone
+							for(int j = 0; j < skin.joints_count; ++j) {
+								cgltf_node *joint = skin.joints[j];
+
+								if(joint == channel->target_node) {
+									boneIndex = j;
+									break;
+								}
+							}
+
+							assert(boneIndex >= 0);
+
+							boneAnimation->boneIndex = boneIndex;
+
+							cgltf_animation_sampler *sampler = channel->sampler;
+							assert(sampler);
+							//NOTE: Input is the seconds values of the keyframes
+							cgltf_accessor *inputAccessor = sampler->input;
+							float *inputBuffer = 0;
+							{
+								cgltf_buffer_view *buffer_view = inputAccessor->buffer_view;
+								cgltf_buffer* buffer = buffer_view->buffer;
+								uint8_t *ptr = (uint8_t *)buffer->data;
+								int floatCount = 1;
+								inputBuffer = (float *)malloc(buffer_view->size);
+
+								animation3d->maxTime = inputAccessor->max[0];
+
+								assert(inputAccessor->component_type == cgltf_component_type_r_32f);
+								assert(inputAccessor->type == cgltf_type_scalar);
+
+								copyDataFromAccessor(inputBuffer, ptr, buffer_view, inputAccessor, false, floatCount);
+							}
+
+							float *outputBuffer;
+
+							//NOTE: Output is the transform values for the keyframes
+							cgltf_accessor *outputAccessor = sampler->output;
+							{
+								cgltf_buffer_view *buffer_view = outputAccessor->buffer_view;
+								cgltf_buffer* buffer = buffer_view->buffer;
+								uint8_t *ptr = (uint8_t *)buffer->data;
+								int floatCount = 4;
+								outputBuffer = (float *)malloc(buffer_view->size);
+
+								if(channel->target_path == cgltf_animation_path_type_rotation) {
+									assert(outputAccessor->component_type == cgltf_component_type_r_32f);
+									assert(outputAccessor->type == cgltf_type_vec4);
+									floatCount = 4;
+								} else if(channel->target_path == cgltf_animation_path_type_translation || channel->target_path == cgltf_animation_path_type_scale) {
+									assert(outputAccessor->component_type == cgltf_component_type_r_32f);
+									assert(outputAccessor->type == cgltf_type_vec3);
+									floatCount = 3;
+								} else {
+									//NOTE: Don't support morph target animations
+									assert(false);
+								}
+								assert(outputBuffer);
+								copyDataFromAccessor(outputBuffer, ptr, buffer_view, outputAccessor, false, floatCount);
+
+								assert(outputAccessor->count == inputAccessor->count);
+
+								boneAnimation->keyFrameCount = outputAccessor->count;
+								boneAnimation->keyFrames = (KeyFrame *)malloc(sizeof(KeyFrame)*outputAccessor->count);
+								for(int l = 0; l < outputAccessor->count; l++) {
+									KeyFrame *frame = &boneAnimation->keyFrames[l];
+									frame->time = inputBuffer[l];
+
+									assert(floatCount <= 4);
+									for(int m = 0; m < floatCount; m++) {
+										frame->transform.E[m] = outputBuffer[floatCount*l + m];
+									}
+
+									// printf("type: %d\n", boneAnimation->type);
+									// printf("bone index: %d\n", boneAnimation->boneIndex);
+									// printf("time: %f\n", frame->time);
+									// printf("transform: %f %f %f %f\n\n", frame->transform.E[0], frame->transform.E[1], frame->transform.E[2], frame->transform.E[3]);
+									
+								}
+							}
+
+							free(outputBuffer);
+							free(inputBuffer);
+						}
+					}
+				}
+				
 				assert(data->skins_count < 2);
 				if(data->skins_count > 0) {
 					cgltf_skin skin = data->skins[0];
@@ -303,7 +445,7 @@ SkeletalModel loadGLTF(char *fileName) {
 									cgltf_node *jointChild = skin.joints[j];
 
 									if(child == jointChild) {
-										pushArrayItem(&model.joints[i].childIndexes, k, int);
+										pushArrayItem(&model.joints[i].childIndexes, j, int);
 										break;
 									}
 								}
@@ -324,8 +466,6 @@ SkeletalModel loadGLTF(char *fileName) {
 					int floatCount = 3;
 
 					bool isShort = false;
-
-					
 					
 					if(attrib.type == cgltf_attribute_type_position) {
 						//NOTE: Make sure it has floats
@@ -367,43 +507,7 @@ SkeletalModel loadGLTF(char *fileName) {
 					
 					//NOTE: Is an actual attribute we want to retrieve
 					if(bufferToCopyTo) {
-						size_t sizeOfElm = (isShort) ? sizeof(u16) : sizeof(float);
-						copyBufferToMemory(bufferToCopyTo, ptr, buffer_view, accessor, isShort, floatCount);
-						
-						//NOTE: This is if an attribute is sparse 
-						if(accessor->is_sparse) {
-							
-							cgltf_accessor_sparse sparse = accessor->sparse;
-
-							if(sparse.count > 0) {
-
-								//NOTE: Get the indicies out
-								cgltf_buffer_view* indices_buffer_view = sparse.indices_buffer_view;
-								assert(indices_buffer_view);
-								
-								cgltf_buffer* indicies_buffer = indices_buffer_view->buffer;
-								uint8_t *indicies_ptr = (uint8_t *)((uint8_t *)indicies_buffer->data) + indices_buffer_view->offset;
-								assert(cgltf_component_type_r_16u == sparse.indices_component_type);
-
-								//NOTE: Now get the data out 
-								cgltf_buffer_view* values_buffer_view = sparse.values_buffer_view;
-								
-								cgltf_buffer* values_buffer = values_buffer_view->buffer;
-								uint8_t *values_ptr = (uint8_t *)((uint8_t *)values_buffer->data) + values_buffer_view->offset;
-
-								size_t indices_stride = sizeof(unsigned short);
-								size_t value_stride = sizeOfElm*floatCount;
-								
-								for(int i = 0; i < sparse.count; ++i) {
-									int index = (int)(*(indicies_ptr + i*indices_stride));
-
-									void *to = ((uint8_t *)bufferToCopyTo) + sizeOfElm*floatCount*index;
-									void *from = values_ptr + i*value_stride;
-
-									memcpy(to, from, floatCount*sizeOfElm);
-								}
-							}
-						}
+						copyDataFromAccessor(bufferToCopyTo, ptr, buffer_view, accessor, isShort, floatCount);
 					}
 				}
 

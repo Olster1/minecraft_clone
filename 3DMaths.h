@@ -91,7 +91,18 @@ struct float3
 
 struct float4
 {
-    float x, y, z, w;
+	union {
+		struct {
+			float x, y, z, w;
+		};
+		struct {
+			float3 xyz;
+			float ignore;	
+		};
+		struct {
+			float E[4];	
+		};
+	};
 };
 
 
@@ -915,5 +926,116 @@ uint32_t get_crc32_for_string(char *string_nullterminated) {
 	return result;
 }
 
+
+typedef union {
+    union {
+        struct {
+            float E[4];
+        };
+        struct {
+            float r, i, j, k;
+        };
+        struct {
+            float4 vector4;
+        };
+    };
+} Quaternion;
+
+Quaternion identityQuaternion() {
+    Quaternion result = {};
+    result.r = 1;
+    
+    return result;
+}
+
+float16 quaternionToMatrix(Quaternion q) {
+    float16 result = float16_identity();
+    
+    result.E[0] = 1 - (2*q.j*q.j + 2*q.k*q.k);
+    result.E[4] = 2*q.i*q.j + 2*q.k*q.r;
+    result.E[8] = 2*q.i*q.k - 2*q.j*q.r;
+    
+    result.E[1] = 2*q.i*q.j - 2*q.k*q.r;
+    result.E[5] = 1 - (2*q.i*q.i  + 2*q.k*q.k);
+    result.E[9] = 2*q.j*q.k + 2*q.i*q.r;
+    
+    result.E[2] = 2*q.i*q.k + 2*q.j*q.r;
+    result.E[6] = 2*q.j*q.k - 2*q.i*q.r;
+    result.E[10] = 1 - (2*q.i*q.i  + 2*q.j*q.j);
+
+    //This is because we're using column notation instead of row notation
+    //TODO @speed: take this out and swap the values manually
+    result = float16_transpose(result);
+    //
+    
+    return result;
+    
+}
+
+Quaternion quaternion(float r, float i, float j, float k) {
+    Quaternion result = {};
+    result.r = r;
+    result.i = i;
+    result.j = j;
+    result.k = k;
+    
+    return result;   
+}
+
+//the arguments are in order of math operation ie. q1*q2 -> have q2 rotation and rotating by q1
+Quaternion quaternion_mult(Quaternion q, Quaternion q2) {
+    Quaternion result = {};
+    
+    result.r = q.r*q2.r - q.i*q2.i -
+        q.j*q2.j - q.k*q2.k;
+    result.i = q.r*q2.i + q.i*q2.r +
+        q.j*q2.k - q.k*q2.j;
+    result.j = q.r*q2.j + q.j*q2.r +
+        q.k*q2.i - q.i*q2.k;
+    result.k = q.r*q2.k + q.k*q2.r +
+        q.i*q2.j - q.j*q2.i;
+    
+    return result;
+}
+
+//this is for 'intergrating' a quaternion, like updating the rotation per frame in physics
+Quaternion addScaledVectorToQuaternion(Quaternion q_, float3 vector, float timeScale) {
+    Quaternion result = q_;
+    Quaternion q = quaternion(0,
+                              vector.x * timeScale,
+                              vector.y * timeScale,
+                              vector.z * timeScale);
+
+    q = quaternion_mult(q_, q);
+    result.r += q.r * 0.5f;
+    result.i += q.i * 0.5f;
+    result.j += q.j * 0.5f;
+    result.k += q.k * 0.5f;
+    
+    return result;
+}
+
+Quaternion easyMath_normalizeQuaternion(Quaternion q) {
+    float n = sqrt(q.i*q.i + q.j*q.j + q.k*q.k + q.r*q.r);
+    
+    q.i /= n;
+    q.j /= n;
+    q.k /= n;
+    q.r /= n;
+
+    return q;
+}
+
+float16 sqt_to_float16(Quaternion q, float3 scale, float3 pos) {
+    float16 result = quaternionToMatrix(q);
+
+	result = float16_scale(result, scale);
+    
+    result.E[12] = pos.x;
+    result.E[13] = pos.y;
+    result.E[14] = pos.z;
+    
+    return result;
+}
 
 

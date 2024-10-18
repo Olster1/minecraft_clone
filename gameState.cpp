@@ -281,7 +281,7 @@ void initGameState(GameState *gameState) {
 
     initThreadQueue(&gameState->threadsInfo);
 
-    gameState->foxModel = loadGLTF("./models/fox/Fox.gltf");
+    // gameState->foxModel = loadGLTF("./models/fox/Fox.gltf");
     // loadGLTF("./models/boxAnimated/BoxAnimated.gltf");
 
     // createTextureAtlas(gameState->renderer, "./sprites/");

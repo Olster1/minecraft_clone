@@ -108,6 +108,8 @@ struct Entity {
     bool tryJump;
     bool running;
 
+    AnimationState animationState;
+
     uint32_t flags;
     BlockType itemType;
 };

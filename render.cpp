@@ -132,15 +132,6 @@ struct Shader {
     uint32_t handle;
 };
 
-struct ModelBuffer {
-    uint32_t handle;
-    uint32_t instanceBufferhandle;
-    uint32_t tboHandle; //NOTE: For Skinning Matrix
-    uint32_t textureHandle; //NOTE: For Skinning Matrix
-
-    int indexCount;
-};
-
 struct InstanceData {
     float3 pos;
     float2 uv;

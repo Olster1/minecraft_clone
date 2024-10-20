@@ -310,7 +310,7 @@ void mineBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
             b.block->timeLeft -= gameState->dt;
 
             if(!gameState->camera.followingPlayer) {
-                b.block->timeLeft = 0;
+                // b.block->timeLeft = 0;
             }
 
             //NOTE: Show progress on mining the block

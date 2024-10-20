@@ -14,7 +14,7 @@ SQT SQT_identity() {
     SQT result;
     result.scale = make_float3(1, 1, 1);
     result.translate = make_float3(0, 0, 0);
-    result.rotation = make_float4(0, 0, 0, 1);
+    result.rotation = identityQuaternion();
     return result;
 }
 

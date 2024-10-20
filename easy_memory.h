@@ -16,7 +16,7 @@ typedef enum {
     EASY_PLATFORM_MEMORY_ZERO,
 } EasyPlatform_MemoryFlag;
 
-static void *easyPlatform_allocateMemory(size_t sizeInBytes, EasyPlatform_MemoryFlag flags) {
+static void *easyPlatform_allocateMemory(size_t sizeInBytes, EasyPlatform_MemoryFlag flags = EASY_PLATFORM_MEMORY_ZERO) {
     
     void *result = 0;
 #if 0//_WIN32

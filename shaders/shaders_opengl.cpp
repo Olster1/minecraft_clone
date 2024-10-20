@@ -40,13 +40,13 @@ static char *skeletalVertexShader =
 "in vec3 vertex;"
 "in vec3 normal;"
 "in vec2 texUV;	"
+"in ivec4 jointIndexes;"
+"in vec4 jointWeights;"
 
 //per instanced variables
 "in mat4 M;"
 "in vec4 uvAtlas;"
 "in vec4 color;"
-"in vec4 jointIndex;"
-"in vec4 jointWeights;"
 
 //uniform variables
 "uniform mat4 V;"
@@ -60,6 +60,23 @@ static char *skeletalVertexShader =
                 "texelFetch(boneMatrixBuffer, index * 4 + 3));"
 "}"
 
+"vec4 getSkinnedPosition(vec4 p) {"
+    "vec4 skinnedPosition = vec4(0.0);"
+
+    "float total = jointWeights[0] + jointWeights[1] + jointWeights[2] + jointWeights[3];"
+
+    "if(total != 1) {"
+        "skinnedPosition = p;"
+    "} else {"
+        "skinnedPosition += (getBoneMatrix(jointIndexes[0]) * p) * jointWeights[0];"
+        "skinnedPosition += (getBoneMatrix(jointIndexes[1]) * p) * jointWeights[1];"
+        "skinnedPosition += (getBoneMatrix(jointIndexes[2]) * p) * jointWeights[2];"
+        "skinnedPosition += (getBoneMatrix(jointIndexes[3]) * p) * jointWeights[3];"
+    "}"
+
+    "return skinnedPosition;"
+"}"
+
 //outgoing variables
 "out vec4 color_frag;"
 "out vec3 normal_frag_view_space;"
@@ -69,7 +86,7 @@ static char *skeletalVertexShader =
 
 "void main() {"
     "mat4 MV = V * M;"
-    "gl_Position = projection * MV * vec4((vertex), 1);"
+    "gl_Position = projection * MV * getSkinnedPosition(vec4(vertex, 1));"
     "color_frag = color;"
     "normal_frag_view_space = mat3(transpose(inverse(MV))) * normal;"
     "sunAngle = mat3(transpose(inverse(MV))) * vec3(0.7071, 0, 0.7071);"

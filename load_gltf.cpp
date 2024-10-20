@@ -282,7 +282,7 @@ SkeletalModel loadGLTF(char *fileName) {
 						assert(indiciesAccessor->component_type == cgltf_component_type_r_16u);
 						// assert(buffer_view->type == cgltf_buffer_view_type_indices);
 
-						indicies = (unsigned short *)malloc(buffer_view->size);
+						indicies = (unsigned short *)easyPlatform_allocateMemory(buffer_view->size, EASY_PLATFORM_MEMORY_ZERO);
 
 						uint8_t *p = ptr + buffer_view->offset;
 						memcpy(indicies, p, buffer_view->size);
@@ -297,7 +297,7 @@ SkeletalModel loadGLTF(char *fileName) {
 
 				if(data->animations_count > 0) {
 					model.animationCount = data->animations_count;
-					model.animations = (Animation3d *)malloc(sizeof(Animation3d)*data->animations_count);
+					model.animations = (Animation3d *)easyPlatform_allocateMemory(sizeof(Animation3d)*data->animations_count, EASY_PLATFORM_MEMORY_ZERO);
 
 					assert(data->skins_count == 1);
 					cgltf_skin skin = data->skins[0];
@@ -309,7 +309,7 @@ SkeletalModel loadGLTF(char *fileName) {
 						animation3d->name = easyString_copyToHeap(animation->name);
 						animation3d->boneCount = animation->channels_count;
 
-						animation3d->boneAnimations = (BoneAnimation *)malloc(sizeof(BoneAnimation)*animation3d->boneCount);
+						animation3d->boneAnimations = (BoneAnimation *)easyPlatform_allocateMemory(sizeof(BoneAnimation)*animation3d->boneCount, EASY_PLATFORM_MEMORY_ZERO);
 
 						for(int k = 0; k < animation->channels_count; ++k) {
 							cgltf_animation_channel *channel = &animation->channels[k];
@@ -350,7 +350,7 @@ SkeletalModel loadGLTF(char *fileName) {
 								cgltf_buffer* buffer = buffer_view->buffer;
 								uint8_t *ptr = (uint8_t *)buffer->data;
 								int floatCount = 1;
-								inputBuffer = (float *)malloc(buffer_view->size);
+								inputBuffer = (float *)easyPlatform_allocateMemory(buffer_view->size);
 
 								animation3d->maxTime = inputAccessor->max[0];
 
@@ -369,7 +369,7 @@ SkeletalModel loadGLTF(char *fileName) {
 								cgltf_buffer* buffer = buffer_view->buffer;
 								uint8_t *ptr = (uint8_t *)buffer->data;
 								int floatCount = 4;
-								outputBuffer = (float *)malloc(buffer_view->size);
+								outputBuffer = (float *)easyPlatform_allocateMemory(buffer_view->size);
 
 								if(channel->target_path == cgltf_animation_path_type_rotation) {
 									assert(outputAccessor->component_type == cgltf_component_type_r_32f);
@@ -389,7 +389,7 @@ SkeletalModel loadGLTF(char *fileName) {
 								assert(outputAccessor->count == inputAccessor->count);
 
 								boneAnimation->keyFrameCount = outputAccessor->count;
-								boneAnimation->keyFrames = (KeyFrame *)malloc(sizeof(KeyFrame)*outputAccessor->count);
+								boneAnimation->keyFrames = (KeyFrame *)easyPlatform_allocateMemory(sizeof(KeyFrame)*outputAccessor->count);
 								for(int l = 0; l < outputAccessor->count; l++) {
 									KeyFrame *frame = &boneAnimation->keyFrames[l];
 									frame->time = inputBuffer[l];
@@ -421,14 +421,17 @@ SkeletalModel loadGLTF(char *fileName) {
 					cgltf_buffer_view *buffer_view = inverse_bind_matrices->buffer_view;
 					cgltf_buffer* buffer = buffer_view->buffer;
 					uint8_t *ptr = (uint8_t *)buffer->data;
+
+					assert(inverse_bind_matrices->component_type == cgltf_component_type_r_32f);
+					assert(inverse_bind_matrices->type == cgltf_type_mat4);
 					
-					model.inverseBindMatrices = (float16 *)malloc(sizeof(float16)*inverse_bind_matrices->count);
+					model.inverseBindMatrices = (float16 *)easyPlatform_allocateMemory(sizeof(float16)*inverse_bind_matrices->count, EASY_PLATFORM_MEMORY_ZERO);
 					copyBufferToMemory(model.inverseBindMatrices, ptr, buffer_view, inverse_bind_matrices, false, 16);
 					model.inverseBindMatrixCount = inverse_bind_matrices->count;
 
 					assert(skin.joints_count < MAX_BONES_PER_MODEL);
 
-					model.joints = (Joint *)malloc(sizeof(Joint)*skin.joints_count);
+					model.joints = (Joint *)easyPlatform_allocateMemory(sizeof(Joint)*skin.joints_count, EASY_PLATFORM_MEMORY_ZERO);
 					model.jointCount = skin.joints_count;
 
 					assert(model.jointCount == model.inverseBindMatrixCount);
@@ -437,18 +440,30 @@ SkeletalModel loadGLTF(char *fileName) {
 						cgltf_node *joint = skin.joints[i];
 
 						if(joint) {
-							model.joints[i].childIndexes = initResizeArray(int);
-							//NOTE: Find the parent index
-							for(int k = 0; k < joint->children_count; ++k) {
-								cgltf_node *child = joint->children[k];
-								for(int j = 0; j < skin.joints_count; ++j) {
-									cgltf_node *jointChild = skin.joints[j];
+							// model.joints[i].childIndexes = initResizeArray(int);
+							model.joints[i].parentIndex = -1;
+							model.joints[i].T = SQT_identity();
 
-									if(child == jointChild) {
-										pushArrayItem(&model.joints[i].childIndexes, j, int);
-										break;
-									}
+							if(joint->has_rotation) {
+								model.joints[i].T.rotation = inverseQuaternion(make_float4(joint->rotation[0], joint->rotation[1], joint->rotation[2], joint->rotation[3]));
+							}
+							if(joint->has_scale) {
+								assert(false);
+							}
+							if(joint->has_translation) {
+								model.joints[i].T.translate = make_float3(joint->translation[0], joint->translation[1], joint->translation[2]);
+							}
+
+							//NOTE: Find the parent index
+							for(int k = 0; k < skin.joints_count; ++k) {
+								cgltf_node *testJoint = skin.joints[k];
+
+								if(testJoint == joint->parent) {
+									assert(k != i);
+									model.joints[i].parentIndex = k;
+									break;
 								}
+
 							}
 						}
 					}
@@ -471,19 +486,19 @@ SkeletalModel loadGLTF(char *fileName) {
 						//NOTE: Make sure it has floats
 						assert(accessor->component_type == cgltf_component_type_r_32f);
 						assert(accessor->type == cgltf_type_vec3);
-						bufferToCopyTo = poss = (float *)malloc(buffer_view->size);
+						bufferToCopyTo = poss = (float *)easyPlatform_allocateMemory(buffer_view->size);
 						vertexCount = accessor->count;
 					}
 					if(attrib.type == cgltf_attribute_type_normal) {
 						assert(accessor->component_type == cgltf_component_type_r_32f);
 						assert(accessor->type == cgltf_type_vec3);
-						bufferToCopyTo = normals = (float *)malloc(buffer_view->size);
+						bufferToCopyTo = normals = (float *)easyPlatform_allocateMemory(buffer_view->size);
 						normalCount = accessor->count;
 					}
 					if(attrib.type == cgltf_attribute_type_joints) {
 						assert(accessor->component_type == cgltf_component_type_r_16u);
 						assert(accessor->type == cgltf_type_vec4);
-						bufferToCopyTo = joints = (u16 *)malloc(buffer_view->size);
+						bufferToCopyTo = joints = (u16 *)easyPlatform_allocateMemory(buffer_view->size);
 						jointCount = accessor->count;
 						floatCount = 4;
 						isShort = true;
@@ -492,7 +507,7 @@ SkeletalModel loadGLTF(char *fileName) {
 					if(attrib.type == cgltf_attribute_type_weights) {
 						assert(accessor->component_type == cgltf_component_type_r_32f);
 						assert(accessor->type == cgltf_type_vec4);
-						bufferToCopyTo = weights = (float *)malloc(buffer_view->size);
+						bufferToCopyTo = weights = (float *)easyPlatform_allocateMemory(buffer_view->size, EASY_PLATFORM_MEMORY_ZERO);
 						weightsCount = accessor->count;
 						floatCount = 4;
 					}
@@ -500,7 +515,7 @@ SkeletalModel loadGLTF(char *fileName) {
 					if(attrib.type == cgltf_attribute_type_texcoord) {
 						assert(accessor->component_type == cgltf_component_type_r_32f);
 						assert(accessor->type == cgltf_type_vec2);
-						bufferToCopyTo = uvs = (float *)malloc(buffer_view->size);
+						bufferToCopyTo = uvs = (float *)easyPlatform_allocateMemory(buffer_view->size, EASY_PLATFORM_MEMORY_ZERO);
 						uvCount = accessor->count;
 						floatCount = 2;
 					}
@@ -513,10 +528,10 @@ SkeletalModel loadGLTF(char *fileName) {
 
 				assert(jointCount == vertexCount);
 				assert(weightsCount == vertexCount);
-				assert(weightsCount == vertexCount);
+				assert(weightsCount == jointCount);
 				assert(uvCount == vertexCount);
 
-				vertexes = (VertexWithJoints *)malloc(sizeof(VertexWithJoints)*vertexCount);
+				vertexes = (VertexWithJoints *)easyPlatform_allocateMemory(sizeof(VertexWithJoints)*vertexCount, EASY_PLATFORM_MEMORY_ZERO);
 
 				if(vertexes) {
 					//NOTE: Create the vertex data now
@@ -533,17 +548,22 @@ SkeletalModel loadGLTF(char *fileName) {
 						}
 
 						if(joints) {
-							v->jointIndexes = make_float4((float)joints[i*4 + 0], (float)joints[i*4 + 1], (float)joints[i*4 + 2], (float)joints[i*4 + 3]);
-							assert((int)v->jointIndexes.x < jointCount);
-							assert((int)v->jointIndexes.y < jointCount);
-							assert((int)v->jointIndexes.z < jointCount);
-							assert((int)v->jointIndexes.w < jointCount);
+							v->jointIndexes[0] = (int)joints[i*4 + 0];
+							v->jointIndexes[1] = (int)joints[i*4 + 1];
+							v->jointIndexes[2] = (int)joints[i*4 + 2];
+							v->jointIndexes[3] = (int)joints[i*4 + 3];
+							// printf("%f, %f, %f, %f,\n", v->jointIndexes.x, v->jointIndexes.y, v->jointIndexes.z, v->jointIndexes.w);
+							// v->jointIndexes = make_float4(1, 1, 1, 0);
+							assert((int)v->jointIndexes[0] < jointCount);
+							assert((int)v->jointIndexes[1] < jointCount);
+							assert((int)v->jointIndexes[2] < jointCount);
+							assert((int)v->jointIndexes[3] < jointCount);
 						}
 
 						if(weights) {
-							v->jointWeights = make_float4((int)weights[i*4 + 0], (int)weights[i*4 + 1], (int)weights[i*4 + 2], (int)weights[i*4 + 3]);
+							v->jointWeights = make_float4(weights[i*4 + 0], weights[i*4 + 1], weights[i*4 + 2], weights[i*4 + 3]);
 							float totalJointWeight = (v->jointWeights.x + v->jointWeights.y + v->jointWeights.z + v->jointWeights.w);
-
+							// printf("%f, %f, %f, %f,\n", v->jointWeights.x, v->jointWeights.y, v->jointWeights.z, v->jointWeights.w);
 							//NOTE: Make sure weights add up to zero if the vertex is weighted
 							assert(totalJointWeight == 1.0f || totalJointWeight == 0.0f);
 						}
@@ -552,7 +572,7 @@ SkeletalModel loadGLTF(char *fileName) {
 
 				if(indicies) {
 					//NOTE: Upscale the indices buffer from a unsigned SHORT to a unsigned INT
-					indiciesToSend = (unsigned int *)malloc(sizeof(unsigned int)*indexCount);
+					indiciesToSend = (unsigned int *)easyPlatform_allocateMemory(sizeof(unsigned int)*indexCount, EASY_PLATFORM_MEMORY_ZERO);
 
 					//NOTE: Create the vertex data now
 					int reverseWindingIndex = indexCount - 1;
@@ -588,7 +608,7 @@ SkeletalModel loadGLTF(char *fileName) {
 
 	if(!indiciesToSend) {
 		indexCount = vertexCount;
-		indiciesToSend = (unsigned int *)malloc(sizeof(unsigned int)*indexCount);
+		indiciesToSend = (unsigned int *)easyPlatform_allocateMemory(sizeof(unsigned int)*indexCount, EASY_PLATFORM_MEMORY_ZERO);
 
 		for(int i = 0; i < vertexCount; ++i) {
 			indiciesToSend[i] = i;

@@ -9,7 +9,8 @@ struct ModelBuffer {
 };
 
 struct Joint {
-	int *childIndexes;
+	int parentIndex;
+	SQT T; //NOTE: Transforms from child space to this space
 };
 
 struct KeyFrame {

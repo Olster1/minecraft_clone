@@ -13,9 +13,9 @@
 #define SCALE_ATTRIB_LOCATION 6
 #define AO_MASK_ATTRIB_LOCATION 7
 #define SAMPLER_INDEX_ATTRIB_LOCATION 8
-#define MODEL_TRANSFORM_ATTRIB_LOCATION 9
-#define JOINT_WEIGHTS 13
-#define JOINT_INDEXES 14
+#define JOINT_WEIGHTS 9
+#define JOINT_INDEXES 10
+#define MODEL_TRANSFORM_ATTRIB_LOCATION 11
 
 
 #define renderCheckError() renderCheckError_(__LINE__, (char *)__FILE__)
@@ -336,7 +336,7 @@ ModelBuffer generateVertexBuffer(void *triangleData, int vertexCount, unsigned i
         glEnableVertexAttribArray(jointAttrib);  
         renderCheckError();
         unsigned int jointIndexOffset = (intptr_t)(&(((VertexWithJoints *)0)->jointIndexes));
-        glVertexAttribPointer(jointAttrib, 4, GL_FLOAT, GL_FALSE, sizeof(VertexWithJoints), ((char *)0) + jointIndexOffset);
+        glVertexAttribPointer(jointAttrib, 4, GL_INT, GL_FALSE, sizeof(VertexWithJoints), ((char *)0) + jointIndexOffset);
         renderCheckError();
         
     }
@@ -396,7 +396,7 @@ void updateSkinningTexture(ModelBuffer *modelBuffer, float16 *skinningMatrix, in
     renderCheckError();
 
     size_t sizeInBytes = sizeof(float16)*jointCount;
-    
+
     glBufferData(GL_TEXTURE_BUFFER, sizeInBytes, skinningMatrix, GL_STREAM_DRAW); 
     renderCheckError();
     
@@ -610,6 +610,7 @@ void updateInstanceData(uint32_t bufferHandle, void *data, size_t sizeInBytes) {
 
 enum ShaderFlags {
     SHADER_CUBE_MAP = 1 << 0,
+    SHADER_TEXTURE_BUFFER = 1 << 1,
 };
 
 void bindTexture(char *uniformName, int slotId, GLint textureId, Shader *shader, uint32_t flags) {
@@ -625,6 +626,9 @@ void bindTexture(char *uniformName, int slotId, GLint textureId, Shader *shader,
     if(flags & SHADER_CUBE_MAP) {
         // glBindTexture(GL_TEXTURE_CUBE_MAP, textureId); 
         // renderCheckError();
+    } else if(flags & SHADER_TEXTURE_BUFFER) { 
+        glBindTexture(GL_TEXTURE_BUFFER, textureId); 
+        renderCheckError();
     } else {
         glBindTexture(GL_TEXTURE_2D, textureId); 
         renderCheckError();
@@ -636,7 +640,7 @@ void bindTextureArray(char *uniformName, GLint textureId, Shader *shader, uint32
 
 }
 
-void drawModels(ModelBuffer *model, Shader *shader, uint32_t textureId, int instanceCount, float16 projectionTransform, float16 modelViewTransform, float3 lookingAxis, bool underWater, TimeOfDayValues timeOfDayValues, uint32_t flags = 0) {
+void drawModels(ModelBuffer *model, Shader *shader, uint32_t textureId, int instanceCount, float16 projectionTransform, float16 modelViewTransform, float3 lookingAxis, bool underWater, TimeOfDayValues timeOfDayValues, uint32_t flags = 0, int skinningTextureId = -1) {
     // printf("%d\n", instanceCount);
     glUseProgram(shader->handle);
     renderCheckError();
@@ -674,14 +678,13 @@ void drawModels(ModelBuffer *model, Shader *shader, uint32_t textureId, int inst
     glUniform1f(glGetUniformLocation(shader->handle, "fogFadeDistance"), (underWater ? 50 : 50));
     renderCheckError();
 
-    // if(!isArrayTexture) {
-        bindTexture("diffuse", 1, textureId, shader, flags);
-        renderCheckError();
-    // } else {
-    //     bindTextureArray("diffuse", textureId, shader, flags);
-    //     renderCheckError();
-    // }
+    bindTexture("diffuse", 1, textureId, shader, flags);
+    renderCheckError();
 
+    if(skinningTextureId >= 0) {
+        bindTexture("boneMatrixBuffer", 2, skinningTextureId, shader, SHADER_TEXTURE_BUFFER);
+        renderCheckError(); 
+    }
 
     glDrawElementsInstanced(GL_TRIANGLES, model->indexCount, GL_UNSIGNED_INT, 0, instanceCount); 
     renderCheckError();

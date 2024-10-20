@@ -16,7 +16,6 @@ struct Vertex {
     float3 pos;
     float2 texUV;
     float3 normal;
-    // float weights[32];
 };
 
 struct VertexWithJoints {
@@ -24,7 +23,7 @@ struct VertexWithJoints {
     float2 texUV;
     float3 normal;
     float4 jointWeights;
-    float4 jointIndexes;
+    int jointIndexes[4];
 };
 
 

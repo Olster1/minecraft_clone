@@ -8,8 +8,8 @@
 #include "./easy_lex.h"
 #include "./imgui.h"
 
-#include "./animation.h"
 #include "./transform.cpp"
+#include "./animation.h"
 #include "./entity.cpp"
 #include "./render.cpp"
 #include "./opengl.cpp"
@@ -294,20 +294,21 @@ void updateGame(GameState *gameState) {
 
     // updateAndDrawDebugCode(gameState);
 
-    gameState->player.animationState.animation.animation = &triangleHandle.animations[0];
-
-    buildSkinningMatrix(gameState, &triangleHandle, &gameState->player.animationState);
+    
     
     rendererFinish(gameState->renderer, screenT, cameraT, screenGuiT, textGuiT, lookingAxis, cameraTWithoutTranslation, timeOfDayValues, gameState->perlinTestTexture.handle);
 
     {
         //NOTE: Draw all the examples on the gltf website
+        gameState->player.animationState.animation.animation = &triangleHandle.animations[1];
+        // printf("%s\n",triangleHandle.animations[1].name);
+        buildSkinningMatrix(gameState, &triangleHandle, &gameState->player.animationState);
         float scale = 0.01f;
         float16 T = float16_scale(float16_identity(), make_float3(scale, scale, scale));
         T = float16_set_pos(T, gameState->modelLocation);
         pushModel(gameState->renderer, T, make_float4(1, 1, 1, 1));
         updateInstanceData(triangleHandle.modelBuffer.instanceBufferhandle, gameState->renderer->modelData, gameState->renderer->modelItemCount*sizeof(InstanceDataWithRotation));
-        drawModels(&triangleHandle.modelBuffer, &gameState->renderer->blockPickupShader, modelTexture.handle, gameState->renderer->modelItemCount, screenT, cameraT, lookingAxis, false, timeOfDayValues);
+        drawModels(&triangleHandle.modelBuffer, &gameState->renderer->skeletalModelShader, modelTexture.handle, gameState->renderer->modelItemCount, screenT, cameraT, lookingAxis, false, timeOfDayValues, 0, triangleHandle.modelBuffer.textureHandle);
         gameState->renderer->modelItemCount = 0;
     }
 

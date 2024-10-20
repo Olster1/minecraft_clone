@@ -23,7 +23,7 @@ Uses OpenGL 3.3 and SDL for platform layer.
 - [ ] Shadow Mapping
 - [ ] Point & Directional lights
 - [ ] Server side application to run on a Rasberry Pi 4 that accepts TCP (block transactions) & UDP (entity positions) packets using Berkely Sockets API (learn about writing a server and running it, and learn about cyber security concepts in practice)
-- [ ] Release game on itch.io & steam as professional as possible - just exe & asset bundle 
+- [ ] Release game on steam as professional as possible - just exe & asset bundle 
 
 ## WHY's
 - [x] Fun & Challenging to program

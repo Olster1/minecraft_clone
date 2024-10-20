@@ -208,6 +208,10 @@ static float3 scale_float3(float dt, float3 value) {
 	return make_float3(dt*value.x, dt*value.y, dt*value.z);
 }
 
+static float3 negate_float3(float3 value) {
+	return make_float3(-value.x, -value.y, -value.z);
+}
+
 
 static float4 scale_float4(float dt, float4 value) {
 	return make_float4(dt*value.x, dt*value.y, dt*value.z, dt*value.w);
@@ -927,113 +931,128 @@ uint32_t get_crc32_for_string(char *string_nullterminated) {
 }
 
 
-typedef union {
-    union {
-        struct {
-            float E[4];
-        };
-        struct {
-            float r, i, j, k;
-        };
-        struct {
-            float4 vector4;
-        };
-    };
-} Quaternion;
-
-Quaternion identityQuaternion() {
-    Quaternion result = {};
-    result.r = 1;
-    
-    return result;
+float4 identityQuaternion() {
+    return make_float4(0, 0, 0, 1);
 }
 
-float16 quaternionToMatrix(Quaternion q) {
+float16 quaternionToMatrix(float4 q) {
     float16 result = float16_identity();
     
-    result.E[0] = 1 - (2*q.j*q.j + 2*q.k*q.k);
-    result.E[4] = 2*q.i*q.j + 2*q.k*q.r;
-    result.E[8] = 2*q.i*q.k - 2*q.j*q.r;
-    
-    result.E[1] = 2*q.i*q.j - 2*q.k*q.r;
-    result.E[5] = 1 - (2*q.i*q.i  + 2*q.k*q.k);
-    result.E[9] = 2*q.j*q.k + 2*q.i*q.r;
-    
-    result.E[2] = 2*q.i*q.k + 2*q.j*q.r;
-    result.E[6] = 2*q.j*q.k - 2*q.i*q.r;
-    result.E[10] = 1 - (2*q.i*q.i  + 2*q.j*q.j);
+    float xx = q.x * q.x;
+    float yy = q.y * q.y;
+    float zz = q.z * q.z;
+    float xy = q.x * q.y;
+    float xz = q.x * q.z;
+    float yz = q.y * q.z;
+    float wx = q.w * q.x;
+    float wy = q.w * q.y;
+    float wz = q.w * q.z;
+
+    result.E_[0][0] = 1.0f - 2.0f * (yy + zz);
+    result.E_[0][1] = 2.0f * (xy - wz);
+    result.E_[0][2] = 2.0f * (xz + wy);
+    result.E_[0][3] = 0.0f;
+
+    result.E_[1][0] = 2.0f * (xy + wz);
+    result.E_[1][1] = 1.0f - 2.0f * (xx + zz);
+    result.E_[1][2] = 2.0f * (yz - wx);
+    result.E_[1][3] = 0.0f;
+
+    result.E_[2][0] = 2.0f * (xz - wy);
+    result.E_[2][1] = 2.0f * (yz + wx);
+    result.E_[2][2] = 1.0f - 2.0f * (xx + yy);
+    result.E_[2][3] = 0.0f;
 
     //This is because we're using column notation instead of row notation
     //TODO @speed: take this out and swap the values manually
-    result = float16_transpose(result);
+    // result = float16_transpose(result);
     //
     
     return result;
     
 }
 
-Quaternion quaternion(float r, float i, float j, float k) {
-    Quaternion result = {};
-    result.r = r;
-    result.i = i;
-    result.j = j;
-    result.k = k;
-    
-    return result;   
+float4 inverseQuaternion(float4 q) {
+    return make_float4(-q.x, -q.y, -q.z, q.w);
 }
 
-//the arguments are in order of math operation ie. q1*q2 -> have q2 rotation and rotating by q1
-Quaternion quaternion_mult(Quaternion q, Quaternion q2) {
-    Quaternion result = {};
+float4 easyMath_normalizeQuaternion(float4 q) {
+    float n = sqrt(q.x*q.x + q.y*q.y + q.z*q.z + q.w*q.w);
     
-    result.r = q.r*q2.r - q.i*q2.i -
-        q.j*q2.j - q.k*q2.k;
-    result.i = q.r*q2.i + q.i*q2.r +
-        q.j*q2.k - q.k*q2.j;
-    result.j = q.r*q2.j + q.j*q2.r +
-        q.k*q2.i - q.i*q2.k;
-    result.k = q.r*q2.k + q.k*q2.r +
-        q.i*q2.j - q.j*q2.i;
-    
-    return result;
-}
-
-//this is for 'intergrating' a quaternion, like updating the rotation per frame in physics
-Quaternion addScaledVectorToQuaternion(Quaternion q_, float3 vector, float timeScale) {
-    Quaternion result = q_;
-    Quaternion q = quaternion(0,
-                              vector.x * timeScale,
-                              vector.y * timeScale,
-                              vector.z * timeScale);
-
-    q = quaternion_mult(q_, q);
-    result.r += q.r * 0.5f;
-    result.i += q.i * 0.5f;
-    result.j += q.j * 0.5f;
-    result.k += q.k * 0.5f;
-    
-    return result;
-}
-
-Quaternion easyMath_normalizeQuaternion(Quaternion q) {
-    float n = sqrt(q.i*q.i + q.j*q.j + q.k*q.k + q.r*q.r);
-    
-    q.i /= n;
-    q.j /= n;
-    q.k /= n;
-    q.r /= n;
+    q.x /= n;
+    q.y /= n;
+    q.z /= n;
+    q.w /= n;
 
     return q;
 }
 
-float16 sqt_to_float16(Quaternion q, float3 scale, float3 pos) {
-    float16 result = quaternionToMatrix(q);
+float4 slerp(float4 q1, float4 q2, float t) {
+    // Normalize the quaternions to ensure they're unit quaternions
+    q1 = easyMath_normalizeQuaternion(q1);
+    q2 = easyMath_normalizeQuaternion(q2);
 
-	result = float16_scale(result, scale);
+    // Compute the dot product
+    float dot = q1.x * q2.x + q1.y * q2.y + q1.z * q2.z + q1.w * q2.w;
+
+    // If the dot product is negative, negate one quaternion to take the shorter path
+    if (dot < 0.0f) {
+        q2.x = -q2.x;
+        q2.y = -q2.y;
+        q2.z = -q2.z;
+        q2.w = -q2.w;
+        dot = -dot; // Update dot product
+    }
+
+    // If the quaternions are very close, linear interpolation can be used
+    if (dot > 0.9995f) {
+        float4 result;
+        result.x = q1.x + t * (q2.x - q1.x);
+        result.y = q1.y + t * (q2.y - q1.y);
+        result.z = q1.z + t * (q2.z - q1.z);
+        result.w = q1.w + t * (q2.w - q1.w);
+        return easyMath_normalizeQuaternion(result); // Normalize result
+    }
+
+    // Calculate the angle between the quaternions
+    float theta_0 = acosf(dot); // theta_0 = angle between q1 and q2
+    float theta = theta_0 * t;  // theta = angle to interpolate
+
+    // Compute the orthogonal vector (the axis of rotation)
+    float4 q2_perp;
+    q2_perp.x = q2.x - dot * q1.x;
+    q2_perp.y = q2.y - dot * q1.y;
+    q2_perp.z = q2.z - dot * q1.z;
+    q2_perp.w = q2.w - dot * q1.w;
+    q2_perp = easyMath_normalizeQuaternion(q2_perp); // Normalize the perpendicular vector
+
+    // Calculate the final quaternion
+    float4 result;
+    result.x = q1.x * cosf(theta) + q2_perp.x * sinf(theta);
+    result.y = q1.y * cosf(theta) + q2_perp.y * sinf(theta);
+    result.z = q1.z * cosf(theta) + q2_perp.z * sinf(theta);
+    result.w = q1.w * cosf(theta) + q2_perp.w * sinf(theta);
+
+    return result; // Return the interpolated quaternion
+}
+
+//the arguments are in order of math operation ie. q1*q2 -> have q2 rotation and rotating by q1
+float4 quaternion_mult(float4 q1, float4 q2) {
+    float4 result = {};
     
-    result.E[12] = pos.x;
-    result.E[13] = pos.y;
-    result.E[14] = pos.z;
+    result.w = q1.w * q2.w - q1.x * q2.x - q1.y * q2.y - q1.z * q2.z;
+    result.x = q1.w * q2.x + q1.x * q2.w + q1.y * q2.z - q1.z * q2.y;
+    result.y = q1.w * q2.y - q1.x * q2.z + q1.y * q2.w + q1.z * q2.x;
+    result.z = q1.w * q2.z + q1.x * q2.y - q1.y * q2.x + q1.z * q2.w;
+
+    return result;
+}
+
+
+float16 sqt_to_float16(float4 q, float3 scale, float3 pos) {
+    float16 result = quaternionToMatrix(q);
+	result = float16_scale(result, scale);
+	result = float16_multiply(float16_set_pos(float16_identity(), pos), result);
     
     return result;
 }

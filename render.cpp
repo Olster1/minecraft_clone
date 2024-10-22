@@ -26,7 +26,12 @@ struct VertexWithJoints {
     int jointIndexes[4];
 };
 
-
+struct VertexWithMeshIDs {
+    float3 pos;
+    float2 texUV;
+    float3 normal;
+    int meshIndex;
+};
 
 Vertex makeVertex(float3 pos, float2 texUV, float3 normal) {
     Vertex v = {};

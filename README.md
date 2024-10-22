@@ -15,7 +15,7 @@ Uses OpenGL 3.3 and SDL for platform layer.
 - [x] Health, Stamina & Item Hotbar
 - [x] Coal & Ore generation & better world generation 
 - [x] Load 3d models & skeletal animations from gltf file
-- [ ] Load 3d models & animations in minecraft format form BlockBench
+- [ ] Load 3d models & animations in minecraft format form BlockBench (models don't use skeltal animation but multiple meshes per model and each mesh is animated separately). Combine all the meshes into one mesh, but give each mesh a index ID for the mesh they came from. Then we still make a 'skinning matrix' and the mesh is used to look up where it came from. Same as Bone Ids into the skinning matrix. 
 - [ ] Cows, Sheep & Zombie Mobs 
 - [ ] Snow and cliffs (learn more about simplex noise & SIMD library implementation of it)
 - [ ] Attacking mobs 

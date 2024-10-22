@@ -58,6 +58,10 @@ void updateAnimationState(GameState *gameState, AnimationState *animationState) 
 			animationState->timeAt = 0;	
 		} else {
 			animationState->timeAt -= a->maxTime;
+
+			if(a->maxTime == 0.0) {
+				animationState->timeAt = 0;
+			}
 		}
 	}
 }
@@ -111,6 +115,11 @@ void buildSkinningMatrix(GameState *gameState, SkeletalModel *model, AnimationSt
 				b = frame2->transform;
 				break;
 			}
+		}
+
+		if(bone->keyFrameCount == 1) {
+			a = bone->keyFrames[0].transform;
+			b = bone->keyFrames[0].transform;
 		}
 
 		assert(t >= 0 && t <= 1.0f);

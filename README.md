@@ -14,7 +14,9 @@ Uses OpenGL 3.3 and SDL for platform layer.
 - [x] Water generation with alpha 
 - [x] Health, Stamina & Item Hotbar
 - [x] Coal & Ore generation & better world generation 
-- [ ] Cows, Sheep & Zombie Mobs (learn about loading animation files with cgltf - Game Engine Architecture book)
+- [x] Load 3d models & skeletal animations from gltf file
+- [ ] Load 3d models & animations in minecraft format form BlockBench
+- [ ] Cows, Sheep & Zombie Mobs 
 - [ ] Snow and cliffs (learn more about simplex noise & SIMD library implementation of it)
 - [ ] Attacking mobs 
 - [ ] Cave generation

@@ -299,8 +299,12 @@ SkeletalModel loadGLTF(char *fileName) {
 					model.animationCount = data->animations_count;
 					model.animations = (Animation3d *)easyPlatform_allocateMemory(sizeof(Animation3d)*data->animations_count, EASY_PLATFORM_MEMORY_ZERO);
 
-					assert(data->skins_count == 1);
-					cgltf_skin skin = data->skins[0];
+					cgltf_skin *skin = 0;
+					
+					// assert(data->skins_count == 1);
+					if(data->skins_count == 1) {
+						skin = &data->skins[0];
+					}
 		
 					for(int i = 0; i < data->animations_count; ++i) {
 						cgltf_animation* animation = &data->animations[i];
@@ -326,17 +330,20 @@ SkeletalModel loadGLTF(char *fileName) {
 							}
 
 							int boneIndex = -1;
-							//NOTE: Find the index of the bone
-							for(int j = 0; j < skin.joints_count; ++j) {
-								cgltf_node *joint = skin.joints[j];
+							// NOTE: Find the index of the bone
+							if(skin) {
+								for(int j = 0; j < skin->joints_count; ++j) {
+									cgltf_node *joint = skin->joints[j];
 
-								if(joint == channel->target_node) {
-									boneIndex = j;
-									break;
+									if(joint == channel->target_node) {
+										boneIndex = j;
+										break;
+									}
 								}
+								assert(boneIndex >= 0);
 							}
 
-							assert(boneIndex >= 0);
+							
 
 							boneAnimation->boneIndex = boneIndex;
 
@@ -526,8 +533,8 @@ SkeletalModel loadGLTF(char *fileName) {
 					}
 				}
 
-				assert(jointCount == vertexCount);
-				assert(weightsCount == vertexCount);
+				assert(jointCount == 0 || jointCount == vertexCount);
+				assert(weightsCount == 0 || weightsCount == vertexCount);
 				assert(weightsCount == jointCount);
 				assert(uvCount == vertexCount);
 

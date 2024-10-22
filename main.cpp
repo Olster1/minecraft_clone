@@ -195,6 +195,7 @@ void updateGame(GameState *gameState) {
 
         // triangleHandle = loadGLTF("./models/sparse.gltf");
         triangleHandle = loadGLTF("./models/fox/Fox.gltf");
+        // triangleHandle = loadGLTF("./models/fox.gltf");
         // triangleHandle = loadGLTF("./models/avocado/Avocado.gltf");
         // modelTexture = loadTextureToGPU("./models/avocado/Avocado_baseColor.png");
         modelTexture = loadTextureToGPU("./models/fox/Texture.png");

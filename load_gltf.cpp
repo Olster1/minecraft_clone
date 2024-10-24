@@ -263,38 +263,21 @@ SkeletalModel loadGLTF(char *fileName) {
 				float *normals = 0;
 				u16 *joints = 0;
 				float *weights = 0;
-				unsigned short *indicies = 0;
+				int *meshIndexes = 0;
 
 				int normalCount = 0;
 				int uvCount = 0;
 				int jointCount = 0;
 				int weightsCount = 0;
+
+				size_t weightsOldSize = 0;
+				size_t jointsOldSize = 0;
+				size_t texOldSize = 0;
+				size_t normalOldSize = 0;
+				size_t possOldSize = 0;
+				size_t indicesOldSize = 0;
+				size_t meshIndexOldSize = 0;
 				
-
-				{
-					cgltf_accessor *indiciesAccessor = data->meshes[0].primitives[0].indices;
-					//NOTE: Get the index data 
-					if(indiciesAccessor) {
-						cgltf_buffer_view *buffer_view = indiciesAccessor->buffer_view;
-						cgltf_buffer* buffer = buffer_view->buffer;
-						uint8_t *ptr = (uint8_t *)buffer->data;
-
-						assert(indiciesAccessor->component_type == cgltf_component_type_r_16u);
-						// assert(buffer_view->type == cgltf_buffer_view_type_indices);
-
-						indicies = (unsigned short *)easyPlatform_allocateMemory(buffer_view->size, EASY_PLATFORM_MEMORY_ZERO);
-
-						uint8_t *p = ptr + buffer_view->offset;
-						memcpy(indicies, p, buffer_view->size);
-
-						indexCount = indiciesAccessor->count;
-					} else {
-						indexCount = 0;
-						indicies = 0;
-
-					}
-				}
-
 				if(data->animations_count > 0) {
 					model.animationCount = data->animations_count;
 					model.animations = (Animation3d *)easyPlatform_allocateMemory(sizeof(Animation3d)*data->animations_count, EASY_PLATFORM_MEMORY_ZERO);
@@ -336,6 +319,17 @@ SkeletalModel loadGLTF(char *fileName) {
 									cgltf_node *joint = skin->joints[j];
 
 									if(joint == channel->target_node) {
+										boneIndex = j;
+										break;
+									}
+								}
+								assert(boneIndex >= 0);
+							} else {
+								//NOTE: Look through the meshes
+								for(int j = 0; j < data->nodes_count; ++j) {
+									cgltf_node *node = &data->nodes[j];
+
+									if(node == channel->target_node) {
 										boneIndex = j;
 										break;
 									}
@@ -421,53 +415,85 @@ SkeletalModel loadGLTF(char *fileName) {
 				}
 				
 				assert(data->skins_count < 2);
-				if(data->skins_count > 0) {
-					cgltf_skin skin = data->skins[0];
-					cgltf_accessor *inverse_bind_matrices = skin.inverse_bind_matrices;
-					assert(inverse_bind_matrices->count == skin.joints_count);
-					cgltf_buffer_view *buffer_view = inverse_bind_matrices->buffer_view;
-					cgltf_buffer* buffer = buffer_view->buffer;
-					uint8_t *ptr = (uint8_t *)buffer->data;
+				{
+					cgltf_node **joints = 0;
+					cgltf_node *nodes = 0;
+					if(data->skins_count > 0) {
+						cgltf_skin skin = data->skins[0];
+						cgltf_accessor *inverse_bind_matrices = skin.inverse_bind_matrices;
+						assert(inverse_bind_matrices->count == skin.joints_count);
+						cgltf_buffer_view *buffer_view = inverse_bind_matrices->buffer_view;
+						cgltf_buffer* buffer = buffer_view->buffer;
+						uint8_t *ptr = (uint8_t *)buffer->data;
 
-					assert(inverse_bind_matrices->component_type == cgltf_component_type_r_32f);
-					assert(inverse_bind_matrices->type == cgltf_type_mat4);
-					
-					model.inverseBindMatrices = (float16 *)easyPlatform_allocateMemory(sizeof(float16)*inverse_bind_matrices->count, EASY_PLATFORM_MEMORY_ZERO);
-					copyBufferToMemory(model.inverseBindMatrices, ptr, buffer_view, inverse_bind_matrices, false, 16);
-					model.inverseBindMatrixCount = inverse_bind_matrices->count;
+						assert(inverse_bind_matrices->component_type == cgltf_component_type_r_32f);
+						assert(inverse_bind_matrices->type == cgltf_type_mat4);
+						
+						model.inverseBindMatrices = (float16 *)easyPlatform_allocateMemory(sizeof(float16)*inverse_bind_matrices->count, EASY_PLATFORM_MEMORY_ZERO);
+						copyBufferToMemory(model.inverseBindMatrices, ptr, buffer_view, inverse_bind_matrices, false, 16);
+						model.inverseBindMatrixCount = inverse_bind_matrices->count;
 
-					assert(skin.joints_count < MAX_BONES_PER_MODEL);
+						assert(skin.joints_count < MAX_BONES_PER_MODEL);
 
-					model.joints = (Joint *)easyPlatform_allocateMemory(sizeof(Joint)*skin.joints_count, EASY_PLATFORM_MEMORY_ZERO);
-					model.jointCount = skin.joints_count;
+						model.joints = (Joint *)easyPlatform_allocateMemory(sizeof(Joint)*skin.joints_count, EASY_PLATFORM_MEMORY_ZERO);
+						model.jointCount = skin.joints_count;
 
-					assert(model.jointCount == model.inverseBindMatrixCount);
+						joints = skin.joints;
 
-					for(int i = 0; i < skin.joints_count; ++i) {
-						cgltf_node *joint = skin.joints[i];
+						assert(model.jointCount == model.inverseBindMatrixCount);
+					} else {
+						model.joints = (Joint *)easyPlatform_allocateMemory(sizeof(Joint)*data->nodes_count, EASY_PLATFORM_MEMORY_ZERO);
+						model.jointCount = data->nodes_count;
 
+						model.inverseBindMatrices = (float16 *)easyPlatform_allocateMemory(sizeof(float16)*model.jointCount, EASY_PLATFORM_MEMORY_ZERO);
+						model.inverseBindMatrixCount = model.jointCount;
+
+						for(int i = 0; i < model.inverseBindMatrixCount; ++i) {
+							model.inverseBindMatrices[i] = float16_identity();
+						}
+
+						nodes = data->nodes;
+					}
+
+					for(int i = 0; i < model.jointCount; ++i) {
+						cgltf_node *joint;
+						if(joints) {
+							joint = joints[i];
+						} else {
+							assert(nodes);
+							joint = &nodes[i];
+						}
+						
 						if(joint) {
-							// model.joints[i].childIndexes = initResizeArray(int);
 							model.joints[i].parentIndex = -1;
 							model.joints[i].T = SQT_identity();
-
+							if(joint->name) {
+								model.joints[i].name = easyString_copyToHeap(joint->name);
+							}
 							if(joint->has_rotation) {
 								model.joints[i].T.rotation = inverseQuaternion(make_float4(joint->rotation[0], joint->rotation[1], joint->rotation[2], joint->rotation[3]));
 							}
 							if(joint->has_scale) {
-								assert(false);
+								model.joints[i].T.scale = make_float3(joint->scale[0], joint->scale[1], joint->scale[2]);
 							}
 							if(joint->has_translation) {
 								model.joints[i].T.translate = make_float3(joint->translation[0], joint->translation[1], joint->translation[2]);
 							}
 
 							//NOTE: Find the parent index
-							for(int k = 0; k < skin.joints_count; ++k) {
-								cgltf_node *testJoint = skin.joints[k];
+							for(int k = 0; k < model.jointCount; ++k) {
+								cgltf_node *testJoint;
+								if(joints) {
+									testJoint = joints[k];
+								} else {
+									assert(nodes);
+									testJoint = &nodes[k];
+								}
 
 								if(testJoint == joint->parent) {
 									assert(k != i);
 									model.joints[i].parentIndex = k;
+									model.joints[i].hasMesh = joint->mesh != 0;
 									break;
 								}
 
@@ -475,61 +501,182 @@ SkeletalModel loadGLTF(char *fileName) {
 						}
 					}
 				}
-				
-				for(int i = 0; i < data->meshes[0].primitives[0].attributes_count; ++i) {
-					
-					cgltf_attribute attrib = data->meshes[0].primitives[0].attributes[i];
-					cgltf_accessor *accessor = attrib.data;
-					cgltf_buffer_view *buffer_view = accessor->buffer_view;
-					cgltf_buffer* buffer = buffer_view->buffer;
-					uint8_t *ptr = (uint8_t *)buffer->data;
 
-					void *bufferToCopyTo = 0;
-					int floatCount = 3;
+				for(int m = 0; m < data->meshes_count; ++m) {
+					assert(data->meshes[m].primitives_count == 1);
+					int boneIndex = -1;
 
-					bool isShort = false;
-					
-					if(attrib.type == cgltf_attribute_type_position) {
-						//NOTE: Make sure it has floats
-						assert(accessor->component_type == cgltf_component_type_r_32f);
-						assert(accessor->type == cgltf_type_vec3);
-						bufferToCopyTo = poss = (float *)easyPlatform_allocateMemory(buffer_view->size);
-						vertexCount = accessor->count;
+					for(int j = 0; j < data->nodes_count && boneIndex < 0; ++j) {
+						cgltf_node *n = &data->nodes[j];
+
+						if(n->mesh == &data->meshes[m]) {
+							boneIndex = j;
+						}
 					}
-					if(attrib.type == cgltf_attribute_type_normal) {
-						assert(accessor->component_type == cgltf_component_type_r_32f);
-						assert(accessor->type == cgltf_type_vec3);
-						bufferToCopyTo = normals = (float *)easyPlatform_allocateMemory(buffer_view->size);
-						normalCount = accessor->count;
-					}
-					if(attrib.type == cgltf_attribute_type_joints) {
-						assert(accessor->component_type == cgltf_component_type_r_16u);
-						assert(accessor->type == cgltf_type_vec4);
-						bufferToCopyTo = joints = (u16 *)easyPlatform_allocateMemory(buffer_view->size);
-						jointCount = accessor->count;
-						floatCount = 4;
-						isShort = true;
+					assert(boneIndex >= 0);
+					int prevVertexCount = vertexCount;
+
+					int thisVertexCount = 0;
+					for(int i = 0; i < data->meshes[m].primitives[0].attributes_count; ++i) {
+
+						cgltf_attribute attrib = data->meshes[m].primitives[0].attributes[i];
+						cgltf_accessor *accessor = attrib.data;
+						cgltf_buffer_view *buffer_view = accessor->buffer_view;
+						cgltf_buffer* buffer = buffer_view->buffer;
+						uint8_t *ptr = (uint8_t *)buffer->data;
+
+						void *bufferToCopyTo = 0;
+						int floatCount = 3;
+
+						bool isShort = false;
+
+						size_t possSize = 0;
+						size_t normalSize = 0;
+						size_t jointsSize = 0;
+						size_t weightsSize = 0;
+						size_t texSize = 0;
+
+						
+						
+						if(attrib.type == cgltf_attribute_type_position) {
+							//NOTE: Make sure it has floats
+							assert(accessor->component_type == cgltf_component_type_r_32f);
+							assert(accessor->type == cgltf_type_vec3);
+							bufferToCopyTo = (float *)easyPlatform_allocateMemory(buffer_view->size);
+							possSize = buffer_view->size;
+							vertexCount += accessor->count;
+							thisVertexCount = accessor->count;
+						}
+						if(attrib.type == cgltf_attribute_type_normal) {
+							assert(accessor->component_type == cgltf_component_type_r_32f);
+							assert(accessor->type == cgltf_type_vec3);
+							bufferToCopyTo = (float *)easyPlatform_allocateMemory(buffer_view->size);
+							normalSize = buffer_view->size;
+							normalCount += accessor->count;
+						}
+						if(attrib.type == cgltf_attribute_type_joints) {
+							assert(accessor->component_type == cgltf_component_type_r_16u);
+							assert(accessor->type == cgltf_type_vec4);
+							bufferToCopyTo = (u16 *)easyPlatform_allocateMemory(buffer_view->size);
+							jointCount += accessor->count;
+							floatCount = 4;
+							jointsSize = buffer_view->size;
+							isShort = true;
+						}
+
+						if(attrib.type == cgltf_attribute_type_weights) {
+							assert(accessor->component_type == cgltf_component_type_r_32f);
+							assert(accessor->type == cgltf_type_vec4);
+							bufferToCopyTo = (float *)easyPlatform_allocateMemory(buffer_view->size, EASY_PLATFORM_MEMORY_ZERO);
+							weightsCount += accessor->count;
+							weightsSize = buffer_view->size;
+							floatCount = 4;
+						}
+
+						if(attrib.type == cgltf_attribute_type_texcoord) {
+							assert(accessor->component_type == cgltf_component_type_r_32f);
+							assert(accessor->type == cgltf_type_vec2);
+							bufferToCopyTo = (float *)easyPlatform_allocateMemory(buffer_view->size, EASY_PLATFORM_MEMORY_ZERO);
+							uvCount += accessor->count;
+							texSize = buffer_view->size;
+							floatCount = 2;
+						}
+						
+						//NOTE: Is an actual attribute we want to retrieve
+						if(bufferToCopyTo) {
+							copyDataFromAccessor(bufferToCopyTo, ptr, buffer_view, accessor, isShort, floatCount);
+						}
+
+						if(possSize > 0) {
+							poss = (float *)easyPlatform_reallocMemory(poss, possOldSize, possOldSize + possSize);
+							easyPlatform_copyMemory(((u8 *)poss) + possOldSize, bufferToCopyTo, possSize);
+							possOldSize += possSize;
+						}
+						if(normalSize > 0) {
+							normals = (float *)easyPlatform_reallocMemory(normals, normalOldSize, normalOldSize + normalSize);
+							easyPlatform_copyMemory(((u8 *)normals) + normalOldSize, bufferToCopyTo, normalSize);
+							normalOldSize += normalSize;
+						}
+						if(texSize > 0) {
+							uvs = (float *)easyPlatform_reallocMemory(uvs, texOldSize, texOldSize + texSize);
+							easyPlatform_copyMemory(((u8 *)uvs) + texOldSize, bufferToCopyTo, texSize);
+							texOldSize += texSize;
+						}
+						if(jointsSize > 0) {
+							joints = (u16 *)easyPlatform_reallocMemory(joints, jointsOldSize, jointsOldSize + jointsSize);
+							easyPlatform_copyMemory(((u8 *)joints) + jointsOldSize, bufferToCopyTo, jointsSize);
+							jointsOldSize += jointsSize;
+						}
+						if(weightsSize > 0) {
+							weights = (float *)easyPlatform_reallocMemory(weights, weightsOldSize, weightsOldSize + weightsSize);
+							easyPlatform_copyMemory(((u8 *)weights) + weightsOldSize, bufferToCopyTo, weightsSize);
+							weightsOldSize += weightsSize;
+						}
+						
+						free(bufferToCopyTo);
 					}
 
-					if(attrib.type == cgltf_attribute_type_weights) {
-						assert(accessor->component_type == cgltf_component_type_r_32f);
-						assert(accessor->type == cgltf_type_vec4);
-						bufferToCopyTo = weights = (float *)easyPlatform_allocateMemory(buffer_view->size, EASY_PLATFORM_MEMORY_ZERO);
-						weightsCount = accessor->count;
-						floatCount = 4;
+					if(data->meshes_count > 1) {
+						size_t indexesSize = sizeof(int)*thisVertexCount;
+						meshIndexes = (int *)easyPlatform_reallocMemory(meshIndexes, meshIndexOldSize, meshIndexOldSize + indexesSize);
+
+						int *ptr = (int *)(((u8 *)meshIndexes) + meshIndexOldSize);
+						for(int p = 0; p < thisVertexCount; ++p) {
+							ptr[p] = boneIndex;
+						}
+						meshIndexOldSize += indexesSize;
 					}
 
-					if(attrib.type == cgltf_attribute_type_texcoord) {
-						assert(accessor->component_type == cgltf_component_type_r_32f);
-						assert(accessor->type == cgltf_type_vec2);
-						bufferToCopyTo = uvs = (float *)easyPlatform_allocateMemory(buffer_view->size, EASY_PLATFORM_MEMORY_ZERO);
-						uvCount = accessor->count;
-						floatCount = 2;
-					}
-					
-					//NOTE: Is an actual attribute we want to retrieve
-					if(bufferToCopyTo) {
-						copyDataFromAccessor(bufferToCopyTo, ptr, buffer_view, accessor, isShort, floatCount);
+					{	
+						unsigned int *indiciesTemp = 0;
+						cgltf_accessor *indiciesAccessor = data->meshes[m].primitives[0].indices;
+						int thisIndicesSize = 0;
+						//NOTE: Get the index data 
+						if(indiciesAccessor) {
+							cgltf_buffer_view *buffer_view = indiciesAccessor->buffer_view;
+							cgltf_buffer* buffer = buffer_view->buffer;
+							uint8_t *ptr = (uint8_t *)buffer->data;
+
+							assert(indiciesAccessor->component_type == cgltf_component_type_r_16u);
+							// assert(buffer_view->type == cgltf_buffer_view_type_indices);
+
+							unsigned short *indicies = (unsigned short *)easyPlatform_allocateMemory(buffer_view->size, EASY_PLATFORM_MEMORY_ZERO);
+
+							uint8_t *p = ptr + buffer_view->offset + indiciesAccessor->offset;
+							memcpy(indicies, p, buffer_view->size);
+
+							indexCount += indiciesAccessor->count;
+
+							thisIndicesSize = sizeof(unsigned int)*indiciesAccessor->count;
+							//NOTE: Upscale the indices buffer from a unsigned SHORT to a unsigned INT
+							indiciesTemp = (unsigned int *)easyPlatform_allocateMemory(thisIndicesSize, EASY_PLATFORM_MEMORY_ZERO);
+
+							//NOTE: Create the vertex data now
+							int reverseWindingIndex = indiciesAccessor->count - 1;
+							//NOTE: The winding is reverse of our renderer - gltf uses a CCW winding order for the front face.
+							for(int i = 0; i < indiciesAccessor->count; ++i) {
+								unsigned short v = indicies[reverseWindingIndex];
+								indiciesTemp[i] = ((unsigned int)v) + prevVertexCount;
+								reverseWindingIndex--;
+							}
+
+							free(indicies);
+							
+						} else {
+							indexCount += thisVertexCount;
+							thisIndicesSize = sizeof(unsigned int)*indexCount;
+							indiciesTemp = (unsigned int *)easyPlatform_allocateMemory(thisIndicesSize, EASY_PLATFORM_MEMORY_ZERO);
+
+							for(int i = 0; i < thisVertexCount; ++i) {
+								indiciesTemp[i] = i + prevVertexCount;
+							}
+						}
+
+						indiciesToSend = (unsigned int *)easyPlatform_reallocMemory(indiciesToSend, indicesOldSize, indicesOldSize + thisIndicesSize);
+						easyPlatform_copyMemory(((u8 *)indiciesToSend) + indicesOldSize, indiciesTemp, thisIndicesSize);
+						indicesOldSize += thisIndicesSize;
+
+						free(indiciesTemp);
 					}
 				}
 
@@ -565,38 +712,33 @@ SkeletalModel loadGLTF(char *fileName) {
 							assert((int)v->jointIndexes[1] < jointCount);
 							assert((int)v->jointIndexes[2] < jointCount);
 							assert((int)v->jointIndexes[3] < jointCount);
+						} else {
+							v->jointIndexes[0] = meshIndexes[i];
+							v->jointIndexes[1] = 0;
+							v->jointIndexes[2] = 0;
+							v->jointIndexes[3] = 0;
 						}
 
 						if(weights) {
 							v->jointWeights = make_float4(weights[i*4 + 0], weights[i*4 + 1], weights[i*4 + 2], weights[i*4 + 3]);
 							float totalJointWeight = (v->jointWeights.x + v->jointWeights.y + v->jointWeights.z + v->jointWeights.w);
-							// printf("%f, %f, %f, %f,\n", v->jointWeights.x, v->jointWeights.y, v->jointWeights.z, v->jointWeights.w);
 							//NOTE: Make sure weights add up to zero if the vertex is weighted
 							assert(totalJointWeight == 1.0f || totalJointWeight == 0.0f);
+						} else {
+							v->jointWeights.x = 1;
+							v->jointWeights.y = 0;
+							v->jointWeights.z = 0;
+							v->jointWeights.w = 0;
 						}
-					}
-				}
-
-				if(indicies) {
-					//NOTE: Upscale the indices buffer from a unsigned SHORT to a unsigned INT
-					indiciesToSend = (unsigned int *)easyPlatform_allocateMemory(sizeof(unsigned int)*indexCount, EASY_PLATFORM_MEMORY_ZERO);
-
-					//NOTE: Create the vertex data now
-					int reverseWindingIndex = indexCount - 1;
-					//NOTE: The winding is reverse of our renderer - gltf uses a CCW winding order for the front face.
-					for(int i = 0; i < indexCount; ++i) {
-						unsigned short v = indicies[reverseWindingIndex];
-						indiciesToSend[i] = (unsigned int)v;
-						reverseWindingIndex--;
 					}
 				}
 
 				free(poss);
 				free(uvs);
 				free(normals);
-				free(indicies);
 				free(joints);
 				free(weights);
+				free(meshIndexes);
 
 
             }
@@ -612,15 +754,6 @@ SkeletalModel loadGLTF(char *fileName) {
     } 
 
 	assert(model.valid);	
-
-	if(!indiciesToSend) {
-		indexCount = vertexCount;
-		indiciesToSend = (unsigned int *)easyPlatform_allocateMemory(sizeof(unsigned int)*indexCount, EASY_PLATFORM_MEMORY_ZERO);
-
-		for(int i = 0; i < vertexCount; ++i) {
-			indiciesToSend[i] = i;
-		}
-	}
 
 	if(vertexes && indiciesToSend) {
 		model.modelBuffer = generateVertexBuffer(vertexes, vertexCount, indiciesToSend, indexCount, ATTRIB_INSTANCE_TYPE_MODEL_MATRIX_SKELETAL);

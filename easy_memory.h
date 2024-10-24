@@ -63,10 +63,10 @@ static inline void easyPlatform_copyMemory(void *to, void *from, size_t sizeInBy
 static inline char * easyPlatform_reallocMemory(void *from, size_t oldSize, size_t newSize) {
     char *result = (char *)easyPlatform_allocateMemory(newSize, EASY_PLATFORM_MEMORY_ZERO);
 
-    easyPlatform_copyMemory(result, from, oldSize);
-
-    easyPlatform_freeMemory(from);
-
+    if(from) {
+        easyPlatform_copyMemory(result, from, oldSize);
+        easyPlatform_freeMemory(from);
+    }
     return result;
 }
 

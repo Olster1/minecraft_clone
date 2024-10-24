@@ -48,6 +48,7 @@
 
 void updateAnimationState(GameState *gameState, AnimationState *animationState) {
 	animationState->timeAt += gameState->dt;
+	animationState->lifeTime += gameState->dt;
 
 	Animation3d *a = animationState->animation.animation;
 
@@ -79,7 +80,7 @@ void updateAnimationState(GameState *gameState, AnimationState *animationState) 
 // 	}
 // }
 
-void buildSkinningMatrix(GameState *gameState, SkeletalModel *model, AnimationState *animationState) {
+void buildSkinningMatrix(GameState *gameState, SkeletalModel *model, AnimationState *animationState, EntityType entityType) {
 	updateAnimationState(gameState, animationState);
 
 	float16 *skinningMatrix = (float16 *)pushArray(&globalPerFrameArena, model->jointCount, float16);
@@ -127,10 +128,13 @@ void buildSkinningMatrix(GameState *gameState, SkeletalModel *model, AnimationSt
 		if(bone->type == BONE_ANIMATION_ROTATION) {
 			a = slerp(a, b, t);
 			// a = lerp_float4(a, b, t);
-			T->rotation = inverseQuaternion(a);
+			if(entityType == ENTITY_NONE) {
+				T->rotation = inverseQuaternion(a);
+			}
+			
 		} else if(bone->type == BONE_ANIMATION_SCALE) {
 			a = lerp_float4(a, b, t);
-			T->scale = float3_hadamard(a.xyz, T->scale);
+			T->scale = a.xyz;
 		} else if(bone->type == BONE_ANIMATION_TRANSLATION) {
 			a = lerp_float4(a, b, t);
 			T->translate = a.xyz;
@@ -140,6 +144,11 @@ void buildSkinningMatrix(GameState *gameState, SkeletalModel *model, AnimationSt
 	for(int i = 0; i < model->jointCount; ++i) {
 		SQT sqt = perJointTransform[i];
 		perJointTransforms[i] = sqt_to_float16(sqt.rotation, sqt.scale, sqt.translate);
+
+		if(entityType == ENTITY_FOX) {
+			perJointTransforms[i] = float16_multiply(getFoxAnimation(animationState, &model->joints[i]), perJointTransforms[i]);
+		}
+		
 	}
 
 	assert(model->parentJointIndex >= 0 && model->parentJointIndex < model->jointCount);
@@ -151,7 +160,7 @@ void buildSkinningMatrix(GameState *gameState, SkeletalModel *model, AnimationSt
 		skinningMatrix[i] = model->inverseBindMatrices[i];
 
 		while(parentIndex >= 0) {
-			assert(parentIndex <= i);
+			// assert(parentIndex <= i);
 			skinningMatrix[i] = float16_multiply(perJointTransforms[parentIndex], skinningMatrix[i]);
 
 			Joint *parentJoint = &model->joints[parentIndex];

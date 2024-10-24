@@ -9,7 +9,9 @@ struct ModelBuffer {
 };
 
 struct Joint {
+	char *name;
 	int parentIndex;
+	bool hasMesh;
 	SQT T; //NOTE: Transforms from child space to this space
 };
 
@@ -55,7 +57,6 @@ struct SkeletalModel {
 	Animation3d *animations;
 
 	int parentJointIndex;
-	
 };
 
 struct AnimationStateNode {
@@ -66,4 +67,5 @@ struct AnimationStateNode {
 struct AnimationState {
 	AnimationStateNode animation;
 	float timeAt;
+	float lifeTime; //NOTE: Total time the animation has been running
 };

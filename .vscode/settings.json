@@ -22,6 +22,8 @@
         "map": "cpp",
         "unordered_map": "cpp",
         "typeinfo": "cpp",
-        "ios": "cpp"
+        "ios": "cpp",
+        "complex": "cpp",
+        "locale": "cpp"
     }
 }

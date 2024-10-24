@@ -21,6 +21,12 @@ inline float radiansToDegrees(float radians) {
 
 }
 
+inline float degreesToRadians(float degrees) {
+	float result = (degrees / 360.0f) * TAU32;
+	return result;
+
+}
+
 int MathMin(int a, int b) {
 	if(a < b) {
 		return a;
@@ -1034,6 +1040,36 @@ float4 slerp(float4 q1, float4 q2, float t) {
     result.w = q1.w * cosf(theta) + q2_perp.w * sinf(theta);
 
     return result; // Return the interpolated quaternion
+}
+
+float4 eulerToQuaternion(float roll, float pitch, float yaw) {
+	// Convert angles to radians
+	roll = degreesToRadians(roll);
+	pitch = degreesToRadians(pitch);
+	yaw = degreesToRadians(yaw);
+    
+    roll  *= 0.5f;
+    pitch *= 0.5f;
+    yaw   *= 0.5f;
+
+	
+
+    // Precompute sines and cosines of half angles
+    float cosRoll = cosf(roll);
+    float sinRoll = sinf(roll);
+    float cosPitch = cosf(pitch);
+    float sinPitch = sinf(pitch);
+    float cosYaw = cosf(yaw);
+    float sinYaw = sinf(yaw);
+
+    // Compute quaternion components in the order (x, y, z, w)
+    float4 q;
+    q.x = sinRoll * cosPitch * cosYaw - cosRoll * sinPitch * sinYaw;
+    q.y = cosRoll * sinPitch * cosYaw + sinRoll * cosPitch * sinYaw;
+    q.z = cosRoll * cosPitch * sinYaw - sinRoll * sinPitch * cosYaw;
+    q.w = cosRoll * cosPitch * cosYaw + sinRoll * sinPitch * sinYaw;
+
+    return q;
 }
 
 //the arguments are in order of math operation ie. q1*q2 -> have q2 rotation and rotating by q1

@@ -4,10 +4,13 @@
 #define ITEM_HOT_SPOTS 8
 
 enum EntityType {
+    ENTITY_NONE,
     ENTITY_PLAYER,
     ENTITY_PICKUP_ITEM,
     ENTITY_GRASS_SHORT,
     ENTITY_GRASS_LONG,
+    ENTITY_FOX,
+    ENTITY_HORSE,
 };
 
 enum BlockType {

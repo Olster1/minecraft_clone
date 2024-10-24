@@ -65,6 +65,7 @@ Renderer *initRenderer(Texture grassTexture, Texture breakBlockTexture, Texture 
 #include "./camera.cpp"
 #include "./perlin_noise_test.cpp"
 #include "./imgui.cpp"
+#include "./minecraft_animations.cpp"
 #include "./animation.cpp"
 
 
@@ -193,13 +194,17 @@ void updateGame(GameState *gameState) {
         perFrameArenaMark = takeMemoryMark(&globalPerFrameArena);
         // DEBUG_chunkTests(gameState);
 
-        // triangleHandle = loadGLTF("./models/sparse.gltf");
-        triangleHandle = loadGLTF("./models/fox/Fox.gltf");
-        // triangleHandle = loadGLTF("./models/fox.gltf");
+        // triangleHandle = loadGLTF("./models/fox/Fox.gltf");
+        // modelTexture = loadTextureToGPU("./models/fox/Texture.png");
+
+        triangleHandle = loadGLTF("./models/fox.gltf");
+        modelTexture = loadTextureToGPU("./models/fox.png");
+
+        // triangleHandle = loadGLTF("./models/horse.gltf");
+        // modelTexture = loadTextureToGPU("./models/horse.png");
+        
         // triangleHandle = loadGLTF("./models/avocado/Avocado.gltf");
         // modelTexture = loadTextureToGPU("./models/avocado/Avocado_baseColor.png");
-        modelTexture = loadTextureToGPU("./models/fox/Texture.png");
-        
 
         initGameState(gameState);
     } else { 
@@ -303,8 +308,9 @@ void updateGame(GameState *gameState) {
         //NOTE: Draw all the examples on the gltf website
         gameState->player.animationState.animation.animation = &triangleHandle.animations[1];
         // printf("%s\n",triangleHandle.animations[1].name);
-        buildSkinningMatrix(gameState, &triangleHandle, &gameState->player.animationState);
-        float scale = 0.01f;
+        buildSkinningMatrix(gameState, &triangleHandle, &gameState->player.animationState, ENTITY_FOX);
+        // float scale = 0.01f;
+        float scale = 1;
         float16 T = float16_scale(float16_identity(), make_float3(scale, scale, scale));
         T = float16_set_pos(T, gameState->modelLocation);
         pushModel(gameState->renderer, T, make_float4(1, 1, 1, 1));

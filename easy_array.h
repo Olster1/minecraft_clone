@@ -76,6 +76,7 @@ void expandMemoryArray_(InfiniteAlloc *arena, int count, int expandCount) {
         if(arena->memory) {
             memcpy(newMem, arena->memory, arena->count*arena->sizeOfMember);
             free(arena->memory);
+            arena->memory = 0;
         }
         arena->memory = newMem;
         arena->totalCount = newCount;
@@ -134,6 +135,7 @@ inline void easyArray_copyInfiniteAlloc(InfiniteAlloc *from, InfiniteAlloc *to) 
 void releaseInfiniteAlloc(InfiniteAlloc *arena) {
     if(arena->memory) {
         free(arena->memory);
+        arena->memory = 0;
         memset(arena, 0, sizeof(InfiniteAlloc));
     }
 }
@@ -444,6 +446,7 @@ void freeArray(Array_Dynamic *array) {
         while(pool) {
             Pool *nextPool = pool->next;
             free(pool);
+            pool = 0;
             pool = nextPool;
         }    
     }
@@ -452,6 +455,7 @@ void freeArray(Array_Dynamic *array) {
     while(currentIndex != &array->freeIndexesSent) {
         ValidIndex *nextIndex = currentIndex->next;
         free(currentIndex);
+        currentIndex = 0;
         currentIndex = nextIndex;
     }
     
@@ -459,6 +463,7 @@ void freeArray(Array_Dynamic *array) {
     while(currentIndex) {
         ValidIndex *nextIndex = currentIndex->next;
         free(currentIndex);
+        currentIndex = 0;
         currentIndex = nextIndex;
     }
     

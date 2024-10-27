@@ -194,6 +194,7 @@ void fillChunk_multiThread(void *data_) {
     chunk->generateState = CHUNK_GENERATED;
 
     free(data_);
+    data_ = 0;
 }
 
 void fillChunk(GameState *gameState, Chunk *chunk) {

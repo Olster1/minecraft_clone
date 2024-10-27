@@ -33,8 +33,6 @@ struct GameState {
 
     TextureAtlas spriteTextureAtlas;
 
-    bool gravityOn;
-
     Interaction currentInteraction;
 
     float2 mouseP_screenSpace;
@@ -233,8 +231,6 @@ void initGameState(GameState *gameState) {
     loadWavFile(&gameState->fallBigSound, "./sounds/fallbig.wav", &gameState->audioSpec);
     loadWavFile(&gameState->pickupSound, "./sounds/pop.wav", &gameState->audioSpec);
     loadWavFile(&gameState->bgMusic, "./sounds/sweeden.wav", &gameState->audioSpec);
-
-    gameState->gravityOn = true;
 
     gameState->lastMouseP = gameState->mouseP_screenSpace;
 

@@ -60,13 +60,15 @@ Font initFontAtlas(char *fontFile) {
             renderCheckError();
 
             //NOTE: Free our CPU side image data now
-            free(tempBitmap); 
+            free(tempBitmap);  
+            tempBitmap = 0;
         } else {
             printf("bytesRead: %ld\n", bytesRead);
             assert(false);
         }
 
         free(ttfBuffer);
+        ttfBuffer = 0;
     } else {
         assert(false);
     }

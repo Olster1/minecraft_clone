@@ -409,7 +409,9 @@ SkeletalModel loadGLTF(char *fileName) {
 							}
 
 							free(outputBuffer);
+							outputBuffer = 0;
 							free(inputBuffer);
+							inputBuffer = 0;
 						}
 					}
 				}
@@ -614,6 +616,7 @@ SkeletalModel loadGLTF(char *fileName) {
 						}
 						
 						free(bufferToCopyTo);
+						bufferToCopyTo = 0;
 					}
 
 					if(data->meshes_count > 1) {
@@ -661,6 +664,7 @@ SkeletalModel loadGLTF(char *fileName) {
 							}
 
 							free(indicies);
+							indicies = 0;
 							
 						} else {
 							indexCount += thisVertexCount;
@@ -677,6 +681,7 @@ SkeletalModel loadGLTF(char *fileName) {
 						indicesOldSize += thisIndicesSize;
 
 						free(indiciesTemp);
+						indiciesTemp = 0;
 					}
 				}
 
@@ -734,17 +739,24 @@ SkeletalModel loadGLTF(char *fileName) {
 				}
 
 				free(poss);
+				poss = 0;
 				free(uvs);
+				uvs = 0;
 				free(normals);
+				normals = 0;
 				free(joints);
+				joints = 0;
 				free(weights);
+				weights = 0;
 				free(meshIndexes);
+				meshIndexes = 0;
 
 
             }
         } 
                 
         cgltf_free(data);
+		data = 0;
     } else {
 		printf("didn't Parsed files successfully\n");
 	}
@@ -760,7 +772,9 @@ SkeletalModel loadGLTF(char *fileName) {
 	}
 
 	free(vertexes);
+	vertexes = 0;
 	free(indiciesToSend);
+	indiciesToSend = 0;
 
 	return model;
 }

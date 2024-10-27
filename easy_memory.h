@@ -52,6 +52,7 @@ static void easyPlatform_freeMemory(void *memory) {
     HeapFree(GetProcessHeap(), 0, memory);
 #else 
     free(memory);
+    memory = 0;
 #endif
 }
 
@@ -66,6 +67,7 @@ static inline char * easyPlatform_reallocMemory(void *from, size_t oldSize, size
     if(from) {
         easyPlatform_copyMemory(result, from, oldSize);
         easyPlatform_freeMemory(from);
+        from = 0;
     }
     return result;
 }

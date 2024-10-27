@@ -397,6 +397,7 @@ void getAOMask_multiThreaded(void *data_) {
     assert(!(b->aoMask & (((uint64_t)(1)) << 63)));
 
     free(data_);
+    data_ = 0;
 }
 
 void drawChunk(GameState *gameState, Chunk *c) {

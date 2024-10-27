@@ -93,6 +93,7 @@ char *getFileLastPortionWithoutExtension_(char *name, Arena *arena) {
         //do nothing
     } else {
         easyPlatform_freeMemory(lastPortion);    
+        lastPortion = 0;
     }
     
     return result;
@@ -288,6 +289,7 @@ FileContents platformReadEntireFile(char *FileName, bool nullTerminate) {
             assert(!"Couldn't read file");
             Result.valid = false;
             free(Result.memory);
+            Result.memory = 0;
         }
         SDL_RWclose(FileHandle);
     } else {
@@ -301,6 +303,7 @@ FileContents platformReadEntireFile(char *FileName, bool nullTerminate) {
 
 static inline void easyFile_endFileContents(FileContents *contents) {
     free(contents->memory);
+    contents->memory = 0;
 } 
 
 static inline FileContents getFileContentsNullTerminate(char *fileName) {
@@ -365,6 +368,7 @@ bool platformCreateDirectory(char *fileName_) {
 #endif
 
     easyPlatform_freeMemory(fileName);
+    fileName = 0;
     return result;
 
 }
@@ -396,6 +400,7 @@ bool platformDoesDirectoryExist(char *fileName_) {
 #endif
     
     easyPlatform_freeMemory(fileName);
+    fileName = 0;
     return result;
 }
 
@@ -438,6 +443,12 @@ void platformCopyFile(char *fileName, char *copyDir) {
         free(copyName1);
         free(copyName2);
         free(lastPortion);
+
+        copyName = 0;
+        copyName1 = 0;
+        copyName2 = 0;
+        lastPortion = 0;
+
         
     } 
 
@@ -504,6 +515,7 @@ assert(!"not implemented");
                                 if(isInCharList(ext, exts, count)) {
                                     platformDeleteFile(fileName);
                                     free(fileName);
+                                    fileName = 0;
                                 }
                             } break;
                             case DIR_FIND_DIR_TYPE: {
@@ -516,6 +528,7 @@ assert(!"not implemented");
                                 if(isInCharList(ext, exts, count)) {
                                     platformCopyFile(fileName, copyDir);
                                     free(fileName);
+                                    fileName = 0;
                                 }
                             } break;
                         }

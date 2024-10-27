@@ -57,8 +57,10 @@ void updatePlayerPhysics(GameState *gameState, Entity *e, float3 movementForFram
     e->grounded = false;
 
     //NOTE: GRAVITY
-    if(gameState->gravityOn) {
+    if(gameState->camera.followingPlayer) {
         e->dP.y -= GRAVITY_POWER*gameState->dt;
+    } else {
+        e->dP = make_float3(0, 0, 0);
     }
 
     //NOTE: Integrate velocity
@@ -70,8 +72,6 @@ void updatePlayerPhysics(GameState *gameState, Entity *e, float3 movementForFram
     //NOTE: Get the movement vector for this frame
     float3 dpVector = plus_float3(movementForFrame, scale_float3(gameState->dt, e->dP));
     // float lengthLeft = float3_magnitude(dpVector);
-
-    // printf("%f %f %f\n", dpVector.x, dpVector.y, dpVector.z);
 
     updateRecoverMovement(gameState, e);
 
@@ -141,12 +141,11 @@ void updatePlayerPhysics(GameState *gameState, Entity *e, float3 movementForFram
         if(hit) {
             didHit = true;
 
-            if((e->dP.y < -20 && float3_dot(make_float3(0, 1, 0), shortestNormalVector) > 0.0f) && gameState->camera.followingPlayer) {
+            if((e->dP.y < -15 && float3_dot(make_float3(0, 1, 0), shortestNormalVector) > 0.0f) && gameState->camera.followingPlayer) {
                 //NOTE: Big fall so shake the camera
                 gameState->camera.shakeTimer = MAX_SHAKE_TIMER;
                 playSound(&gameState->fallBigSound);
             }
-
             
 
             //NOTE: Auto jump code - see if hit the sides 
@@ -378,87 +377,90 @@ void mineBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
 }
 
 void updatePlayer(GameState *gameState, Entity *e) {
-    float rotSpeed = 13.0f;
+    if(gameState->camera.followingPlayer) {
+        float rotSpeed = 13.0f;
 
-    float2 mouseDelta = minus_float2(gameState->mouseP_screenSpace, gameState->lastMouseP);
+        float2 mouseDelta = minus_float2(gameState->mouseP_screenSpace, gameState->lastMouseP);
 
-    e->T.rotation.y += gameState->dt*rotSpeed*-mouseDelta.x;
-    e->T.rotation.x += gameState->dt*rotSpeed*-mouseDelta.y;
+        e->T.rotation.y += gameState->dt*rotSpeed*-mouseDelta.x;
+        e->T.rotation.x += gameState->dt*rotSpeed*-mouseDelta.y;
 
-    if(e->T.rotation.x > 89) {
-        e->T.rotation.x = 89;
-    }
-    if(e->T.rotation.x < -89) {
-        e->T.rotation.x = -89;
+        if(e->T.rotation.x > 89) {
+            e->T.rotation.x = 89;
+        }
+        if(e->T.rotation.x < -89) {
+            e->T.rotation.x = -89;
+        }
     }
 
     float16 rot = eulerAnglesToTransform(e->T.rotation.y, e->T.rotation.x, e->T.rotation.z);
-
-    float3 zAxis = make_float3(rot.E_[2][0], 0, rot.E_[2][2]); //NOTE: rot.E_[2][1] in y if we want to fly
-    zAxis = normalize_float3(zAxis);
-    float3 xAxis = make_float3(rot.E_[0][0], rot.E_[0][1], rot.E_[0][2]);
-
-    float3 playerSpeed = make_float3(1, 1, 1);
-    float magnitude = gameState->dt*WALK_SPEED;
-
     float3 movement = make_float3(0, 0, 0);
 
-    if(gameState->keys.keys[KEY_LEFT]) {
-        movement = plus_float3(movement, float3_negate(xAxis));
-    }
-    if(gameState->keys.keys[KEY_RIGHT]) {
-        movement = plus_float3(movement, xAxis);
-    }
-    if(gameState->keys.keys[KEY_DOWN]) {
-        movement = plus_float3(movement, float3_negate(zAxis));
-    }
-    if(gameState->keys.keys[KEY_UP]) {
-        movement = plus_float3(movement, zAxis);
+    if(gameState->camera.followingPlayer) {
 
-        if(gameState->keys.keys[KEY_SHIFT] && e->grounded) {
-            //NOTE: Player is running
-            magnitude *= 2.0f;
+        float3 zAxis = make_float3(rot.E_[2][0], 0, rot.E_[2][2]); //NOTE: rot.E_[2][1] in y if we want to fly
+        zAxis = normalize_float3(zAxis);
+        float3 xAxis = make_float3(rot.E_[0][0], rot.E_[0][1], rot.E_[0][2]);
 
-            if(!e->running) {
-                e->running = true;
+        float3 playerSpeed = make_float3(1, 1, 1);
+        float magnitude = gameState->dt*WALK_SPEED;
+
+        if(gameState->keys.keys[KEY_LEFT]) {
+            movement = plus_float3(movement, float3_negate(xAxis));
+        }
+        if(gameState->keys.keys[KEY_RIGHT]) {
+            movement = plus_float3(movement, xAxis);
+        }
+        if(gameState->keys.keys[KEY_DOWN]) {
+            movement = plus_float3(movement, float3_negate(zAxis));
+        }
+        if(gameState->keys.keys[KEY_UP]) {
+            movement = plus_float3(movement, zAxis);
+
+            if(gameState->keys.keys[KEY_SHIFT] && e->grounded) {
+                //NOTE: Player is running
+                magnitude *= 2.0f;
+
+                if(!e->running) {
+                    e->running = true;
+                    
+                    gameState->camera.runShakeTimer = 0;
+                }
                 
-                gameState->camera.runShakeTimer = 0;
             }
-            
         }
-    }
 
-    if(e->running) {
-        gameState->camera.targetFov = 80;
-        e->stamina -= gameState->dt*STAMINA_DRAIN_SPEED;
+        if(e->running) {
+            gameState->camera.targetFov = 80;
+            e->stamina -= gameState->dt*STAMINA_DRAIN_SPEED;
 
-         if(e->stamina < 0) {
-            e->stamina = 0;
+            if(e->stamina < 0) {
+                e->stamina = 0;
+            }
+        } else {
+            e->stamina += gameState->dt*STAMINA_RECHARGE_SPEED;
+
+            if(e->stamina >= 1) {
+                e->stamina = 1;
+            }
         }
-    } else {
-        e->stamina += gameState->dt*STAMINA_RECHARGE_SPEED;
 
-        if(e->stamina >= 1) {
-            e->stamina = 1;
+        movement = normalize_float3(movement);
+        movement = scale_float3(magnitude, movement);
+
+        if(!gameState->keys.keys[KEY_SHIFT] || e->stamina <= 0) {
+            e->running = false;
+            gameState->camera.runShakeTimer = -1;
         }
-    }
+        
+        if((gameState->keys.keys[KEY_SPACE] == MOUSE_BUTTON_PRESSED || e->tryJump) && e->grounded) {
+            //NOTE: JUMP
+            e->dP.y += JUMP_POWER;
+        }
+        e->tryJump = false;
+    } 
 
-    movement = normalize_float3(movement);
-    movement = scale_float3(magnitude, movement);
-
-    if(!gameState->keys.keys[KEY_SHIFT] || e->stamina <= 0) {
-        e->running = false;
-        gameState->camera.runShakeTimer = -1;
-    }
-    
-    if((gameState->keys.keys[KEY_SPACE] == MOUSE_BUTTON_PRESSED || e->tryJump) && (e->grounded || !gameState->gravityOn)) {
-        //NOTE: JUMP
-        e->dP.y += JUMP_POWER;
-    }
-    e->tryJump = false;
-    
     updatePlayerPhysics(gameState, e, movement);
-
     float3 lookingAxis = make_float3(rot.E_[2][0], rot.E_[2][1], rot.E_[2][2]);
 
     if(gameState->mouseLeftBtn == MOUSE_BUTTON_PRESSED) {
@@ -517,17 +519,5 @@ void updatePlayer(GameState *gameState, Entity *e) {
                 gameState->showCircleTimer = -1;
             }
         }
-    }
-
-    {
-        //NOTE: Check if player is under water
-        float3 cameraP = plus_float3(gameState->cameraOffset, gameState->player.T.pos);
-        BlockChunkPartner data = blockExists(gameState, cameraP.x, cameraP.y, cameraP.z, BLOCK_EXISTS);
-        if(data.block && data.block->type == BLOCK_WATER) {
-            gameState->renderer->underWater = true;
-        } else {
-            gameState->renderer->underWater = false;
-        }
-        
     }
 }

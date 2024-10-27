@@ -484,6 +484,7 @@ Texture loadCubeMapTextureToGPU(char *folderName) {
             stbi_image_free(data);
         }
         free(concatFileName);
+        concatFileName = 0;
     }
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -533,6 +534,7 @@ Texture loadTextureArrayToGPU(char *fileName, int fileNameCount) {
     for(int i = 0; i < fileNameCount; ++i) {
         glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, t.w, t.h, 1, GL_RGB, GL_UNSIGNED_BYTE, imageDatas[i]);
         stbi_image_free(imageDatas[i]);
+        imageDatas[i] = 0;
     }
 
     glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
@@ -587,6 +589,7 @@ Texture loadTextureToGPU(char *fileName) {
     t.handle = resultId;
 
     stbi_image_free(imageData);
+    imageData = 0;
 
     return t;
     
@@ -672,10 +675,10 @@ void drawModels(ModelBuffer *model, Shader *shader, uint32_t textureId, int inst
     glUniform4f(glGetUniformLocation(shader->handle, "fogColor"), fogColor.x, fogColor.y, fogColor.z, fogColor.w);
     renderCheckError();
 
-    glUniform1f(glGetUniformLocation(shader->handle, "fogSeeDistance"), (underWater ? 0 : 20));
+    glUniform1f(glGetUniformLocation(shader->handle, "fogSeeDistance"), (underWater ? 0 : 50));
     renderCheckError();
 
-    glUniform1f(glGetUniformLocation(shader->handle, "fogFadeDistance"), (underWater ? 50 : 50));
+    glUniform1f(glGetUniformLocation(shader->handle, "fogFadeDistance"), (underWater ? 60 : 60));
     renderCheckError();
 
     bindTexture("diffuse", 1, textureId, shader, flags);

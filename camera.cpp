@@ -1,6 +1,6 @@
 void updateCamera(GameState *gameState) {
     if(!gameState->camera.followingPlayer) {
-        gameState->player.T = gameState->camera.T;
+        
         float speed = 10;
 
         if(gameState->keys.keys[KEY_SHIFT]) {
@@ -30,6 +30,8 @@ void updateCamera(GameState *gameState) {
         if(gameState->keys.keys[KEY_UP]) {
             gameState->camera.T.pos = plus_float3(gameState->camera.T.pos, scale_float3(gameState->dt*speed, zAxis));
         }
+
+        gameState->player.T = gameState->camera.T;
     } else if(gameState->useCameraMovement) {
         gameState->camera.T = gameState->player.T;
         gameState->camera.T.pos = plus_float3(gameState->cameraOffset, gameState->camera.T.pos);
@@ -68,6 +70,18 @@ void updateCamera(GameState *gameState) {
             gameState->camera.T.rotation.z += (float)sin(20*gameState->camera.runShakeTimer);
             gameState->camera.runShakeTimer += gameState->dt;
         } 
+    }
+
+    {
+        //NOTE: Check if player is under water
+        float3 cameraP = convertRealWorldToBlockCoords(gameState->camera.T.pos);
+        BlockChunkPartner data = blockExists(gameState, cameraP.x, cameraP.y, cameraP.z, BLOCK_EXISTS);
+        if(data.block && data.block->type == BLOCK_WATER) {
+            gameState->renderer->underWater = true;
+        } else {
+            gameState->renderer->underWater = false;
+        }
+        
     }
 
     gameState->camera.fov = lerp(gameState->camera.fov, gameState->camera.targetFov, make_lerpTValue(0.4f));

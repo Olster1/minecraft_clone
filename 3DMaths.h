@@ -181,6 +181,17 @@ static float3 make_float3(float x0, float y0, float z0) {
 	return result;
 }
 
+static float3 float3_crossProduct(float3 v1, float3 v2) {
+	float3 result = {};
+
+	result.x = v1.y * v2.z - v1.z * v2.y;
+	result.y = v1.z * v2.x - v1.x * v2.z;
+	result.z = v1.x * v2.y - v1.y * v2.x;
+
+	return result;
+
+}
+
 static float3 float3_hadamard(float3 a, float3 b) {
 	float3 result = {};
 
@@ -204,6 +215,9 @@ static float4 make_float4(float x, float y, float z, float w) {
 	result.w = w;
 
 	return result;
+}
+static float3 lerp_float3(float3 a, float3 b, float t) {
+	return make_float3((b.x - a.x)*t + a.x, (b.y - a.y)*t + a.y, (b.z - a.z)*t + a.z);
 }
 
 static float4 lerp_float4(float4 a, float4 b, float t) {
@@ -419,14 +433,15 @@ static Rect3f rect3f_minowski_plus(float3 aScale, float3 bScale, float3 center) 
 	return result;
 }
 
-struct EasyRay {
-    float3 origin;
-    float3 direction;
-};
 
 struct EasyPlane {
     float3 origin;
     float3 normal;
+};
+
+struct EasyRay {
+    float3 origin;
+    float3 direction;
 };
 
 static float3 minus_float3(float3 a, float3 b) {
@@ -833,6 +848,111 @@ float16 float16_angle_aroundY(float angle_radians) {
     return result;
 }
 
+
+float4 float16_transform(float16 i, float4 p) {
+	float4 result;
+
+	result.x = p.x*i.E_[0][0] + p.y*i.E_[1][0] + p.z*i.E_[2][0] + p.w*i.E_[3][0];
+	result.y = p.x*i.E_[0][1] + p.y*i.E_[1][1] + p.z*i.E_[2][1] + p.w*i.E_[3][1];
+	result.z = p.x*i.E_[0][2] + p.y*i.E_[1][2] + p.z*i.E_[2][2] + p.w*i.E_[3][2];
+	result.w = p.x*i.E_[0][3] + p.y*i.E_[1][3] + p.z*i.E_[2][3] + p.w*i.E_[3][3];
+
+	return result;
+}
+
+
+bool rect3fInsideViewFrustrum(Rect3f rect, float3 cameraP, float16 cameraMatrix, float FOV_degrees, float nearClip, float farClip, float aspectRatio_x_over_y) {
+	bool result = true;
+	
+	float3 unitXAxis = make_float3(cameraMatrix.E_[0][0], cameraMatrix.E_[0][1], cameraMatrix.E_[0][2]);
+	float3 unitYAxis = make_float3(cameraMatrix.E_[1][0], cameraMatrix.E_[1][1], cameraMatrix.E_[1][2]);
+	float3 unitZAxis = make_float3(cameraMatrix.E_[2][0], cameraMatrix.E_[2][1], cameraMatrix.E_[2][2]);
+
+	float3 rectPoints[8] = {
+		make_float3(rect.minX, rect.minY, rect.minZ),
+		make_float3(rect.minX, rect.maxY, rect.minZ),
+		make_float3(rect.maxX, rect.minY, rect.minZ),
+		make_float3(rect.maxX, rect.maxY, rect.minZ),
+		make_float3(rect.minX, rect.minY, rect.maxZ),
+		make_float3(rect.minX, rect.maxY, rect.maxZ),
+		make_float3(rect.maxX, rect.minY, rect.maxZ),
+		make_float3(rect.maxX, rect.maxY, rect.maxZ),
+	}; 
+
+	EasyPlane planes[6];
+
+	float FOV_radians = (FOV_degrees*PI32) / 180.0f;
+
+	//NOTE: Get the size of the plane the game world will be projected on.
+	float y = tan(FOV_radians/2); //plane's half height
+	float x = y*aspectRatio_x_over_y; //plane's half width
+
+	float yFar = farClip*y; //plane's far half height
+	float xFar = farClip*x; //plane's far half width
+
+	//NOTE: Nearest end plane
+	planes[0].origin = plus_float3(scale_float3(nearClip, unitZAxis), cameraP);
+	planes[0].normal = unitZAxis;
+
+	//NOTE: Furtherest end plane
+	planes[1].normal = float3_negate(unitZAxis);
+	planes[1].origin = plus_float3(scale_float3(farClip, unitZAxis), cameraP);
+
+	float3 closeCorners[4] = {
+		plus_float3(planes[0].origin, float16_transform(cameraMatrix, make_float4(-x, -y, 0, 0)).xyz),
+		plus_float3(planes[0].origin, float16_transform(cameraMatrix, make_float4(x, -y, 0, 0)).xyz),
+		plus_float3(planes[0].origin, float16_transform(cameraMatrix, make_float4(x, y, 0, 0)).xyz),
+		plus_float3(planes[0].origin, float16_transform(cameraMatrix, make_float4(-x, y, 0, 0)).xyz),
+	};
+
+	float3 farCorners[4] = {
+		plus_float3(planes[1].origin, float16_transform(cameraMatrix, make_float4(-xFar, -yFar, 0, 0)).xyz),
+		plus_float3(planes[1].origin, float16_transform(cameraMatrix, make_float4(xFar, -yFar, 0, 0)).xyz),
+		plus_float3(planes[1].origin, float16_transform(cameraMatrix, make_float4(xFar, yFar, 0, 0)).xyz),
+		plus_float3(planes[1].origin, float16_transform(cameraMatrix, make_float4(-xFar, yFar, 0, 0)).xyz),
+	};
+
+	float3 orthoVectors[4] = {unitXAxis, unitYAxis, negate_float3(unitXAxis), negate_float3(unitYAxis)};
+
+	for(int i = 0; i < arrayCount(farCorners); ++i) {
+		int index = i + 1;
+
+		if(index >= arrayCount(farCorners)) {
+			index = 0;
+		}
+
+		float3 a = lerp_float3(closeCorners[i], farCorners[i], 0.5f);
+		float3 b = lerp_float3(closeCorners[index], farCorners[index], 0.5f);
+
+		planes[2 + i].origin = lerp_float3(a, b, 0.5f);
+
+		float3 a1 = lerp_float3(closeCorners[i], closeCorners[index], 0.5f);
+		float3 b1 = lerp_float3(farCorners[i], farCorners[index], 0.5f);
+
+		float3 v =  normalize_float3(minus_float3(b1, a1));
+
+		planes[2 + i].normal = float3_crossProduct(v, orthoVectors[i]);
+	}
+	
+	for(int i = 0; i < arrayCount(planes) && result; ++i) {
+		EasyPlane p = planes[i];
+		bool insidePlane = false;
+		for(int j = 0; j < arrayCount(rectPoints) && !insidePlane; ++j) {
+			float3 point = minus_float3(rectPoints[j], p.origin); 
+
+			//NOTE: Normal points inwards to the center of the frustrum
+			if(float3_dot(point, p.normal) >= 0) {
+				insidePlane = true;
+			}
+		}
+		if(!insidePlane) {
+			result = false;
+		}
+	}
+	return result;
+
+}
+
 float16 float16_angle_aroundX(float angle_radians) {
     float16 result = {{
 			1, 0, 0, 0,
@@ -886,17 +1006,6 @@ float16 float16_angle_aroundZ(float angle_radians) {
 //     return result;
 // }
 
-
-float4 float16_transform(float16 i, float4 p) {
-	float4 result;
-
-	result.x = p.x*i.E_[0][0] + p.y*i.E_[1][0] + p.z*i.E_[2][0] + p.w*i.E_[3][0];
-	result.y = p.x*i.E_[0][1] + p.y*i.E_[1][1] + p.z*i.E_[2][1] + p.w*i.E_[3][1];
-	result.z = p.x*i.E_[0][2] + p.y*i.E_[1][2] + p.z*i.E_[2][2] + p.w*i.E_[3][2];
-	result.w = p.x*i.E_[0][3] + p.y*i.E_[1][3] + p.z*i.E_[2][3] + p.w*i.E_[3][3];
-
-	return result;
-}
 
 float16 float16_transpose(float16 val) {
     float16 result = float16_identity();

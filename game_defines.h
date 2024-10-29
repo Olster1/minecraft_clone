@@ -9,6 +9,7 @@
 #define STAMINA_RECHARGE_SPEED 0.1f
 #define CLOUD_EVELVATION 100 //NOTE: This is 192 in actual minecraft - Clouds always float westward between layer 192 and 196
 #define WATER_ELEVATION 40 //NOTE: This is 62 in actual minecraft
+#define BLOCK_SIZE 1 
 
 //NOTE: DEBUGGING CONSTANTS
 #define PERLIN_SIZE 128

@@ -72,6 +72,8 @@ struct GameState {
     WavFile fallBigSound;
     WavFile pickupSound;
 
+    float16 cameraRotation;
+
     float3 startP;
 
     ThreadsInfo threadsInfo;

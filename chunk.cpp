@@ -400,14 +400,16 @@ void getAOMask_multiThreaded(void *data_) {
     data_ = 0;
 }
 
-void drawChunk(GameState *gameState, Chunk *c) {
+void drawChunk(GameState *gameState, Chunk *c, float16 cameraMatrix) {
     int blockCount = (c->blocks) ? BLOCKS_PER_CHUNK : 0;
     for(int i = 0; i < blockCount; ++i) {
         Block *b = &c->blocks[i];
-
+        // float3 worldP = make_float3(c->x*CHUNK_DIM + b->x, c->y*CHUNK_DIM + b->y, c->z*CHUNK_DIM + b->z);
+        // Rect3f rect = make_rect3f_center_dim(worldP, make_float3(1, 1, 1));
+        // if(rect3fInsideViewFrustrum(rect, gameState->modelLocation, gameState->cameraRotation, gameState->camera.fov, MATH_3D_NEAR_CLIP_PlANE, MATH_3D_FAR_CLIP_PlANE, gameState->aspectRatio_y_over_x)) 
+        {
         if(b->exists) {
             float3 worldP = make_float3(c->x*CHUNK_DIM + b->x, c->y*CHUNK_DIM + b->y, c->z*CHUNK_DIM + b->z);
-            
 
             float maxColor = 0.0f;
 
@@ -447,6 +449,7 @@ void drawChunk(GameState *gameState, Chunk *c) {
                 
                 // c->blocks[i].hitBlock = false;
             }
+        }
         }
     }
 

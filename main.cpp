@@ -258,6 +258,17 @@ void updateGame(GameState *gameState) {
     float16 cameraTWithoutTranslation = getCameraX_withoutTranslation(gameState->camera.T);
 
     float3 worldP = convertRealWorldToBlockCoords(gameState->camera.T.pos);
+
+    float16 rot = eulerAnglesToTransform(gameState->player.T.rotation.y, gameState->player.T.rotation.x, gameState->player.T.rotation.z);
+    float3 lookingAxis = make_float3(rot.E_[2][0], rot.E_[2][1], rot.E_[2][2]);
+
+    // gameState->modelLocation = gameState->camera.T.pos;
+    // gameState->cameraRotation = rot;
+
+    if(!gameState->camera.followingPlayer) {
+        worldP = convertRealWorldToBlockCoords(gameState->modelLocation);
+    }
+    
     
     int chunkX = (int)worldP.x / CHUNK_DIM;
     int chunkY = (int)worldP.y / CHUNK_DIM;
@@ -268,14 +279,18 @@ void updateGame(GameState *gameState) {
     // printf("%d %d %d\n", chunkX, chunkY, chunkZ);
 
     int chunkRadiusY = 1;
-    int chunkRadiusXZ = 5;
+    int chunkRadiusXZ = 3; //TODO: This should be able to get to 64 at 60FPS
     
     for(int z = -chunkRadiusXZ; z <= chunkRadiusXZ; ++z) {
         for(int x = -chunkRadiusXZ; x <= chunkRadiusXZ; ++x) {
             for(int y = -chunkRadiusY; y <= chunkRadiusY; ++y) {
                 Chunk *chunk = getChunk(gameState, chunkX + x, chunkY + y, chunkZ + z);
                 if(chunk) {
-                    drawChunk(gameState, chunk);
+                    Rect3f rect = make_rect3f_min_dim((chunkX + x)*CHUNK_DIM, (chunkY + y)*CHUNK_DIM, (chunkZ + z)*CHUNK_DIM, CHUNK_DIM, CHUNK_DIM, CHUNK_DIM);
+                    if(rect3fInsideViewFrustrum(rect, gameState->modelLocation, gameState->cameraRotation, gameState->camera.fov, MATH_3D_NEAR_CLIP_PlANE, MATH_3D_FAR_CLIP_PlANE, gameState->aspectRatio_y_over_x)) 
+                    {
+                        drawChunk(gameState, chunk, rot);
+                    } 
                 }
             }
         }
@@ -290,34 +305,26 @@ void updateGame(GameState *gameState) {
         }
     }
 
-    // pushCircleOutline(gameState->renderer, make_float3(0, 0, 1), 50, make_float4(1, 1, 1, 1));
-    float16 rot = eulerAnglesToTransform(gameState->player.T.rotation.y, gameState->player.T.rotation.x, gameState->player.T.rotation.z);
-    float3 lookingAxis = make_float3(rot.E_[2][0], rot.E_[2][1], rot.E_[2][2]);
-
-    // pushTriangle(gameState->renderer, make_float3(1000, 60, 1000), make_float4(1, 0, 1, 1));
-
     drawHUD(gameState);
 
     // updateAndDrawDebugCode(gameState);
-
-    
     
     rendererFinish(gameState->renderer, screenT, cameraT, screenGuiT, textGuiT, lookingAxis, cameraTWithoutTranslation, timeOfDayValues, gameState->perlinTestTexture.handle);
 
-    {
-        //NOTE: Draw all the examples on the gltf website
-        gameState->player.animationState.animation.animation = &triangleHandle.animations[1];
-        // printf("%s\n",triangleHandle.animations[1].name);
-        buildSkinningMatrix(gameState, &triangleHandle, &gameState->player.animationState, ENTITY_FOX);
-        // float scale = 0.01f;
-        float scale = 1;
-        float16 T = float16_scale(float16_identity(), make_float3(scale, scale, scale));
-        T = float16_set_pos(T, gameState->modelLocation);
-        pushModel(gameState->renderer, T, make_float4(1, 1, 1, 1));
-        updateInstanceData(triangleHandle.modelBuffer.instanceBufferhandle, gameState->renderer->modelData, gameState->renderer->modelItemCount*sizeof(InstanceDataWithRotation));
-        drawModels(&triangleHandle.modelBuffer, &gameState->renderer->skeletalModelShader, modelTexture.handle, gameState->renderer->modelItemCount, screenT, cameraT, lookingAxis, false, timeOfDayValues, 0, triangleHandle.modelBuffer.textureHandle);
-        gameState->renderer->modelItemCount = 0;
-    }
+    // {
+    //     //NOTE: Draw all the examples on the gltf website
+    //     gameState->player.animationState.animation.animation = &triangleHandle.animations[1];
+    //     // printf("%s\n",triangleHandle.animations[1].name);
+    //     buildSkinningMatrix(gameState, &triangleHandle, &gameState->player.animationState, ENTITY_FOX);
+    //     // float scale = 0.01f;
+    //     float scale = 1;
+    //     float16 T = float16_scale(float16_identity(), make_float3(scale, scale, scale));
+    //     T = float16_set_pos(T, gameState->modelLocation);
+    //     pushModel(gameState->renderer, T, make_float4(1, 1, 1, 1));
+    //     updateInstanceData(triangleHandle.modelBuffer.instanceBufferhandle, gameState->renderer->modelData, gameState->renderer->modelItemCount*sizeof(InstanceDataWithRotation));
+    //     drawModels(&triangleHandle.modelBuffer, &gameState->renderer->skeletalModelShader, modelTexture.handle, gameState->renderer->modelItemCount, screenT, cameraT, lookingAxis, false, timeOfDayValues, 0, triangleHandle.modelBuffer.textureHandle);
+    //     gameState->renderer->modelItemCount = 0;
+    // }
 
 
     //NOTE: End Mouse interaction if release
@@ -326,8 +333,9 @@ void updateGame(GameState *gameState) {
     }
 
     if(gameState->camera.followingPlayer) {
-            gameState->modelLocation = make_float3(gameState->player.T.pos.x, gameState->player.T.pos.y, gameState->player.T.pos.z + 10);
-    }
+            gameState->modelLocation = make_float3(gameState->camera.T.pos.x, gameState->camera.T.pos.y, gameState->camera.T.pos.z);
+            gameState->cameraRotation = rot;
+    } 
 
     if(gameState->keys.keys[KEY_1] == MOUSE_BUTTON_PRESSED) {
         gameState->camera.followingPlayer = !gameState->camera.followingPlayer;
@@ -335,6 +343,10 @@ void updateGame(GameState *gameState) {
             //NOTE: Reset the player to the camera position
             gameState->player.T.pos = minus_float3(gameState->camera.T.pos, gameState->cameraOffset);
         } 
+
+        if(!gameState->camera.followingPlayer) {
+            gameState->cameraRotation = rot;
+        }   
         gameState->currentInventoryHotIndex = 0;
     }
     if(gameState->keys.keys[KEY_2] == MOUSE_BUTTON_PRESSED) {

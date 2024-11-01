@@ -675,10 +675,10 @@ void drawModels(ModelBuffer *model, Shader *shader, uint32_t textureId, int inst
     glUniform4f(glGetUniformLocation(shader->handle, "fogColor"), fogColor.x, fogColor.y, fogColor.z, fogColor.w);
     renderCheckError();
 
-    glUniform1f(glGetUniformLocation(shader->handle, "fogSeeDistance"), (underWater ? 0 : 50));
+    glUniform1f(glGetUniformLocation(shader->handle, "fogSeeDistance"), (underWater ? 0 : 100)); //global_fogSeeDistance*1000
     renderCheckError();
 
-    glUniform1f(glGetUniformLocation(shader->handle, "fogFadeDistance"), (underWater ? 60 : 60));
+    glUniform1f(glGetUniformLocation(shader->handle, "fogFadeDistance"), (underWater ? 60 : 250)); //global_fogFarDistance*1000
     renderCheckError();
 
     bindTexture("diffuse", 1, textureId, shader, flags);

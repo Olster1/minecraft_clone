@@ -249,6 +249,7 @@ static char *blockFragShader =
     "}"
     "c = vec4(AOValue*c.xyz, c.w);"
     "vec4 fogFactor = mix(diffSample*c, vec4(fogColor), clamp(((distanceFromEye - fogSeeDistance) / fogFadeDistance), 0.0, 1.0));"
+    // "vec4 fogFactor = diffSample*c;"
     
     "color = vec4((fogFactor).xyz, 1);"//fogFactor
 "}";

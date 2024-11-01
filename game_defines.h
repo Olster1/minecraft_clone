@@ -10,6 +10,9 @@
 #define CLOUD_EVELVATION 100 //NOTE: This is 192 in actual minecraft - Clouds always float westward between layer 192 and 196
 #define WATER_ELEVATION 40 //NOTE: This is 62 in actual minecraft
 #define BLOCK_SIZE 1 
+#define AO_BIT_NOT_VISIBLE 61
+#define AO_BIT_CREATING 62
+#define AO_BIT_INVALID 63
 
 //NOTE: DEBUGGING CONSTANTS
 #define PERLIN_SIZE 128

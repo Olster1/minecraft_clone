@@ -1,4 +1,12 @@
 #include "./game_defines.h"
+
+uint64_t getBitWiseFlag(uint64_t bitWise) {
+    return ((uint64_t)1 << bitWise);
+}
+
+static float global_fogFarDistance;
+static float global_fogSeeDistance;
+
 #include "./easy_memory.h"
 #include "./resize_array.cpp"
 #include "./memory_arena.h"
@@ -16,6 +24,7 @@
 #include "./font.cpp"
 #include "./particles.cpp"
 #include "./load_gltf.cpp"
+
 
 
 Renderer *initRenderer(Texture grassTexture, Texture breakBlockTexture, Texture atlasTexture) {
@@ -157,12 +166,25 @@ void drawHUD(GameState *gameState) {
 }
 
 void updateAndDrawDebugCode(GameState *gameState) {
-    perlinNoiseDrawTests(gameState, gameState->camera.T.pos.x, gameState->camera.T.pos.y, gameState->camera.T.pos.z);
-    gameState->perlinNoiseValue.x = gui_drawSlider(gameState, &gameState->guiState, gameState->renderer, "Perlin Noise Slider x", gameState->perlinNoiseValue.x);
-    gameState->perlinNoiseValue.y = gui_drawSlider(gameState, &gameState->guiState, gameState->renderer, "Perlin Noise Slider y", gameState->perlinNoiseValue.y, 3);
-    gameState->perlinNoiseValue.z = gui_drawSlider(gameState, &gameState->guiState, gameState->renderer, "Perlin Noise Slider z", gameState->perlinNoiseValue.z, 6);
+    // perlinNoiseDrawTests(gameState, gameState->camera.T.pos.x, gameState->camera.T.pos.y, gameState->camera.T.pos.z);
+    // global_fogSeeDistance = gui_drawSlider(gameState, &gameState->guiState, gameState->renderer, "Perlin Noise Slider x", global_fogSeeDistance);
+    // global_fogFarDistance = gui_drawSlider(gameState, &gameState->guiState, gameState->renderer, "Perlin Noise Slider y", global_fogFarDistance, 3);
+    // gameState->perlinNoiseValue.z = gui_drawSlider(gameState, &gameState->guiState, gameState->renderer, "Perlin Noise Slider z", gameState->perlinNoiseValue.z, 6);
 
-    printf("%f %f %f\n", gameState->perlinNoiseValue.x, gameState->perlinNoiseValue.y, gameState->perlinNoiseValue.z);
+    // printf("%f %f\n", global_fogSeeDistance, global_fogFarDistance);
+    {
+        char s[255];
+        int charsRendered = sprintf (s, "Blocks Drawn: %d", gameState->DEBUG_BlocksDrawnForFrame);
+        assert(charsRendered < arrayCount(s));
+        renderText(gameState->renderer, &gameState->mainFont, s, make_float2(10, 10), 0.1f);
+    }
+    {
+        char s[255];
+        int charsRendered = sprintf (s, "Frame Rate: %dFPS", (int)(round((1.0f / gameState->dt))));
+        assert(charsRendered < arrayCount(s));
+        renderText(gameState->renderer, &gameState->mainFont, s, make_float2(10, 10 + 5), 0.1f);
+    }
+    
 }
 
 
@@ -211,7 +233,7 @@ void updateGame(GameState *gameState) {
         releaseMemoryMark(&perFrameArenaMark);
         perFrameArenaMark = takeMemoryMark(&globalPerFrameArena);
     }
-
+    gameState->DEBUG_BlocksDrawnForFrame = 0;
     gameState->camera.targetFov = 60;
 
     gameState->timeOfDay += 0.001f*gameState->dt;
@@ -262,24 +284,19 @@ void updateGame(GameState *gameState) {
     float16 rot = eulerAnglesToTransform(gameState->player.T.rotation.y, gameState->player.T.rotation.x, gameState->player.T.rotation.z);
     float3 lookingAxis = make_float3(rot.E_[2][0], rot.E_[2][1], rot.E_[2][2]);
 
-    // gameState->modelLocation = gameState->camera.T.pos;
-    // gameState->cameraRotation = rot;
+    gameState->modelLocation = gameState->camera.T.pos;
+    gameState->cameraRotation = rot;
 
     if(!gameState->camera.followingPlayer) {
         worldP = convertRealWorldToBlockCoords(gameState->modelLocation);
     }
     
-    
     int chunkX = (int)worldP.x / CHUNK_DIM;
     int chunkY = (int)worldP.y / CHUNK_DIM;
     int chunkZ = (int)worldP.z / CHUNK_DIM;
     
-    // Chunk *chunk = getChunk(gameState, chunkX, chunkY, chunkZ);
-    // drawChunk(gameState, chunk);
-    // printf("%d %d %d\n", chunkX, chunkY, chunkZ);
-
-    int chunkRadiusY = 1;
-    int chunkRadiusXZ = 3; //TODO: This should be able to get to 64 at 60FPS
+    int chunkRadiusY = 2;
+    int chunkRadiusXZ = 10; //TODO: This should be able to get to 64 at 60FPS
     
     for(int z = -chunkRadiusXZ; z <= chunkRadiusXZ; ++z) {
         for(int x = -chunkRadiusXZ; x <= chunkRadiusXZ; ++x) {
@@ -307,7 +324,7 @@ void updateGame(GameState *gameState) {
 
     drawHUD(gameState);
 
-    // updateAndDrawDebugCode(gameState);
+    updateAndDrawDebugCode(gameState);
     
     rendererFinish(gameState->renderer, screenT, cameraT, screenGuiT, textGuiT, lookingAxis, cameraTWithoutTranslation, timeOfDayValues, gameState->perlinTestTexture.handle);
 

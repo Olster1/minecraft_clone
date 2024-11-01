@@ -95,7 +95,7 @@ struct AoMaskData {
 };
 
 uint64_t getInvalidAoMaskValue() {
-    return (((uint64_t)(1)) << 63);
+    return (((uint64_t)(1)) << AO_BIT_INVALID);
 }
 
 Block spawnBlock(int x, int y, int z, BlockType type) {
@@ -230,12 +230,12 @@ Chunk *getChunk_(GameState *gameState, int x, int y, int z, bool shouldGenerateC
 
 
 void getAOMaskForBlock(GameState *gameState, const float3 worldP, BlockFlags blockFlags, Block *b) {
-    if(b->aoMask & (((uint64_t)(1)) << 62)) {
+    if(b->aoMask & (((uint64_t)(1)) << AO_BIT_CREATING)) {
         //NOTE: Generating so don't start a new generation
         // assert(false);
     } else {
-        b->aoMask |= (((uint64_t)(1)) << 62);
-        b->aoMask |= (((uint64_t)(1)) << 63);
+        b->aoMask |= (((uint64_t)(1)) << AO_BIT_CREATING);
+        b->aoMask |= (((uint64_t)(1)) << AO_BIT_INVALID);
 
         MemoryBarrier();
         ReadWriteBarrier();
@@ -352,7 +352,7 @@ void getAOMask_multiThreaded(void *data_) {
             bool blockValues[3] = {false, false, false};
             
             for(int j = 0; j < arrayCount(blockValues); j++) {
-                float3 p = plus_float3(worldP,gameState->aoOffsets[i].offsets[j]);
+                float3 p = plus_float3(worldP, gameState->aoOffsets[i].offsets[j]);
                 if(blockExistsReadOnly(gameState, p.x, p.y, p.z, BLOCK_FLAGS_AO)) {
                     blockValues[j] = true; 
                 }
@@ -382,10 +382,23 @@ void getAOMask_multiThreaded(void *data_) {
                 assert(!blockValues[1]);
                 value = 1;
             } 
-
+            
+            //NOTE: Times 2 because each value need 2 bits to write 0 - 3. 
             result |= (value << (uint64_t)(i*2)); //NOTE: Add the mask value
+            assert(((i + 1)*2) < AO_BIT_NOT_VISIBLE); //NOTE: +1 to account for the top bit
         }
     }
+
+    //NOTE: Calculate whether this block can be seen by the player. This is if there is a neighouring block in all caridnal directions.
+    uint64_t unseen = getBitWiseFlag(AO_BIT_NOT_VISIBLE);
+    for(int j = 0; j < arrayCount(gameState->cardinalOffsets) && unseen != 0; j++) {
+        float3 p = plus_float3(worldP, gameState->cardinalOffsets[j]);
+        if(!blockExistsReadOnly(gameState, p.x, p.y, p.z, BLOCK_FLAGS_AO)) {
+            unseen = 0;
+        }
+    }
+
+    result = (uint64_t)result | (uint64_t)unseen;
 
     MemoryBarrier();
     ReadWriteBarrier();
@@ -393,8 +406,8 @@ void getAOMask_multiThreaded(void *data_) {
     b->aoMask = result;
     
     //NOTE: make sure these bits aren't set
-    assert(!(b->aoMask & (((uint64_t)(1)) << 62)));
-    assert(!(b->aoMask & (((uint64_t)(1)) << 63)));
+    assert(!(b->aoMask & (((uint64_t)(1)) << AO_BIT_CREATING)));
+    assert(!(b->aoMask & (((uint64_t)(1)) << AO_BIT_INVALID)));
 
     free(data_);
     data_ = 0;
@@ -404,17 +417,9 @@ void drawChunk(GameState *gameState, Chunk *c, float16 cameraMatrix) {
     int blockCount = (c->blocks) ? BLOCKS_PER_CHUNK : 0;
     for(int i = 0; i < blockCount; ++i) {
         Block *b = &c->blocks[i];
-        // float3 worldP = make_float3(c->x*CHUNK_DIM + b->x, c->y*CHUNK_DIM + b->y, c->z*CHUNK_DIM + b->z);
-        // Rect3f rect = make_rect3f_center_dim(worldP, make_float3(1, 1, 1));
-        // if(rect3fInsideViewFrustrum(rect, gameState->modelLocation, gameState->cameraRotation, gameState->camera.fov, MATH_3D_NEAR_CLIP_PlANE, MATH_3D_FAR_CLIP_PlANE, gameState->aspectRatio_y_over_x)) 
-        {
+        
         if(b->exists) {
             float3 worldP = make_float3(c->x*CHUNK_DIM + b->x, c->y*CHUNK_DIM + b->y, c->z*CHUNK_DIM + b->z);
-
-            float maxColor = 0.0f;
-
-            float4 color = make_float4(maxColor, maxColor, maxColor, 1);
-
             BlockType t = (BlockType)b->type;
 
             if(t == BLOCK_WATER) {
@@ -431,25 +436,19 @@ void drawChunk(GameState *gameState, Chunk *c, float16 cameraMatrix) {
                 }
                 pushGrassQuad(gameState->renderer, worldP, height, make_float4(1, 1, 1, 1));
             } else {
-                // if(b->hitBlock) {
-                //     // t = BLOCK_SOIL;
-                //     color = make_float4(1.0f, 1.0f, 1.0f, 1);
-                // }
-
                 //NOTE: Calculate the aoMask if haven't yet - top bit is set 
                 if(b->aoMask & getInvalidAoMaskValue()) 
                 { 
                     getAOMaskForBlock(gameState, worldP, getBlockFlags(gameState, (BlockType)b->type), b);
                 }
-
-                uint64_t AOMask = b->aoMask;
-
-                pushCube(gameState->renderer, worldP, t, color, AOMask);
-                // pushAlphaItem(gameState->renderer, worldP, make_float3(1, 1, 1), color);
                 
-                // c->blocks[i].hitBlock = false;
+                if(!(b->aoMask & getBitWiseFlag(AO_BIT_NOT_VISIBLE))) 
+                {
+                    uint64_t AOMask = b->aoMask;
+                    pushCube(gameState->renderer, worldP, t, make_float4(0, 0, 0, 1), AOMask);
+                    gameState->DEBUG_BlocksDrawnForFrame++;
+                }
             }
-        }
         }
     }
 

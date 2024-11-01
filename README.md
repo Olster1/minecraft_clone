@@ -15,10 +15,10 @@ Uses OpenGL 3.3 and SDL for platform layer.
 - [x] Health, Stamina & Item Hotbar
 - [x] Coal & Ore generation & better world generation 
 - [x] Load 3d models & skeletal animations from gltf file
-- [x] Load 3d models & animations in minecraft format from BlockBench
+- [x] Load 3d models & animations in minecraft format from BlockBench\
+- [x] Clip the world that's being rendered to the view frustrum. 
 - [ ] Change to smaller blocks
 - [ ] Grass animated with Perlin Noise - just triangles as grass blades
-- [ ] Clip the world that's being rendered to the view frustrum. 
 - [ ] Greedy meshing optimisation
 - [ ] Environmental Sounds (walking on different materials like stone and grass. Point sounds)
 - [ ] Cows, Sheep & Zombie Mobs (move player movement code to be generic to any entity movement)

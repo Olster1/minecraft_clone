@@ -110,6 +110,9 @@ struct GameState {
     KeyStates keys;
 
     AOOffset aoOffsets[24];
+    float3 cardinalOffsets[6];
+
+    int DEBUG_BlocksDrawnForFrame;
 
     float3 searchOffsets[26];
     float3 searchOffsetsSmall[6];
@@ -133,7 +136,7 @@ void createBlockFlags(GameState *gameState) {
         switch(t) {
             case BLOCK_WATER: {
                 flags = flags | BLOCK_FLAGS_NONE | BLOCK_FLAGS_NO_MINE_OUTLINE;
-                flags &= ~BLOCK_EXISTS_COLLISION;
+                flags &= ~(BLOCK_FLAGS_AO | BLOCK_EXISTS_COLLISION);
             } break;
             case BLOCK_GRASS_SHORT_ENTITY:
             case BLOCK_GRASS_TALL_ENTITY: {
@@ -142,6 +145,7 @@ void createBlockFlags(GameState *gameState) {
             } break;
             case BLOCK_TREE_LEAVES: {
                 flags = (BlockFlags)(flags | BLOCK_EXISTS_COLLISION | BLOCK_FLAGS_NO_MINE_OUTLINE);
+                flags &= ~(BLOCK_FLAGS_AO);
             } break;
             default: {
                 
@@ -149,6 +153,16 @@ void createBlockFlags(GameState *gameState) {
         }
         gameState->blockFlags[i] = flags;
     }
+}
+
+void createCardinalDirections(GameState *gameState) {
+    gameState->cardinalOffsets[0] = make_float3(-1, 0, 0);
+    gameState->cardinalOffsets[1] = make_float3(1, 0, 0);
+    gameState->cardinalOffsets[2] = make_float3(0, -1, 0);
+    gameState->cardinalOffsets[3] = make_float3(0, 1, 0);
+    gameState->cardinalOffsets[4] = make_float3(0, 0, -1);
+    gameState->cardinalOffsets[5] = make_float3(0, 0, 1);
+
 }
 
 void createAOOffsets(GameState *gameState) {
@@ -255,7 +269,9 @@ void initGameState(GameState *gameState) {
 
     gameState->renderer = initRenderer(gameState->grassTexture, breakBlockTexture, atlasTexture);
 
-    gameState->mainFont = initFontAtlas("./fonts/Minecraft.ttf");
+    // gameState->mainFont = initFontAtlas("./fonts/Minecraft.ttf");
+    gameState->mainFont = initFontAtlas("./fonts/Roboto-Regular.ttf");
+    
     gameState->renderer->fontAtlasTexture = gameState->mainFont.textureHandle;
 
     gameState->placeBlockTimer = -1;
@@ -269,11 +285,13 @@ void initGameState(GameState *gameState) {
 
     gameState->randomStartUpID = rand();
 
+    
     // printf("chunk size: %ld\n", sizeof(Chunk));
     // printf("block size: %ld\n", sizeof(Block));
     // printf("Entity size: %ld\n", sizeof(Entity));
 
     createAOOffsets(gameState);
+    createCardinalDirections(gameState);
 
     gameState->particlerCount = 0;
 
@@ -290,7 +308,6 @@ void initGameState(GameState *gameState) {
     glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &maxUniformBlockSize);
     assert((maxUniformBlockSize / sizeof(float16)) > MAX_BONES_PER_MODEL);
     
-
     createSearchOffsets(gameState);
 
     gameState->perlinTestTexture = createGPUTexture(PERLIN_SIZE, PERLIN_SIZE, 0);

@@ -156,12 +156,12 @@ void createBlockFlags(GameState *gameState) {
 }
 
 void createCardinalDirections(GameState *gameState) {
-    gameState->cardinalOffsets[0] = make_float3(-1, 0, 0);
-    gameState->cardinalOffsets[1] = make_float3(1, 0, 0);
-    gameState->cardinalOffsets[2] = make_float3(0, -1, 0);
-    gameState->cardinalOffsets[3] = make_float3(0, 1, 0);
-    gameState->cardinalOffsets[4] = make_float3(0, 0, -1);
-    gameState->cardinalOffsets[5] = make_float3(0, 0, 1);
+    gameState->cardinalOffsets[0] = make_float3(0, 1, 0);
+    gameState->cardinalOffsets[1] = make_float3(0, -1, 0);
+    gameState->cardinalOffsets[2] = make_float3(0, 0, 1);
+    gameState->cardinalOffsets[3] = make_float3(0, 0, -1);
+    gameState->cardinalOffsets[4] = make_float3(-1, 0, 0);
+    gameState->cardinalOffsets[5] = make_float3(1, 0, 0);
 
 }
 

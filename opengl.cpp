@@ -205,6 +205,7 @@ void addInstancingAttrib_int32(GLuint attribLoc, int numOfInt32s, size_t offsetF
 }
 
 enum AttribInstancingType {
+    ATTRIB_INSTANCE_TYPE_NONE,
     ATTRIB_INSTANCE_TYPE_DEFAULT,
     ATTRIB_INSTANCE_TYPE_MODEL_MATRIX,
     ATTRIB_INSTANCE_TYPE_MODEL_MATRIX_SKELETAL,
@@ -244,6 +245,76 @@ void addInstancingAttribsForShader(AttribInstancingType type) {
         assert(false);
     }
     
+}
+
+ChunkModelBuffer generateChunkVertexBuffer(void *triangleData, int vertexCount, unsigned int *indicesData, int indexCount) {
+    ChunkModelBuffer result = {};
+    glGenVertexArrays(1, &result.handle);
+    renderCheckError();
+    glBindVertexArray(result.handle);
+    renderCheckError();
+    
+    GLuint vertices;
+    GLuint indices;
+    
+    glGenBuffers(1, &vertices);
+    renderCheckError();
+    
+    glBindBuffer(GL_ARRAY_BUFFER, vertices);
+    renderCheckError();
+
+    size_t sizeOfVertex = sizeof(VertexForChunk);
+    
+    glBufferData(GL_ARRAY_BUFFER, vertexCount*sizeOfVertex, triangleData, GL_DYNAMIC_DRAW);
+    renderCheckError();
+    
+    glGenBuffers(1, &indices);
+    renderCheckError();
+    
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices);
+    renderCheckError();
+    
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexCount*sizeof(unsigned int), indicesData, GL_DYNAMIC_DRAW);
+    renderCheckError();
+    
+    result.indexCount = indexCount;
+
+    //NOTE: Assign the attribute locations with the data offsets & types
+    GLint vertexAttrib = VERTEX_ATTRIB_LOCATION;
+    renderCheckError();
+    glEnableVertexAttribArray(vertexAttrib);  
+    renderCheckError();
+    glVertexAttribPointer(vertexAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(VertexForChunk), 0);
+    renderCheckError();
+    
+    GLint texUVAttrib = UV_ATTRIB_LOCATION;
+    glEnableVertexAttribArray(texUVAttrib);  
+    renderCheckError();
+    unsigned int uvByteOffset = (intptr_t)(&(((VertexForChunk *)0)->texUV));
+    glVertexAttribPointer(texUVAttrib, 2, GL_FLOAT, GL_FALSE, sizeof(VertexForChunk), ((char *)0) + uvByteOffset);
+    renderCheckError();
+
+    GLint normalsAttrib = NORMAL_ATTRIB_LOCATION;
+    glEnableVertexAttribArray(normalsAttrib);  
+    renderCheckError();
+    unsigned int normalOffset = (intptr_t)(&(((VertexForChunk *)0)->normal));
+    glVertexAttribPointer(normalsAttrib, 3, GL_FLOAT, GL_FALSE, sizeof(VertexForChunk), ((char *)0) + normalOffset);
+    renderCheckError();
+
+    GLint aoAttrib = AO_MASK_ATTRIB_LOCATION;
+    glEnableVertexAttribArray(aoAttrib);  
+    renderCheckError();
+    unsigned int aoOffset = (intptr_t)(&(((VertexForChunk *)0)->aoMask));
+    glVertexAttribPointer(aoAttrib, 1, GL_INT, GL_FALSE, sizeof(VertexForChunk), ((char *)0) + aoOffset);
+    renderCheckError();
+    
+    glBindVertexArray(0);
+        
+    //we can delete these buffers since they are still referenced by the VAO 
+    glDeleteBuffers(1, &vertices);
+    glDeleteBuffers(1, &indices);
+
+    return result;
 }
 
 ModelBuffer generateVertexBuffer(void *triangleData, int vertexCount, unsigned int *indicesData, int indexCount, AttribInstancingType attribInstancingType = ATTRIB_INSTANCE_TYPE_DEFAULT) {
@@ -643,6 +714,42 @@ void bindTextureArray(char *uniformName, GLint textureId, Shader *shader, uint32
 
 }
 
+void prepareChunkRender(ChunkModelBuffer *model, Shader *shader, uint32_t textureId, float16 projectionTransform, float16 modelViewTransform, float3 lookingAxis, bool underWater) {
+     glUseProgram(shader->handle);
+    renderCheckError();
+    
+    glBindVertexArray(model->handle);
+    renderCheckError();
+
+    glUniformMatrix4fv(glGetUniformLocation(shader->handle, "V"), 1, GL_FALSE, modelViewTransform.E);
+    renderCheckError();
+
+    glUniformMatrix4fv(glGetUniformLocation(shader->handle, "projection"), 1, GL_FALSE, projectionTransform.E);
+    renderCheckError();
+
+    glUniform3f(glGetUniformLocation(shader->handle, "lookingAxis"), lookingAxis.x, lookingAxis.y, lookingAxis.z);
+    renderCheckError();
+
+    float4 fogColor = make_float4(0.9, 0.9, 0.9, 1);
+
+    if(underWater) {
+        fogColor = make_float4(0.163, 0.551, 0.776, 1);
+    }
+
+    glUniform4f(glGetUniformLocation(shader->handle, "fogColor"), fogColor.x, fogColor.y, fogColor.z, fogColor.w);
+    renderCheckError();
+
+    glUniform1f(glGetUniformLocation(shader->handle, "fogSeeDistance"), (underWater ? 0 : 100)); //global_fogSeeDistance*1000
+    renderCheckError();
+
+    glUniform1f(glGetUniformLocation(shader->handle, "fogFadeDistance"), (underWater ? 60 : 250)); //global_fogFarDistance*1000
+    renderCheckError();
+
+    bindTexture("diffuse", 1, textureId, shader, 0);
+    renderCheckError();
+   
+}
+
 void drawModels(ModelBuffer *model, Shader *shader, uint32_t textureId, int instanceCount, float16 projectionTransform, float16 modelViewTransform, float3 lookingAxis, bool underWater, TimeOfDayValues timeOfDayValues, uint32_t flags = 0, int skinningTextureId = -1) {
     // printf("%d\n", instanceCount);
     glUseProgram(shader->handle);
@@ -698,6 +805,14 @@ void drawModels(ModelBuffer *model, Shader *shader, uint32_t textureId, int inst
     glUseProgram(0);
     renderCheckError();
     
+}
+
+void endChunkRender() {
+    glBindVertexArray(0);
+    renderCheckError();    
+
+    glUseProgram(0);
+    renderCheckError();
 }
 
 void rendererFinish(Renderer *renderer, float16 projectionTransform, float16 modelViewTransform, float16 projectionScreenTransform, float16 textScreenTransform, float3 lookingAxis, float16 cameraTransformWithoutTranslation, TimeOfDayValues timeOfDay, uint32_t perlinNoiseHandle) {

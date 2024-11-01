@@ -131,9 +131,11 @@ struct CloudChunk {
 };
 
 enum ChunkGenerationState {
-    CHUNK_NOT_GENERATED = 0, 
-    CHUNK_GENERATING = 1, 
-    CHUNK_GENERATED = 2, 
+    CHUNK_NOT_GENERATED = 1 << 0, 
+    CHUNK_GENERATING = 1 << 1, 
+    CHUNK_GENERATED = 1 << 2, 
+    CHUNK_MESH_DIRTY = 1 << 3, 
+    CHUNK_MESH_BUILDING = 1 << 3, 
 };
 
 struct Chunk {
@@ -141,13 +143,15 @@ struct Chunk {
     int y;
     int z;
 
-    volatile ChunkGenerationState generateState; //NOTE: Chunk might not be generated, so check first when you get one
+    volatile int64_t generateState; //NOTE: Chunk might not be generated, so check first when you get one
 
     //NOTE: 16 x 16 x 16
     //NOTE: Z Y X
     Block *blocks; //NOTE: Could be null
 
     Entity *entities;
+
+    ChunkModelBuffer modelBuffer;
 
     Chunk *next;
 };

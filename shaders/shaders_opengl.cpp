@@ -216,6 +216,44 @@ static char *blockVertexShader =
 //    "samplerIndexOut = float(samplerIndex);"
 "}";
 
+static char *blockGreedyVertexShader = 
+"#version 330\n"
+//per vertex variables
+"in vec3 vertex;"
+"in vec3 normal;"
+"in vec2 texUV;	"
+"in int AOMask;"
+
+//uniform variables
+"uniform mat4 V;"
+"uniform mat4 projection;"
+
+//outgoing variables
+"out vec4 color_frag;"
+"out vec3 normal_frag_view_space;"
+"out vec2 uv_frag;"
+"out vec3 fragPosInViewSpace;"
+"out vec3 sunAngle;"
+"out vec3 normalInModelSpace;"
+"out float distanceFromEye;"
+"out float AOValue;"
+
+"float aoFactors[4] = float[4](1, 0.7, 0.5, 0.3);"
+
+"void main() {"
+    "mat4 MV = V;"
+    "vec4 cameraSpace = MV * vec4(vertex, 1);"
+    "distanceFromEye = cameraSpace.z;"
+    "gl_Position = projection * cameraSpace;"
+    "normal_frag_view_space = mat3(transpose(inverse(MV))) * normal;"
+    "sunAngle = mat3(transpose(inverse(MV))) * vec3(0.7071, 0, 0.7071);"
+    "fragPosInViewSpace = vec3(MV * vec4(vertex, 1));"
+    "normalInModelSpace = normal;"
+    "AOValue = aoFactors[AOMask];"
+    "color_frag = vec4(1, 1, 1, 1);"
+    "uv_frag = texUV;"
+"}";
+
 static char *blockFragShader = 
 "#version 330\n"
 "in vec4 color_frag;" 

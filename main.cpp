@@ -15,6 +15,7 @@ static float global_fogSeeDistance;
 #include "./easy_files.h"
 #include "./easy_lex.h"
 #include "./imgui.h"
+#include "./render.h"
 
 #include "./transform.cpp"
 #include "./animation.h"
@@ -41,6 +42,7 @@ Renderer *initRenderer(Texture grassTexture, Texture breakBlockTexture, Texture 
     renderer->atlasTexture = atlasTexture.handle;
 
     renderer->blockShader = loadShader(blockVertexShader, blockFragShader);
+    renderer->blockGreedyShader = loadShader(blockGreedyVertexShader, blockFragShader);
     renderer->quadTextureShader = loadShader(quadVertexShader, quadTextureFragShader);
     renderer->fontTextureShader = loadShader(quadVertexShader, fontTextureFragShader);
     
@@ -297,17 +299,20 @@ void updateGame(GameState *gameState) {
     
     int chunkRadiusY = 2;
     int chunkRadiusXZ = 10; //TODO: This should be able to get to 64 at 60FPS
+
     
     for(int z = -chunkRadiusXZ; z <= chunkRadiusXZ; ++z) {
         for(int x = -chunkRadiusXZ; x <= chunkRadiusXZ; ++x) {
             for(int y = -chunkRadiusY; y <= chunkRadiusY; ++y) {
                 Chunk *chunk = getChunk(gameState, chunkX + x, chunkY + y, chunkZ + z);
                 if(chunk) {
+                    prepareChunkRender(&chunk->modelBuffer, &gameState->renderer->blockGreedyShader, gameState->renderer->terrainTextureHandle, screenT, cameraT, lookingAxis, gameState->renderer->underWater);
                     Rect3f rect = make_rect3f_min_dim((chunkX + x)*CHUNK_DIM, (chunkY + y)*CHUNK_DIM, (chunkZ + z)*CHUNK_DIM, CHUNK_DIM, CHUNK_DIM, CHUNK_DIM);
                     if(rect3fInsideViewFrustrum(rect, gameState->modelLocation, gameState->cameraRotation, gameState->camera.fov, MATH_3D_NEAR_CLIP_PlANE, MATH_3D_FAR_CLIP_PlANE, gameState->aspectRatio_y_over_x)) 
                     {
-                        drawChunk(gameState, chunk, rot);
+                        drawChunk(gameState, gameState->renderer, chunk);
                     } 
+                    endChunkRender();
                 }
             }
         }

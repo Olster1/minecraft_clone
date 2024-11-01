@@ -191,15 +191,16 @@ void fillChunk_multiThread(void *data_) {
     MemoryBarrier();
     ReadWriteBarrier();
 
-    chunk->generateState = CHUNK_GENERATED;
+    chunk->generateState = CHUNK_GENERATED | CHUNK_MESH_DIRTY;
 
     free(data_);
     data_ = 0;
 }
 
+
 void fillChunk(GameState *gameState, Chunk *chunk) {
-    assert(chunk->generateState == CHUNK_NOT_GENERATED);
-    chunk->generateState = CHUNK_GENERATING;
+    assert(chunk->generateState & CHUNK_NOT_GENERATED);
+    chunk->generateState = CHUNK_GENERATING | CHUNK_MESH_DIRTY;
 
     MemoryBarrier();
     ReadWriteBarrier();

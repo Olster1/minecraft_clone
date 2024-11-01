@@ -11,38 +11,6 @@ struct AtlasAsset {
     AtlasAsset *next;
 };
 
-
-struct Vertex {
-    float3 pos;
-    float2 texUV;
-    float3 normal;
-};
-
-struct VertexWithJoints {
-    float3 pos;
-    float2 texUV;
-    float3 normal;
-    float4 jointWeights;
-    int jointIndexes[4];
-};
-
-struct VertexWithMeshIDs {
-    float3 pos;
-    float2 texUV;
-    float3 normal;
-    int meshIndex;
-};
-
-Vertex makeVertex(float3 pos, float2 texUV, float3 normal) {
-    Vertex v = {};
-    
-    v.pos = pos;
-    v.texUV = texUV;
-    v.normal = normal;
-
-    return v;
-}
-
 static Vertex global_quadData[] = {
     makeVertex(make_float3(0.5f, -0.5f, 0), make_float2(1, 1), make_float3(0, 0, 1)),
     makeVertex(make_float3(-0.5f, -0.5f, 0), make_float2(0, 1), make_float3(0, 0, 1)),
@@ -52,6 +20,39 @@ static Vertex global_quadData[] = {
 
 static unsigned int global_quadIndices[] = {
     0, 1, 2, 0, 2, 3,
+};
+
+static VertexForChunk global_cubeDataForChunk[] = {
+    // Top face (y = 1.0f)
+    makeVertexForChunk(make_float3(-0.5f, 0.5f, -0.5f), make_float2(0.25f,1), make_float3(0, 1, 0)),
+    makeVertexForChunk(make_float3(0.5f, 0.5f, -0.5f), make_float2(0.25f, 0), make_float3(0, 1, 0)),
+    makeVertexForChunk(make_float3(0.5f, 0.5f,  0.5f), make_float2(0.5f, 0), make_float3(0, 1, 0)),
+    makeVertexForChunk(make_float3(-0.5f, 0.5f,  0.5f), make_float2(0.5f, 1), make_float3(0, 1, 0)),
+    // Bottom face (y = -1.0f)
+    makeVertexForChunk(make_float3(0.5f, -0.5f, -0.5f), make_float2(0.75f, 0), make_float3(0, -1, 0)),
+    makeVertexForChunk(make_float3(-0.5f, -0.5f, -0.5f), make_float2(0.75f, 1), make_float3(0, -1, 0)),
+    makeVertexForChunk(make_float3(-0.5f, -0.5f,  0.5f), make_float2(0.5f, 1), make_float3(0, -1, 0)),
+    makeVertexForChunk(make_float3(0.5f, -0.5f,  0.5f), make_float2(0.5f, 0), make_float3(0, -1, 0)),
+    // Front face  (z = 1.0f)
+    makeVertexForChunk(make_float3(-0.5f, -0.5f, 0.5f), make_float2(0, 1), make_float3(0, 0, 1)),
+    makeVertexForChunk(make_float3(0.5f, -0.5f, 0.5f), make_float2(0.25f,1), make_float3(0, 0, 1)),
+    makeVertexForChunk(make_float3(0.5f, 0.5f, 0.5f), make_float2(0.25f,0), make_float3(0, 0, 1)),
+    makeVertexForChunk(make_float3(-0.5f, 0.5f, 0.5f), make_float2(0, 0), make_float3(0, 0, 1)),
+    // Back face (z = -1.0f)
+    makeVertexForChunk(make_float3(0.5f, -0.5f, -0.5f), make_float2(0,1), make_float3(0, 0, -1)),
+    makeVertexForChunk(make_float3(-0.5f, -0.5f, -0.5f), make_float2(0.25f,1), make_float3(0, 0, -1)),
+    makeVertexForChunk(make_float3(-0.5f, 0.5f, -0.5f), make_float2(0.25f,0), make_float3(0, 0, -1)),
+    makeVertexForChunk(make_float3(0.5f, 0.5f, -0.5f), make_float2(0,0), make_float3(0, 0, -1)),
+    // Left face (x = -1.0f)
+    makeVertexForChunk(make_float3(-0.5f, 0.5f, -0.5f), make_float2(0, 0), make_float3(-1, 0, 0)),
+    makeVertexForChunk(make_float3(-0.5f, -0.5f, -0.5f), make_float2(0, 1), make_float3(-1, 0, 0)),
+    makeVertexForChunk(make_float3(-0.5f, -0.5f, 0.5f), make_float2(0.25f,1), make_float3(-1, 0, 0)),
+    makeVertexForChunk(make_float3(-0.5f, 0.5f, 0.5f), make_float2(0.25f,0), make_float3(-1, 0, 0)),
+    // Right face (x = 1.0f)
+    makeVertexForChunk(make_float3(0.5f, -0.5f, -0.5f), make_float2(0.25f,1), make_float3(1, 0, 0)),
+    makeVertexForChunk(make_float3(0.5f, 0.5f, -0.5f), make_float2(0.25f,0), make_float3(1, 0, 0)),
+    makeVertexForChunk(make_float3(0.5f, 0.5f, 0.5f), make_float2(0, 0), make_float3(1, 0, 0)),
+    makeVertexForChunk(make_float3(0.5f, -0.5f, 0.5f), make_float2(0, 1), make_float3(1, 0, 0)),
 };
 
 static Vertex global_cubeData[] = {
@@ -188,6 +189,7 @@ struct Renderer {
     InstanceDataWithRotation glyphData[MAX_GLYPHS_PER_RENDER];
 
     Shader blockShader;
+    Shader blockGreedyShader;
     Shader blockPickupShader;
     Shader skeletalModelShader;
     Shader quadShader;

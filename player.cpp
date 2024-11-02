@@ -199,8 +199,21 @@ void invalidateSurroundingAoValues(GameState *gs, int worldX, int worldY, int wo
 
                 if(b) {
                     //NOTE: Invalidate the AO value
-                    b->aoMask = getInvalidAoMaskValue();
+                    // b->aoMask = getInvalidAoMaskValue();
+
+                    int chunkX = (worldX + x) / CHUNK_DIM;
+                    int chunkY = (worldY + y) / CHUNK_DIM;
+                    int chunkZ = (worldZ + z) / CHUNK_DIM;
+
+                    Chunk *c = getChunkReadOnly(gs, chunkX, chunkY, chunkZ);
+
+                    if(c) {
+                        c->generateState &= ~(CHUNK_MESH_DIRTY | CHUNK_MESH_BUILDING);
+                        c->generateState |= CHUNK_MESH_DIRTY;
+                    }
                 }
+
+               
             }
         }
     }

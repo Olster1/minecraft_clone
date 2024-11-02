@@ -250,7 +250,7 @@ static char *blockGreedyVertexShader =
     "fragPosInViewSpace = vec3(MV * vec4(vertex, 1));"
     "normalInModelSpace = normal;"
     "AOValue = aoFactors[AOMask];"
-    "color_frag = vec4(1, 1, 1, 1);"
+    "color_frag = vec4(0, 0, 0, 1);"
     "uv_frag = texUV;"
 "}";
 

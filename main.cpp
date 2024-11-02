@@ -300,19 +300,23 @@ void updateGame(GameState *gameState) {
     int chunkRadiusY = 2;
     int chunkRadiusXZ = 10; //TODO: This should be able to get to 64 at 60FPS
 
-    
     for(int z = -chunkRadiusXZ; z <= chunkRadiusXZ; ++z) {
         for(int x = -chunkRadiusXZ; x <= chunkRadiusXZ; ++x) {
             for(int y = -chunkRadiusY; y <= chunkRadiusY; ++y) {
                 Chunk *chunk = getChunk(gameState, chunkX + x, chunkY + y, chunkZ + z);
                 if(chunk) {
-                    prepareChunkRender(&chunk->modelBuffer, &gameState->renderer->blockGreedyShader, gameState->renderer->terrainTextureHandle, screenT, cameraT, lookingAxis, gameState->renderer->underWater);
+                    if(chunk->modelBuffer.indexCount > 0) {
+                        prepareChunkRender(&chunk->modelBuffer, &gameState->renderer->blockGreedyShader, gameState->renderer->terrainTextureHandle, screenT, cameraT, lookingAxis, gameState->renderer->underWater);
+                    }
+                    
                     Rect3f rect = make_rect3f_min_dim((chunkX + x)*CHUNK_DIM, (chunkY + y)*CHUNK_DIM, (chunkZ + z)*CHUNK_DIM, CHUNK_DIM, CHUNK_DIM, CHUNK_DIM);
                     if(rect3fInsideViewFrustrum(rect, gameState->modelLocation, gameState->cameraRotation, gameState->camera.fov, MATH_3D_NEAR_CLIP_PlANE, MATH_3D_FAR_CLIP_PlANE, gameState->aspectRatio_y_over_x)) 
                     {
                         drawChunk(gameState, gameState->renderer, chunk);
                     } 
-                    endChunkRender();
+                    if(chunk->modelBuffer.indexCount > 0) {
+                        endChunkRender();
+                    }
                 }
             }
         }
@@ -332,6 +336,30 @@ void updateGame(GameState *gameState) {
     updateAndDrawDebugCode(gameState);
     
     rendererFinish(gameState->renderer, screenT, cameraT, screenGuiT, textGuiT, lookingAxis, cameraTWithoutTranslation, timeOfDayValues, gameState->perlinTestTexture.handle);
+
+    {
+        int count = 0;
+        ChunkVertexToCreate **infoPtr = &gameState->meshesToCreate;
+        int maxLoopCount = 10;
+        while(*infoPtr && count < maxLoopCount) {
+            ChunkVertexToCreate *info = *infoPtr;
+            if(info->ready) {
+                processMeshData(info);
+                //NOTE: Take off list
+                *infoPtr = info->next;
+
+                //NOTE: Add to free list
+                info->next = gameState->meshesToCreateFreeList;
+                gameState->meshesToCreateFreeList = info;
+                
+                count++;
+            } else {
+                infoPtr = &info->next;
+            }
+        }
+    }
+    
+    
 
     // {
     //     //NOTE: Draw all the examples on the gltf website

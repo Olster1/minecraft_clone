@@ -247,6 +247,10 @@ void addInstancingAttribsForShader(AttribInstancingType type) {
     
 }
 
+void deleteVao(GLuint handle) {
+    glDeleteVertexArrays(1, &handle);
+}
+
 ChunkModelBuffer generateChunkVertexBuffer(void *triangleData, int vertexCount, unsigned int *indicesData, int indexCount) {
     ChunkModelBuffer result = {};
     glGenVertexArrays(1, &result.handle);

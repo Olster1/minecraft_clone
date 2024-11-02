@@ -109,7 +109,7 @@ Block spawnBlock(int x, int y, int z, BlockType type) {
 
     b.timeLeft = getBlockTime((BlockType)type);
 
-    b.aoMask = getInvalidAoMaskValue();
+    b.aoMask = 0;
 
     b.exists = true;
     
@@ -256,22 +256,22 @@ void resetChunksAO(GameState *gameState, int x, int y, int z, DimensionEnum dime
     Chunk *c = getChunkReadOnly(gameState, x, y, z);
 
     if(c) {
-        c->generateState =  ((int64_t)c->generateState) | CHUNK_MESH_DIRTY; //NOTE: Need to calculate mesh again
-        int blockCount = (c->blocks) ? BLOCKS_PER_CHUNK : 0;
-        for(int i = 0; i < blockCount; ++i) {
-            Block *b = &c->blocks[i];
+        c->generateState = ((int64_t)c->generateState) | CHUNK_MESH_DIRTY; //NOTE: Need to calculate mesh again
+        // int blockCount = (c->blocks) ? BLOCKS_PER_CHUNK : 0;
+        // for(int i = 0; i < blockCount; ++i) {
+        //     Block *b = &c->blocks[i];
 
-            if(b->exists) {
-                float3 worldP = make_float3(c->x*CHUNK_DIM + b->x, c->y*CHUNK_DIM + b->y, c->z*CHUNK_DIM + b->z);
-                if(dimension == DIMENSION_X && b->x == dimensionValue) {
-                    b->aoMask = getInvalidAoMaskValue();
-                } else if(dimension == DIMENSION_Y && b->y == dimensionValue) {
-                    b->aoMask = getInvalidAoMaskValue();
-                } else if(dimension == DIMENSION_Z && b->z == dimensionValue) {
-                    b->aoMask = getInvalidAoMaskValue();
-                }
-            }
-        }
+        //     if(b->exists) {
+        //         float3 worldP = make_float3(c->x*CHUNK_DIM + b->x, c->y*CHUNK_DIM + b->y, c->z*CHUNK_DIM + b->z);
+        //         if(dimension == DIMENSION_X && b->x == dimensionValue) {
+        //             b->aoMask = getInvalidAoMaskValue();
+        //         } else if(dimension == DIMENSION_Y && b->y == dimensionValue) {
+        //             b->aoMask = getInvalidAoMaskValue();
+        //         } else if(dimension == DIMENSION_Z && b->z == dimensionValue) {
+        //             b->aoMask = getInvalidAoMaskValue();
+        //         }
+        //     }
+        // }
     }
 }
 
@@ -295,7 +295,7 @@ Chunk *generateChunk(GameState *gameState, int x, int y, int z, uint32_t hash) {
     chunk->x = x;
     chunk->y = y;
     chunk->z = z;
-    chunk->generateState = CHUNK_NOT_GENERATED | CHUNK_MESH_DIRTY;
+    chunk->generateState = CHUNK_NOT_GENERATED;
     chunk->entities = 0;
 
     //NOTE: Reset all AO of neighbouring blocks
@@ -414,118 +414,173 @@ void getAOMask_multiThreaded(void *data_) {
 }
 
 void generateChunkMesh_multiThread(void *data_) {
-    FillChunkData *data = (FillChunkData *)data_;
+    GenerateMeshData *data = (GenerateMeshData *)data_;
 
     GameState *gameState = data->gameState;
-    Chunk *c = data->chunk;
+    ChunkVertexToCreate *info = data->info;
+    Chunk *c = info->chunk;
 
-    assert(c->generateState & CHUNK_MESH_BUILDING);
-
-    VertexForChunk *triangleData = initResizeArray(VertexForChunk);
-    u32 *indicesData = initResizeArray(u32);
+    // assert(c->generateState & CHUNK_MESH_BUILDING);
+    if(c->generateState & CHUNK_MESH_BUILDING) {
     
-    int blockCount = (c->blocks) ? BLOCKS_PER_CHUNK : 0;
-    for(int i = 0; i < blockCount; ++i) {
-        Block *b = &c->blocks[i];
-        
-        if(b->exists) {
-            float3 worldP = make_float3(c->x*CHUNK_DIM + b->x, c->y*CHUNK_DIM + b->y, c->z*CHUNK_DIM + b->z);
-            BlockType t = (BlockType)b->type;
+        int blockCount = (c->blocks) ? BLOCKS_PER_CHUNK : 0;
+        for(int i = 0; i < blockCount; ++i) {
+            Block *b = &c->blocks[i];
+            
+            if(b->exists) {
+                float3 worldP = make_float3(c->x*CHUNK_DIM + b->x, c->y*CHUNK_DIM + b->y, c->z*CHUNK_DIM + b->z);
+                BlockType t = (BlockType)b->type;
+                b->aoMask = 0;
 
-            //NOTE: Run Greedy mesh algorithm
-            for(int k = 0; k < arrayCount(gameState->cardinalOffsets); k++) {
-                float3 p = plus_float3(worldP, gameState->cardinalOffsets[k]);
-                if(!blockExistsReadOnly(gameState, p.x, p.y, p.z, BLOCK_FLAGS_AO)) {
-                    //NOTE: Face is exposed so add it to the mesh
+                //NOTE: Run Greedy mesh algorithm
+                for(int k = 0; k < arrayCount(gameState->cardinalOffsets); k++) {
+                    float3 p = plus_float3(worldP, gameState->cardinalOffsets[k]);
+                    if(!blockExistsReadOnly(gameState, p.x, p.y, p.z, BLOCK_FLAGS_AO)) {
+                        //NOTE: Face is exposed so add it to the mesh
 
-                    int vertexCount = getArrayLength(triangleData);
-                    //NOTE: 4 vertices for a cube face
-                    for(int i = 0; i < 4; ++i) {
-                        int indexIntoCubeData = i + k*4;
-                        const VertexForChunk v = global_cubeDataForChunk[indexIntoCubeData];
+                        int vertexCount = getArrayLength(info->triangleData);
+                        //NOTE: 4 vertices for a cube face
+                        for(int i = 0; i < 4; ++i) {
+                            int indexIntoCubeData = i + k*4;
+                            const VertexForChunk v = global_cubeDataForChunk[indexIntoCubeData];
 
-                        bool blockValues[3] = {false, false, false};
-                        
-                        for(int j = 0; j < arrayCount(blockValues); j++) {
-                            float3 p = plus_float3(worldP, gameState->aoOffsets[indexIntoCubeData].offsets[j]);
-                            if(blockExistsReadOnly(gameState, p.x, p.y, p.z, BLOCK_FLAGS_AO)) {
-                                blockValues[j] = true; 
+                            bool blockValues[3] = {false, false, false};
+                            
+                            for(int j = 0; j < arrayCount(blockValues); j++) {
+                                float3 p = plus_float3(worldP, gameState->aoOffsets[indexIntoCubeData].offsets[j]);
+                                if(blockExistsReadOnly(gameState, p.x, p.y, p.z, BLOCK_FLAGS_AO)) {
+                                    blockValues[j] = true; 
+                                }
                             }
+
+                            VertexForChunk vForChunk = v;
+                            vForChunk.pos = plus_float3(worldP, v.pos);
+                            float2 uvAtlas = getUVCoordForBlock((BlockType)b->type);
+                            vForChunk.texUV.y = lerp(uvAtlas.x, uvAtlas.y, make_lerpTValue(vForChunk.texUV.y));
+
+                            //NOTE: Get the ambient occulusion level
+                            uint64_t value = 0;
+                            //SPEED: Somehow make this not into if statments
+                            if(blockValues[0] && blockValues[2])  {
+                                value = 3;
+                            } else if((blockValues[0] && blockValues[1])) {
+                                assert(!blockValues[2]);
+                                value = 2;
+                            } else if((blockValues[1] && blockValues[2])) {
+                                assert(!blockValues[0]);
+                                value = 2;
+                            } else if(blockValues[0]) {
+                                assert(!blockValues[1]);
+                                assert(!blockValues[2]);
+                                value = 1;
+                            } else if(blockValues[1]) {
+                                assert(!blockValues[0]);
+                                assert(!blockValues[2]);
+                                value = 1;
+                            } else if(blockValues[2]) {
+                                assert(!blockValues[0]);
+                                assert(!blockValues[1]);
+                                value = 1;
+                            } 
+                            
+                            vForChunk.aoMask = value;
+
+                            //NOTE: Times 2 because each value need 2 bits to write 0 - 3. 
+                            b->aoMask |= (value << (uint64_t)(indexIntoCubeData*2)); //NOTE: Add the mask value
+
+                            pushArrayItem(&info->triangleData, vForChunk, VertexForChunk);
                         }
-
-                        VertexForChunk vForChunk = v;
-                        vForChunk.pos = plus_float3(worldP, v.pos);
-                        float2 uvAtlas = getUVCoordForBlock((BlockType)b->type);
-                        vForChunk.texUV.y = lerp(uvAtlas.x, uvAtlas.y, make_lerpTValue(vForChunk.texUV.y));
-
-                        //NOTE: Get the ambient occulusion level
-                        uint64_t value = 0;
-                        //SPEED: Somehow make this not into if statments
-                        if(blockValues[0] && blockValues[2])  {
-                            value = 3;
-                        } else if((blockValues[0] && blockValues[1])) {
-                            assert(!blockValues[2]);
-                            value = 2;
-                        } else if((blockValues[1] && blockValues[2])) {
-                            assert(!blockValues[0]);
-                            value = 2;
-                        } else if(blockValues[0]) {
-                            assert(!blockValues[1]);
-                            assert(!blockValues[2]);
-                            value = 1;
-                        } else if(blockValues[1]) {
-                            assert(!blockValues[0]);
-                            assert(!blockValues[2]);
-                            value = 1;
-                        } else if(blockValues[2]) {
-                            assert(!blockValues[0]);
-                            assert(!blockValues[1]);
-                            value = 1;
-                        } 
-                        
-                        vForChunk.aoMask = value;
-
-                        pushArrayItem(&triangleData, vForChunk, VertexForChunk);
+                        u32 a = global_quadIndices[0] + vertexCount;
+                        u32 b = global_quadIndices[1] + vertexCount;
+                        u32 c = global_quadIndices[2] + vertexCount;
+                        u32 d = global_quadIndices[3] + vertexCount;
+                        u32 e = global_quadIndices[4] + vertexCount;
+                        u32 f = global_quadIndices[5] + vertexCount;
+                        pushArrayItem(&info->indicesData, a, u32);
+                        pushArrayItem(&info->indicesData, b, u32);
+                        pushArrayItem(&info->indicesData, c, u32);
+                        pushArrayItem(&info->indicesData, d, u32);
+                        pushArrayItem(&info->indicesData, e, u32);
+                        pushArrayItem(&info->indicesData, f, u32);
                     }
-                    pushArrayItem(&indicesData, global_quadIndices[0] + vertexCount, u32);
-                    pushArrayItem(&indicesData, global_quadIndices[1] + vertexCount, u32);
-                    pushArrayItem(&indicesData, global_quadIndices[2] + vertexCount, u32);
-                    pushArrayItem(&indicesData, global_quadIndices[3] + vertexCount, u32);
-                    pushArrayItem(&indicesData, global_quadIndices[4] + vertexCount, u32);
-                    pushArrayItem(&indicesData, global_quadIndices[5] + vertexCount, u32);
                 }
             }
         }
     }
-
-    c->modelBuffer = generateChunkVertexBuffer(triangleData, getArrayLength(triangleData), indicesData, getArrayLength(indicesData));
-
+    
     MemoryBarrier();
     ReadWriteBarrier();
 
-    assert(c->generateState & CHUNK_MESH_BUILDING);
-    c->generateState &= ~CHUNK_MESH_BUILDING;
+    info->ready = true;
 
     free(data_);
     data_ = 0;
-    free(triangleData);
-    triangleData = 0;
-    free(indicesData);
-    indicesData = 0;
+    
 }
+
+void processMeshData(ChunkVertexToCreate *info) {
+    Chunk *c = info->chunk;
+    if(c->generateState & CHUNK_MESH_BUILDING) {
+
+        int indexCount = getArrayLength(info->indicesData);
+        int vertexCount = getArrayLength(info->triangleData);
+        if(indexCount > 0 && vertexCount > 0) {
+            if(c->modelBuffer.handle) {
+                //TODO: Delete buffer
+                deleteVao(c->modelBuffer.handle);
+                c->modelBuffer.indexCount = 0;
+            }
+            c->modelBuffer = generateChunkVertexBuffer(info->triangleData, vertexCount, info->indicesData, indexCount);
+        } 
+
+         assert(c->generateState & CHUNK_MESH_BUILDING);
+        c->generateState &= ~CHUNK_MESH_BUILDING;
+        assert(!(c->generateState & CHUNK_MESH_BUILDING));
+        assert(!(c->generateState & CHUNK_MESH_DIRTY));
+    }
+
+    freeResizeArray(info->triangleData);
+    freeResizeArray(info->indicesData);
+} 
 
 void pushCreateMeshToThreads(GameState *gameState, Chunk *chunk) {
     assert(chunk->generateState & CHUNK_MESH_DIRTY);
     chunk->generateState &= ~CHUNK_MESH_DIRTY;
     chunk->generateState |= CHUNK_MESH_BUILDING;
+    assert(chunk->generateState & CHUNK_MESH_BUILDING);
+    assert(!(chunk->generateState & CHUNK_MESH_DIRTY));
+    
     
     MemoryBarrier();
     ReadWriteBarrier();
 
-    FillChunkData *data = (FillChunkData *)malloc(sizeof(FillChunkData));
+    GenerateMeshData *data = (GenerateMeshData *)malloc(sizeof(GenerateMeshData));
 
     data->gameState = gameState;
-    data->chunk = chunk;
+
+    ChunkVertexToCreate *info = 0;
+
+    if(gameState->meshesToCreateFreeList) {
+        info = gameState->meshesToCreateFreeList;
+
+        //NOTE: Take off free list
+        gameState->meshesToCreateFreeList = info->next;
+    } else {
+        info = pushStruct(&globalLongTermArena, ChunkVertexToCreate);
+        //TODO: Change this to a fixed sized array with each threads own memory arena
+    }
+    assert(info);
+
+    info->triangleData = initResizeArray(VertexForChunk);
+    info->indicesData = initResizeArray(u32);
+
+    //NOTE: Add to the list
+    info->next = gameState->meshesToCreate;
+    gameState->meshesToCreate = info;
+    info->ready = false;
+    info->chunk = chunk;
+
+    data->info = info;
 
     //NOTE: Multi-threaded
     pushWorkOntoQueue(&gameState->threadsInfo, generateChunkMesh_multiThread, data);
@@ -533,9 +588,9 @@ void pushCreateMeshToThreads(GameState *gameState, Chunk *chunk) {
 }
 
 void drawChunk(GameState *gameState, Renderer *renderer, Chunk *c) {
-    if(c->generateState & CHUNK_MESH_DIRTY || c->generateState & CHUNK_MESH_BUILDING) {
+    if((c->generateState & CHUNK_MESH_DIRTY) || (c->generateState & CHUNK_MESH_BUILDING)) 
+    {
         //NOTE: Default to drawing blocks seperately i.e. if user breaks a block, we don't want to wait for the mesh to rebuild for the chunk
-
         if(c->generateState & CHUNK_MESH_DIRTY) {
             pushCreateMeshToThreads(gameState, c);
         }
@@ -577,7 +632,7 @@ void drawChunk(GameState *gameState, Renderer *renderer, Chunk *c) {
                 }
             }
         }
-    } else {
+    } else if(c->modelBuffer.indexCount > 0) {
         glDrawElements(GL_TRIANGLES, c->modelBuffer.indexCount, GL_UNSIGNED_INT, 0); 
         renderCheckError();
     }

@@ -4,6 +4,12 @@ struct FillChunkData {
     Chunk *chunk;
 };
 
+struct GenerateMeshData {
+    GameState *gameState;
+    ChunkVertexToCreate *info;
+};
+
+
 void getAOMask_multiThreaded(void *data_);
 
 void addBlock(GameState *gameState, float3 worldP, BlockType type) {
@@ -200,7 +206,7 @@ void fillChunk_multiThread(void *data_) {
 
 void fillChunk(GameState *gameState, Chunk *chunk) {
     assert(chunk->generateState & CHUNK_NOT_GENERATED);
-    chunk->generateState = CHUNK_GENERATING | CHUNK_MESH_DIRTY;
+    chunk->generateState = CHUNK_GENERATING;
 
     MemoryBarrier();
     ReadWriteBarrier();

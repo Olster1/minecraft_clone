@@ -192,7 +192,6 @@ void cancelMiningInteraction(GameState *gameState) {
 }
 
 void invalidateSurroundingAoValues(GameState *gs, int worldX, int worldY, int worldZ) {
-
     for(int z = -1; z <= 1; z++) {
         for(int y = -1; y <= 1; y++) {
             for(int x = -1; x <= 1; x++) {

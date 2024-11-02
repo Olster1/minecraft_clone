@@ -22,6 +22,12 @@ ResizeArrayHeader *getResizeArrayHeader(u8 *array) {
     return header;
 }
 
+void freeResizeArray(void *array_) {
+    u8 *array = (u8 *)array_;
+    ResizeArrayHeader *header = getResizeArrayHeader(array);
+    easyPlatform_freeMemory(header);
+}
+
 u8 *getResizeArrayContents(ResizeArrayHeader *header) {
     u8 *array = ((u8 *)header) + sizeof(ResizeArrayHeader);
     return array;

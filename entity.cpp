@@ -130,12 +130,13 @@ struct CloudChunk {
     CloudChunk *next;
 };
 
+
 enum ChunkGenerationState {
     CHUNK_NOT_GENERATED = 1 << 0, 
     CHUNK_GENERATING = 1 << 1, 
     CHUNK_GENERATED = 1 << 2, 
     CHUNK_MESH_DIRTY = 1 << 3, 
-    CHUNK_MESH_BUILDING = 1 << 3, 
+    CHUNK_MESH_BUILDING = 1 << 4, 
 };
 
 struct Chunk {
@@ -154,6 +155,12 @@ struct Chunk {
     ChunkModelBuffer modelBuffer;
 
     Chunk *next;
+};
+
+struct ChunkInfo {
+    Chunk *chunk;
+
+    ChunkInfo *next;
 };
 
 struct BlockChunkPartner {

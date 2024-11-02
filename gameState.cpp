@@ -12,6 +12,15 @@ struct AOOffset {
     float3 offsets[3];
 };
 
+struct ChunkVertexToCreate {
+    VertexForChunk *triangleData;
+    u32 *indicesData;
+    Chunk *chunk;
+
+    ChunkVertexToCreate *next;
+    bool ready;
+};
+
 enum BlockFlags {
     BLOCK_FLAGS_NONE = 0,
     BLOCK_EXISTS_COLLISION = 1 << 0,
@@ -48,6 +57,8 @@ struct GameState {
     Texture soilTexture;
     Texture circleTexture;
     Texture circleOutlineTexture;
+
+    ChunkInfo *chunksList;
     
     MouseKeyState mouseLeftBtn;
 
@@ -65,6 +76,9 @@ struct GameState {
     InventoryItem playerInventory[64];
 
     float3 cameraOffset;
+
+    ChunkVertexToCreate *meshesToCreate;
+    ChunkVertexToCreate *meshesToCreateFreeList;
 
     WavFile blockBreakSound;
     WavFile blockFinishSound;
@@ -264,6 +278,9 @@ void initGameState(GameState *gameState) {
     // gameState->circleTexture = loadTextureToGPU("./images/fillCircle.png");
 
     gameState->currentMiningBlock = 0;
+
+    gameState->meshesToCreate = 0;
+    gameState->meshesToCreateFreeList = 0;
 
     // DEBUG_ArrayTests();
 

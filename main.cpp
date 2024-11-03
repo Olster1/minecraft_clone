@@ -174,6 +174,12 @@ void updateAndDrawDebugCode(GameState *gameState) {
 
     // printf("%f %f\n", global_fogSeeDistance, global_fogFarDistance);
     {
+            char s[255];
+            int charsRendered = sprintf (s, "Player Pos: %f %f %f", gameState->player.T.pos.x, gameState->player.T.pos.y, gameState->player.T.pos.z);
+            assert(charsRendered < arrayCount(s));
+            renderText(gameState->renderer, &gameState->mainFont, s, make_float2(10, 5), 0.1f);
+        }
+    {
         char s[255];
         int charsRendered = sprintf (s, "Blocks Drawn: %d", gameState->DEBUG_BlocksDrawnForFrame);
         assert(charsRendered < arrayCount(s));
@@ -185,6 +191,7 @@ void updateAndDrawDebugCode(GameState *gameState) {
         assert(charsRendered < arrayCount(s));
         renderText(gameState->renderer, &gameState->mainFont, s, make_float2(10, 10 + 5), 0.1f);
     }
+     
 
     {
         float occupiedBuckets = 0;

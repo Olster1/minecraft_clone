@@ -195,29 +195,19 @@ void invalidateSurroundingAoValues(GameState *gs, int worldX, int worldY, int wo
     for(int z = -1; z <= 1; z++) {
         for(int y = -1; y <= 1; y++) {
             for(int x = -1; x <= 1; x++) {
-                Block *b =  blockExistsReadOnly(gs, worldX + x, worldY + y, worldZ + z, BLOCK_EXISTS);
+                int chunkX = (worldX + x) / CHUNK_DIM;
+                int chunkY = (worldY + y) / CHUNK_DIM;
+                int chunkZ = (worldZ + z) / CHUNK_DIM;
 
-                if(b) {
-                    //NOTE: Invalidate the AO value
-                    // b->aoMask = getInvalidAoMaskValue();
+                Chunk *c = getChunkReadOnly(gs, chunkX, chunkY, chunkZ);
 
-                    int chunkX = (worldX + x) / CHUNK_DIM;
-                    int chunkY = (worldY + y) / CHUNK_DIM;
-                    int chunkZ = (worldZ + z) / CHUNK_DIM;
-
-                    Chunk *c = getChunkReadOnly(gs, chunkX, chunkY, chunkZ);
-
-                    if(c) {
-                        c->generateState &= ~(CHUNK_MESH_DIRTY | CHUNK_MESH_BUILDING);
-                        c->generateState |= CHUNK_MESH_DIRTY;
-                    }
+                if(c) {
+                    c->generateState &= ~(CHUNK_MESH_DIRTY | CHUNK_MESH_BUILDING);
+                    c->generateState |= CHUNK_MESH_DIRTY;
                 }
-
-               
             }
         }
     }
-    
 }
 
 bool placeBlock(GameState *gameState, float3 lookingAxis, Entity *e, BlockType blockType) {
@@ -365,7 +355,7 @@ void mineBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
                 invalidateSurroundingAoValues(gameState, worldP.x, worldP.y, worldP.z);
 
                 //NOTE: Check if we should destroy an above block like grass
-                Block *aboveBlock = blockExistsReadOnly(gameState, worldP.x, worldP.y + 1 , worldP.z, BLOCK_FLAGS_UNSAFE_UNDER);
+                Block *aboveBlock = blockExistsReadOnly_withBlock(gameState, worldP.x, worldP.y + 1 , worldP.z, BLOCK_FLAGS_UNSAFE_UNDER);
                 if(aboveBlock) {
                     //NOTE: Destory the block
                     aboveBlock->exists = false;

@@ -165,6 +165,9 @@ void createBlockFlags(GameState *gameState) {
                 flags = (BlockFlags)(flags | BLOCK_EXISTS_COLLISION | BLOCK_FLAGS_NO_MINE_OUTLINE);
                 flags &= ~(BLOCK_FLAGS_AO);
             } break;
+            case BLOCK_NONE: {
+                flags = 0;
+            } break;
             default: {
                 
             };

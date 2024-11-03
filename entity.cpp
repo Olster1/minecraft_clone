@@ -14,6 +14,7 @@ enum EntityType {
 };
 
 enum BlockType {
+    BLOCK_NONE,
     BLOCK_GRASS,
     BLOCK_SOIL,
     BLOCK_STONE,

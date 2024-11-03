@@ -299,7 +299,7 @@ Chunk *generateChunk(GameState *gameState, int x, int y, int z, uint32_t hash) {
     chunk->entities = 0;
 
     //NOTE: Reset all AO of neighbouring blocks
-    resetNeighbouringChunksAO(gameState, x, y, z);
+    // resetNeighbouringChunksAO(gameState, x, y, z);
 
     chunk->next = gameState->chunks[hash];
     gameState->chunks[hash] = chunk;
@@ -307,9 +307,7 @@ Chunk *generateChunk(GameState *gameState, int x, int y, int z, uint32_t hash) {
     return chunk;
 }
 
-
-
-Block *blockExistsReadOnly(GameState *gameState, int worldx, int worldy, int worldz, BlockFlags flags) {
+Block *blockExistsReadOnly_withBlock(GameState *gameState, int worldx, int worldy, int worldz, BlockFlags flags) {
     int chunkX = worldx / CHUNK_DIM;
     int chunkY = worldy / CHUNK_DIM;
     int chunkZ = worldz / CHUNK_DIM;
@@ -325,6 +323,36 @@ Block *blockExistsReadOnly(GameState *gameState, int worldx, int worldy, int wor
         assert(blockIndex < BLOCKS_PER_CHUNK);
         if(blockIndex < BLOCKS_PER_CHUNK && c->blocks[blockIndex].exists && (getBlockFlags(gameState, c->blocks[blockIndex].type) & flags)) {
             found = &c->blocks[blockIndex];
+        }
+    } 
+
+    return found;
+}
+
+
+bool blockExistsReadOnly(GameState *gameState, int worldx, int worldy, int worldz, BlockFlags flags) {
+    int chunkX = worldx / CHUNK_DIM;
+    int chunkY = worldy / CHUNK_DIM;
+    int chunkZ = worldz / CHUNK_DIM;
+
+    int localx = worldx - (CHUNK_DIM*chunkX); 
+    int localy = worldy - (CHUNK_DIM*chunkY); 
+    int localz = worldz - (CHUNK_DIM*chunkZ); 
+    
+    Chunk *c = getChunkReadOnly(gameState, chunkX, chunkY, chunkZ);
+    bool found = false;
+    if(c && c->blocks) {
+        int blockIndex = getBlockIndex(localx, localy, localz);
+        assert(blockIndex < BLOCKS_PER_CHUNK);
+        if(blockIndex < BLOCKS_PER_CHUNK && c->blocks[blockIndex].exists && (getBlockFlags(gameState, c->blocks[blockIndex].type) & flags)) {
+            found = true;
+        }
+    } else {
+        //NOTE: Find out what the block type should be since the chunk hasn't generated yet
+        BlockType t = worldGeneration_shouldBlockExist(worldx, worldy, worldz);
+
+        if(getBlockFlags(gameState, t) & flags) {
+            found = true;
         }
     }
 

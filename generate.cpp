@@ -89,13 +89,43 @@ void generateTree_multiThread(GameState *gameState, Chunk *chunk, float3 worldP)
 
 }
 
+BlockType worldGeneration_shouldBlockExist(int worldX, int worldY, int worldZ) {
+    float terrainHeight = getTerrainHeight(worldX, worldZ);
+
+    bool underWater = worldY < WATER_ELEVATION;
+    BlockType type = BLOCK_NONE;
+
+    if(worldY < terrainHeight) {
+        BlockType type = BLOCK_GRASS;
+        bool isTop = false;
+
+        if(underWater) {
+            type = BLOCK_SOIL;
+        } else if(worldY < (terrainHeight - 1)) {
+            type = BLOCK_SOIL;
+        } else {
+            isTop = true;
+        }
+
+        //TODO: Handle Tree building based on perlin noise
+        // if(worldY > waterElevation && isTop && isTreeLocation(worldX, worldZ)) {
+            // generateTree_multiThread(gameState, chunk, make_float3(worldX, worldY + 1, worldZ));
+        // } 
+        
+    } else if(worldY < WATER_ELEVATION) {
+        type = BLOCK_WATER;
+    }
+
+    return type;
+}
+
 void fillChunk_multiThread(void *data_) {
     FillChunkData *data = (FillChunkData *)data_;
 
     GameState *gameState = data->gameState;
     Chunk *chunk = data->chunk;
 
-    int subSoilDepth = 5; //NOTE: 5 blocks to bedrock //TODO: could be random
+    
 
     for(int z = 0; z < CHUNK_DIM; ++z) {
         for(int x = 0; x < CHUNK_DIM; ++x) {
@@ -127,7 +157,7 @@ void fillChunk_multiThread(void *data_) {
                             type = BLOCK_STONE;
                         }
                     } else if(worldY < (terrainHeight - 1)) {
-                        if(worldY >= ((terrainHeight - 1) - subSoilDepth)) {
+                        if(worldY >= ((terrainHeight - 1) - SUB_SOIL_DEPTH)) {
                             type = BLOCK_SOIL;
                         } else {
                             if(isIronLocation(worldX, worldY, worldZ)) {

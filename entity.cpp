@@ -153,6 +153,7 @@ struct Chunk {
     Entity *entities;
 
     ChunkModelBuffer modelBuffer;
+    ChunkModelBuffer alphaModelBuffer;
 
     Chunk *next;
 };

@@ -1027,13 +1027,22 @@ float16 eulerAnglesToTransform(float y, float x, float z) {
 	return result;
 }
 
-uint32_t get_crc32(char *bytes, size_t bytes_length) {
-	uint32_t result = 0;
-	for(int i = 0; i < bytes_length; ++i) {
-		result = __crc32b (result, bytes[i]);
+// uint32_t get_crc32(char *bytes, size_t bytes_length) {
+// 	uint32_t result = 0;
+// 	for(int i = 0; i < bytes_length; ++i) {
+// 		result = __crc32b (result, bytes[i]);
 
-	}
-	return result;
+// 	}
+// 	return result;
+// }
+
+uint32_t get_crc32(char *bytes, size_t bytes_length) {
+	uint32_t hash[4];                
+  	uint32_t seed = 42;
+	MurmurHash3_x86_32(bytes, bytes_length, seed, hash);
+
+	return hash[0];
+
 }
 
 uint32_t get_crc32_for_string(char *string_nullterminated) {

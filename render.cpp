@@ -274,12 +274,18 @@ float2 getUVCoordForBlock(BlockType type) {
     } else if(type == BLOCK_WATER) {
         uv.x = 0.3f;
         uv.y = 0.4f;
-    } else if(type == BLOCK_COAL) {
-        uv.x = 0.6f;
-        uv.y = 0.7f;
     } else if(type == BLOCK_IRON) {
         uv.x = 0.5f;
         uv.y = 0.6f;
+    } else if(type == BLOCK_COAL) {
+        uv.x = 0.6f;
+        uv.y = 0.7f;
+    } else if(type == BLOCK_GRASS_SHORT_ENTITY || type == BLOCK_GRASS_TALL_ENTITY) {
+        uv.x = 0.7f;
+        uv.y = 0.8f;
+    } else if(type == BLOCK_WATER) {
+        uv.x = 0.8f;
+        uv.y = 0.9f;
     }
     
     return uv;

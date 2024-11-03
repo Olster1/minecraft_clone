@@ -24,6 +24,7 @@
         "typeinfo": "cpp",
         "ios": "cpp",
         "complex": "cpp",
-        "locale": "cpp"
+        "locale": "cpp",
+        "murmur3.c": "cpp"
     }
 }

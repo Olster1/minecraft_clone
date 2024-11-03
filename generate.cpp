@@ -17,9 +17,9 @@ void addBlock(GameState *gameState, float3 worldP, BlockType type) {
     int chunkY = (int)worldP.y / CHUNK_DIM;
     int chunkZ = (int)worldP.z / CHUNK_DIM;
 
-    //NOTE: entity swapped chunk, so move it to the new chunk
     Chunk *c = getChunkNoGenerate(gameState, chunkX, chunkY, chunkZ);
     // assert(c);
+    //NOTE: the chunk might not exist yet so trees might be cut off if the chunk hasn't been generated yet. If they were based on perlin noise this wouldn't be the case.
    
     if(c) {
         if(!c->blocks) {

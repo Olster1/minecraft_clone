@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <map>
 #define arrayCount(array1) (sizeof(array1) / sizeof(array1[0]))
+#include "./murmur3.c"
 #include "./3DMaths.h"
 #include <cstdio>
 #include "./threads.cpp"

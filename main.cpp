@@ -16,7 +16,6 @@ static float global_fogSeeDistance;
 #include "./easy_lex.h"
 #include "./imgui.h"
 #include "./render.h"
-
 #include "./transform.cpp"
 #include "./animation.h"
 #include "./entity.cpp"
@@ -186,6 +185,55 @@ void updateAndDrawDebugCode(GameState *gameState) {
         assert(charsRendered < arrayCount(s));
         renderText(gameState->renderer, &gameState->mainFont, s, make_float2(10, 10 + 5), 0.1f);
     }
+
+    {
+        float occupiedBuckets = 0;
+        float avgChainLength = 0;
+        int maxChainLength = 0;
+        for(int i = 0; i < arrayCount(gameState->chunks); ++i) {
+            Chunk *chunk = gameState->chunks[i];
+            if(chunk) {
+                occupiedBuckets++;
+                
+            }
+
+            int chainLength = 0;
+            while(chunk) {
+                avgChainLength++;
+                chainLength++;
+                chunk = chunk->next;
+            }
+
+            if(chainLength > maxChainLength) {
+                maxChainLength = chainLength;
+            }
+        }
+        avgChainLength = avgChainLength / occupiedBuckets;
+
+        {
+            char s[255];
+            int charsRendered = sprintf (s, "Load Factor: %f", occupiedBuckets / (float)arrayCount(gameState->chunks));
+            assert(charsRendered < arrayCount(s));
+            renderText(gameState->renderer, &gameState->mainFont, s, make_float2(10, 10 + 10), 0.1f);
+        }
+        {
+            char s[255];
+            int charsRendered = sprintf (s, "Avg Chain Length: %f", avgChainLength);
+            assert(charsRendered < arrayCount(s));
+            renderText(gameState->renderer, &gameState->mainFont, s, make_float2(10, 10 + 15), 0.1f);
+        }
+        {
+            char s[255];
+            int charsRendered = sprintf (s, "Max Chain Length: %d", maxChainLength);
+            assert(charsRendered < arrayCount(s));
+            renderText(gameState->renderer, &gameState->mainFont, s, make_float2(10, 10 + 20), 0.1f);
+        }
+    }
+
+    
+
+
+
     
 }
 
@@ -297,7 +345,7 @@ void updateGame(GameState *gameState) {
     int chunkY = (int)worldP.y / CHUNK_DIM;
     int chunkZ = (int)worldP.z / CHUNK_DIM;
     
-    int chunkRadiusY = 2;
+    int chunkRadiusY = 4;
     int chunkRadiusXZ = 10; //TODO: This should be able to get to 64 at 60FPS
 
     for(int z = -chunkRadiusXZ; z <= chunkRadiusXZ; ++z) {
@@ -332,9 +380,7 @@ void updateGame(GameState *gameState) {
     }
 
     drawHUD(gameState);
-
     updateAndDrawDebugCode(gameState);
-    
     rendererFinish(gameState->renderer, screenT, cameraT, screenGuiT, textGuiT, lookingAxis, cameraTWithoutTranslation, timeOfDayValues, gameState->perlinTestTexture.handle);
 
     {
@@ -358,8 +404,6 @@ void updateGame(GameState *gameState) {
             }
         }
     }
-    
-    
 
     // {
     //     //NOTE: Draw all the examples on the gltf website

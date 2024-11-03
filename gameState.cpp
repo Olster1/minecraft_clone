@@ -15,6 +15,10 @@ struct AOOffset {
 struct ChunkVertexToCreate {
     VertexForChunk *triangleData;
     u32 *indicesData;
+
+    VertexForChunk *alphaTriangleData;
+    u32 *alphaIndicesData;
+
     Chunk *chunk;
 
     ChunkVertexToCreate *next;
@@ -32,7 +36,7 @@ enum BlockFlags {
     BLOCK_FLAGS_UNSAFE_UNDER = 1 << 6, //NOTE: Whether the block should be destroyed if underneath block destroyed
 };
 
-#define CHUNK_LIST_SIZE 4096
+#define CHUNK_LIST_SIZE 4096*4
 
 struct GameState {
     bool inited;

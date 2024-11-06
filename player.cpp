@@ -195,9 +195,9 @@ void invalidateSurroundingAoValues(GameState *gs, int worldX, int worldY, int wo
     for(int z = -1; z <= 1; z++) {
         for(int y = -1; y <= 1; y++) {
             for(int x = -1; x <= 1; x++) {
-                int chunkX = (worldX + x) / CHUNK_DIM;
-                int chunkY = (worldY + y) / CHUNK_DIM;
-                int chunkZ = (worldZ + z) / CHUNK_DIM;
+                int chunkX = roundChunkCoord((float)(worldX + x) / (float)CHUNK_DIM);
+                int chunkY = roundChunkCoord((float)(worldY + y) / (float)CHUNK_DIM);
+                int chunkZ = roundChunkCoord((float)(worldZ + z) / (float)CHUNK_DIM);
 
                 Chunk *c = getChunkReadOnly(gs, chunkX, chunkY, chunkZ);
 
@@ -275,10 +275,12 @@ Particler *findParticler(GameState *gameState, ParticlerId id) {
 }
 
 void highlightBlockLookingAt(GameState *gameState, float3 lookingAxis, Entity *e) {
-    BlockChunkPartner b = castRayAgainstBlock(gameState, lookingAxis, DISTANCE_CAN_PLACE_BLOCK, plus_float3(gameState->cameraOffset, e->T.pos));
+    BlockChunkPartner b = castRayAgainstBlock(gameState, lookingAxis, DISTANCE_CAN_PLACE_BLOCK, plus_float3(gameState->cameraOffset, e->T.pos), BLOCK_FLAGS_MINEABLE);
 
     if(b.block) {
-        // b.block->hitBlock = true;
+        float3 blockWorldP = getBlockWorldPos(b);
+        pushAlphaCube(gameState->renderer, blockWorldP, BLOCK_OUTLINE, make_float4(0, 0, 0, 0.1f));
+        gameState->DEBUG_BlocksDrawnForFrame++;
     }
 }
 
@@ -298,7 +300,7 @@ Particler *getBlockMiningParticler(GameState *gameState, Block *block, float3 bl
 
 void mineBlock(GameState *gameState, float3 lookingAxis, Entity *e) {
     float3 cameraPos = plus_float3(gameState->cameraOffset, e->T.pos);
-    BlockChunkPartner b = castRayAgainstBlock(gameState, lookingAxis, DISTANCE_CAN_PLACE_BLOCK, cameraPos);
+    BlockChunkPartner b = castRayAgainstBlock(gameState, lookingAxis, DISTANCE_CAN_PLACE_BLOCK, cameraPos, BLOCK_FLAGS_MINEABLE);
 
         if(b.block) {
             //NOTE: Play sound
@@ -509,9 +511,10 @@ void updatePlayer(GameState *gameState, Entity *e) {
         gameState->placeBlockTimer = -1;
         gameState->mineBlockTimer = -1;
     }
-
+    highlightBlockLookingAt(gameState, lookingAxis, e);
+    
     if(gameState->showCircleTimer >= 0) {
-        highlightBlockLookingAt(gameState, lookingAxis, e);
+        
         pushCircleOutline(gameState->renderer, make_float3(0, 0, 0), CIRCLE_RADIUS_MAX, make_float4(1, 1, 1, 1));
         
         if(gameState->mouseLeftBtn == MOUSE_BUTTON_NONE) {

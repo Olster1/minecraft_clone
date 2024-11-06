@@ -50,7 +50,9 @@ Renderer *initRenderer(Texture grassTexture, Texture breakBlockTexture, Texture 
     renderer->blockPickupShader = loadShader(blockPickupVertexShader, blockPickupFragShader);
     renderer->skeletalModelShader = loadShader(skeletalVertexShader, skeletalFragShader);
     renderer->blockSameTextureShader = loadShader(blockSameTextureVertexShader, blockPickupFragShader);
-    renderer->blockColorShader = loadShader(blockVertexShader, blockColorShader);
+    // renderer->blockColorShader = loadShader(blockVertexShader, blockColorShader);
+    renderer->blockColorShader = loadShader(blockVertexShader, blockFragShader);
+    
     
     renderer->blockModel = generateVertexBuffer(global_cubeData, 24, global_cubeIndices, 36);
     renderer->quadModel = generateVertexBuffer(global_quadData, 4, global_quadIndices, 6, ATTRIB_INSTANCE_TYPE_MODEL_MATRIX);
@@ -348,30 +350,34 @@ void updateGame(GameState *gameState) {
         worldP = convertRealWorldToBlockCoords(gameState->modelLocation);
     }
     
-    int chunkX = (int)worldP.x / CHUNK_DIM;
-    int chunkY = (int)worldP.y / CHUNK_DIM;
-    int chunkZ = (int)worldP.z / CHUNK_DIM;
+    int chunkX = roundChunkCoord(worldP.x / (float)CHUNK_DIM);
+    int chunkY = roundChunkCoord(worldP.y / (float)CHUNK_DIM);
+    int chunkZ = roundChunkCoord(worldP.z / (float)CHUNK_DIM);
     
-    int chunkRadiusY = 4;
-    int chunkRadiusXZ = 10; //TODO: This should be able to get to 64 at 60FPS
+    int chunkRadiusY = 1;
+    int chunkRadiusXZ = 3; //TODO: This should be able to get to 64 at 60FPS
 
     for(int z = -chunkRadiusXZ; z <= chunkRadiusXZ; ++z) {
         for(int x = -chunkRadiusXZ; x <= chunkRadiusXZ; ++x) {
             for(int y = -chunkRadiusY; y <= chunkRadiusY; ++y) {
                 Chunk *chunk = getChunk(gameState, chunkX + x, chunkY + y, chunkZ + z);
                 if(chunk) {
-                    if(chunk->modelBuffer.indexCount > 0) {
-                        prepareChunkRender(&chunk->modelBuffer, &gameState->renderer->blockGreedyShader, gameState->renderer->terrainTextureHandle, screenT, cameraT, lookingAxis, gameState->renderer->underWater);
-                    }
-                    
                     Rect3f rect = make_rect3f_min_dim((chunkX + x)*CHUNK_DIM, (chunkY + y)*CHUNK_DIM, (chunkZ + z)*CHUNK_DIM, CHUNK_DIM, CHUNK_DIM, CHUNK_DIM);
                     if(rect3fInsideViewFrustrum(rect, gameState->modelLocation, gameState->cameraRotation, gameState->camera.fov, MATH_3D_NEAR_CLIP_PlANE, MATH_3D_FAR_CLIP_PlANE, gameState->aspectRatio_y_over_x)) 
                     {
+                        if(chunk->modelBuffer.indexCount > 0) {
+                            prepareChunkRender(&chunk->modelBuffer, &gameState->renderer->blockGreedyShader, gameState->renderer->terrainTextureHandle, screenT, cameraT, lookingAxis, gameState->renderer->underWater);
+                        }
+
                         drawChunk(gameState, gameState->renderer, chunk);
+
+                        if(chunk->modelBuffer.indexCount > 0) {
+                            endChunkRender();
+                        }
                     } 
-                    if(chunk->modelBuffer.indexCount > 0) {
-                        endChunkRender();
-                    }
+                    
+                } else {
+                    int h = 0;
                 }
             }
         }
@@ -394,6 +400,7 @@ void updateGame(GameState *gameState) {
         int count = 0;
         ChunkVertexToCreate **infoPtr = &gameState->meshesToCreate;
         int maxLoopCount = 10;
+        
         while(*infoPtr && count < maxLoopCount) {
             ChunkVertexToCreate *info = *infoPtr;
             if(info->ready) {
@@ -410,7 +417,28 @@ void updateGame(GameState *gameState) {
                 infoPtr = &info->next;
             }
         }
+
+    //     int totalCount = 0;
+    //     ChunkVertexToCreate *info = gameState->meshesToCreate;
+    //     while(info) {
+    //         totalCount++;
+    //         info = info->next;
+    //     }
+
+    //     if(totalCount == 0) {
+    //         chunkRadiusY++;
+    //         chunkRadiusXZ++;
+
+    //         if(chunkRadiusXZ > 40) {
+    //             chunkRadiusXZ = 40;
+    //         }
+    //         if(chunkRadiusY > 5) {
+    //             chunkRadiusY = 5;
+    //         }
+    //     }
     }
+
+    // printf("xz: %d y: %d\n", chunkRadiusXZ, chunkRadiusY);
 
     // {
     //     //NOTE: Draw all the examples on the gltf website

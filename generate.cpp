@@ -13,9 +13,9 @@ struct GenerateMeshData {
 void getAOMask_multiThreaded(void *data_);
 
 void addBlock(GameState *gameState, float3 worldP, BlockType type) {
-    int chunkX = (int)worldP.x / CHUNK_DIM;
-    int chunkY = (int)worldP.y / CHUNK_DIM;
-    int chunkZ = (int)worldP.z / CHUNK_DIM;
+    int chunkX = roundChunkCoord(worldP.x / (float)CHUNK_DIM);
+    int chunkY = roundChunkCoord(worldP.y / (float)CHUNK_DIM);
+    int chunkZ = roundChunkCoord(worldP.z / (float)CHUNK_DIM);
 
     Chunk *c = getChunkNoGenerate(gameState, chunkX, chunkY, chunkZ);
     // assert(c);
@@ -125,8 +125,6 @@ void fillChunk_multiThread(void *data_) {
     GameState *gameState = data->gameState;
     Chunk *chunk = data->chunk;
 
-    
-
     for(int z = 0; z < CHUNK_DIM; ++z) {
         for(int x = 0; x < CHUNK_DIM; ++x) {
             int worldX = x + chunk->x*CHUNK_DIM;
@@ -192,9 +190,9 @@ void fillChunk_multiThread(void *data_) {
                                 grassType1 = BLOCK_GRASS_TALL_ENTITY;
                             }
 
-                            int chunkX = worldX / CHUNK_DIM;
-                            int chunkY = (worldY + 1) / CHUNK_DIM;
-                            int chunkZ = worldZ / CHUNK_DIM;
+                            int chunkX = roundChunkCoord((float)worldX / (float)CHUNK_DIM);
+                            int chunkY = roundChunkCoord((float)(worldY + 1) / (float)CHUNK_DIM);
+                            int chunkZ = roundChunkCoord((float)worldZ / (float)CHUNK_DIM);
 
 
                             int localX = x;

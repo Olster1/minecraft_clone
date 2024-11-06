@@ -14,6 +14,11 @@
 #define AO_BIT_CREATING 62
 #define AO_BIT_INVALID 63
 #define SUB_SOIL_DEPTH 5
+#define DISTANCE_CAN_PLACE_BLOCK 6 //NOTE: Minecraft has a reach distance of 5 in survival and 6 in creative
+#define CAMERA_OFFSET make_float3(0, 0.7f, 0)
+#define ITEM_PER_SLOT_COUNT 64
+#define ITEM_HOT_SPOTS 8
+
 
 //NOTE: DEBUGGING CONSTANTS
 #define PERLIN_SIZE 128

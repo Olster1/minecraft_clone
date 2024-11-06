@@ -286,6 +286,9 @@ float2 getUVCoordForBlock(BlockType type) {
     } else if(type == BLOCK_WATER) {
         uv.x = 0.8f;
         uv.y = 0.9f;
+    } else if(type == BLOCK_OUTLINE) {
+        uv.x = 0.9f;
+        uv.y = 1.0f;
     }
     
     return uv;

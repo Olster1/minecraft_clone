@@ -34,6 +34,8 @@ enum BlockFlags {
     BLOCK_FLAGS_NO_MINE_OUTLINE = 1 << 4, //NOTE: Whether it shows the mining outline
     BLOCK_FLAGS_AO = 1 << 5, //NOTE: Whether it shows the mining outline
     BLOCK_FLAGS_UNSAFE_UNDER = 1 << 6, //NOTE: Whether the block should be destroyed if underneath block destroyed
+    BLOCK_FLAGS_MINEABLE = 1 << 7, 
+
 };
 
 #define CHUNK_LIST_SIZE 4096*4
@@ -149,12 +151,12 @@ struct GameState {
 
 void createBlockFlags(GameState *gameState) {
     for(int i = 0; i < arrayCount(gameState->blockFlags); ++i) {
-        uint64_t flags = BLOCK_EXISTS | BLOCK_FLAGS_AO | BLOCK_FLAG_STACKABLE | BLOCK_EXISTS_COLLISION;
+        uint64_t flags = BLOCK_EXISTS | BLOCK_FLAGS_AO | BLOCK_FLAG_STACKABLE | BLOCK_EXISTS_COLLISION | BLOCK_FLAGS_MINEABLE;
         BlockType t = (BlockType)i;
         switch(t) {
             case BLOCK_WATER: {
                 flags = flags | BLOCK_FLAGS_NONE | BLOCK_FLAGS_NO_MINE_OUTLINE;
-                flags &= ~(BLOCK_FLAGS_AO | BLOCK_EXISTS_COLLISION);
+                flags &= ~(BLOCK_FLAGS_AO | BLOCK_EXISTS_COLLISION | BLOCK_FLAGS_MINEABLE);
             } break;
             case BLOCK_GRASS_SHORT_ENTITY:
             case BLOCK_GRASS_TALL_ENTITY: {
@@ -242,7 +244,7 @@ void initGameState(GameState *gameState) {
     
     assert(BLOCK_TYPE_COUNT < 255);
     gameState->camera.fov = 60;
-    gameState->camera.T.pos = make_float3(1000, 100, 1000);
+    gameState->camera.T.pos = make_float3(-100, 100, -100);
     gameState->camera.followingPlayer = true;
     gameState->cameraOffset = CAMERA_OFFSET;
     gameState->camera.shakeTimer = -1;

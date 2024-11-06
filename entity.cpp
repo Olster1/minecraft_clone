@@ -1,8 +1,3 @@
-#define DISTANCE_CAN_PLACE_BLOCK 6
-#define CAMERA_OFFSET make_float3(0, 0.7f, 0)
-#define ITEM_PER_SLOT_COUNT 64
-#define ITEM_HOT_SPOTS 8
-
 enum EntityType {
     ENTITY_NONE,
     ENTITY_PLAYER,
@@ -26,6 +21,7 @@ enum BlockType {
     BLOCK_GRASS_TALL_ENTITY,
     BLOCK_COAL,
     BLOCK_IRON,
+    BLOCK_OUTLINE,
 
 
     //NOTHING PAST HERE

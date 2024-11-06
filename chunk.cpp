@@ -53,6 +53,10 @@ float3 convertRealWorldToBlockCoords(float3 p) {
     return p;
 }
 
+int roundChunkCoord(float value) {
+    return floor(value);
+}
+
 uint32_t getHashForChunk(int x, int y, int z) {
     int values[3] = {x, y, z};
     uint32_t hash = get_crc32((char *)values, arrayCount(values)*sizeof(int));
@@ -308,13 +312,17 @@ Chunk *generateChunk(GameState *gameState, int x, int y, int z, uint32_t hash) {
 }
 
 Block *blockExistsReadOnly_withBlock(GameState *gameState, int worldx, int worldy, int worldz, BlockFlags flags) {
-    int chunkX = worldx / CHUNK_DIM;
-    int chunkY = worldy / CHUNK_DIM;
-    int chunkZ = worldz / CHUNK_DIM;
+    int chunkX = roundChunkCoord((float)worldx / (float)CHUNK_DIM);
+    int chunkY = roundChunkCoord((float)worldy / (float)CHUNK_DIM);
+    int chunkZ = roundChunkCoord((float)worldz / (float)CHUNK_DIM);
 
     int localx = worldx - (CHUNK_DIM*chunkX); 
     int localy = worldy - (CHUNK_DIM*chunkY); 
     int localz = worldz - (CHUNK_DIM*chunkZ); 
+
+    assert(localx < CHUNK_DIM);
+    assert(localy < CHUNK_DIM);
+    assert(localz < CHUNK_DIM);
     
     Chunk *c = getChunkReadOnly(gameState, chunkX, chunkY, chunkZ);
     Block *found = 0;
@@ -331,13 +339,17 @@ Block *blockExistsReadOnly_withBlock(GameState *gameState, int worldx, int world
 
 
 bool blockExistsReadOnly(GameState *gameState, int worldx, int worldy, int worldz, BlockFlags flags) {
-    int chunkX = worldx / CHUNK_DIM;
-    int chunkY = worldy / CHUNK_DIM;
-    int chunkZ = worldz / CHUNK_DIM;
+    int chunkX = roundChunkCoord((float)worldx / (float)CHUNK_DIM);
+    int chunkY = roundChunkCoord((float)worldy / (float)CHUNK_DIM);
+    int chunkZ = roundChunkCoord((float)worldz / (float)CHUNK_DIM);
 
     int localx = worldx - (CHUNK_DIM*chunkX); 
     int localy = worldy - (CHUNK_DIM*chunkY); 
     int localz = worldz - (CHUNK_DIM*chunkZ); 
+
+    assert(localx < CHUNK_DIM);
+    assert(localy < CHUNK_DIM);
+    assert(localz < CHUNK_DIM);
     
     Chunk *c = getChunkReadOnly(gameState, chunkX, chunkY, chunkZ);
     bool found = false;
@@ -460,7 +472,7 @@ void generateChunkMesh_multiThread(void *data_) {
                 BlockType t = (BlockType)b->type;
                 b->aoMask = 0;
 
-                if(t == BLOCK_WATER) {
+                 if(t == BLOCK_WATER) {
                     //NOTE: Only draw the water quad if there isn't any block above it - notice the +1 on the y coord
                     if(!blockExistsReadOnly(gameState, worldP.x, worldP.y + 1, worldP.z, (BlockFlags)0xFFFFFFFF)) {
                         //NOTE: Draw the water
@@ -657,43 +669,43 @@ void drawChunk(GameState *gameState, Renderer *renderer, Chunk *c) {
             pushCreateMeshToThreads(gameState, c);
         }
         
-        // int blockCount = (c->blocks) ? BLOCKS_PER_CHUNK : 0;
-        // for(int i = 0; i < blockCount; ++i) {
-        //     Block *b = &c->blocks[i];
+        int blockCount = (c->blocks) ? BLOCKS_PER_CHUNK : 0;
+        for(int i = 0; i < blockCount; ++i) {
+            Block *b = &c->blocks[i];
             
-        //     if(b->exists) {
-        //         float3 worldP = make_float3(c->x*CHUNK_DIM + b->x, c->y*CHUNK_DIM + b->y, c->z*CHUNK_DIM + b->z);
-        //         BlockType t = (BlockType)b->type;
+            if(b->exists) {
+                float3 worldP = make_float3(c->x*CHUNK_DIM + b->x, c->y*CHUNK_DIM + b->y, c->z*CHUNK_DIM + b->z);
+                BlockType t = (BlockType)b->type;
 
-        //         if(t == BLOCK_WATER) {
-        //             //NOTE: Only draw the water quad if there isn't any block above it - notice the +1 on the y coord
-        //             if(!blockExistsReadOnly(gameState, worldP.x, worldP.y + 1, worldP.z, (BlockFlags)0xFFFFFFFF)) {
-        //                 //NOTE: Draw the water
-        //                 pushWaterQuad(gameState->renderer, worldP, make_float4(1, 1, 1, 0.6f));
-        //             }
+                if(t == BLOCK_WATER) {
+                    //NOTE: Only draw the water quad if there isn't any block above it - notice the +1 on the y coord
+                    if(!blockExistsReadOnly(gameState, worldP.x, worldP.y + 1, worldP.z, (BlockFlags)0xFFFFFFFF)) {
+                        //NOTE: Draw the water
+                        pushWaterQuad(gameState->renderer, worldP, make_float4(1, 1, 1, 0.6f));
+                    }
                     
-        //         } else if(t == BLOCK_GRASS_SHORT_ENTITY || t == BLOCK_GRASS_TALL_ENTITY) {
-        //             float height = 1;
-        //             if(t == BLOCK_GRASS_TALL_ENTITY) {
-        //                 height = 2;
-        //             }
-        //             pushGrassQuad(gameState->renderer, worldP, height, make_float4(1, 1, 1, 1));
-        //         } else {
-        //             //NOTE: Calculate the aoMask if haven't yet - top bit is set 
-        //             if(b->aoMask & getInvalidAoMaskValue()) 
-        //             { 
-        //                 getAOMaskForBlock(gameState, worldP, getBlockFlags(gameState, (BlockType)b->type), b);
-        //             }
+                } else if(t == BLOCK_GRASS_SHORT_ENTITY || t == BLOCK_GRASS_TALL_ENTITY) {
+                    float height = 1;
+                    if(t == BLOCK_GRASS_TALL_ENTITY) {
+                        height = 2;
+                    }
+                    pushGrassQuad(gameState->renderer, worldP, height, make_float4(1, 1, 1, 1));
+                } else {
+                    //NOTE: Calculate the aoMask if haven't yet - top bit is set 
+                    if(b->aoMask & getInvalidAoMaskValue()) 
+                    { 
+                        getAOMaskForBlock(gameState, worldP, getBlockFlags(gameState, (BlockType)b->type), b);
+                    }
                     
-        //             if(!(b->aoMask & getBitWiseFlag(AO_BIT_NOT_VISIBLE))) 
-        //             {
-        //                 uint64_t AOMask = b->aoMask;
-        //                 pushCube(gameState->renderer, worldP, t, make_float4(0, 0, 0, 1), AOMask);
-        //                 gameState->DEBUG_BlocksDrawnForFrame++;
-        //             }
-        //         }
-        //     }
-        // }
+                    if(!(b->aoMask & getBitWiseFlag(AO_BIT_NOT_VISIBLE))) 
+                    {
+                        uint64_t AOMask = b->aoMask;
+                        pushCube(gameState->renderer, worldP, t, make_float4(0, 0, 0, 1), AOMask);
+                        gameState->DEBUG_BlocksDrawnForFrame++;
+                    }
+                }
+            }
+        }
     } else if(c->modelBuffer.indexCount > 0) {
         glDrawElements(GL_TRIANGLES, c->modelBuffer.indexCount, GL_UNSIGNED_INT, 0); 
         renderCheckError();
@@ -740,9 +752,9 @@ void storeEntitiesAfterFrameUpdate(GameState *gameState) {
 
             float3 blockPos = convertRealWorldToBlockCoords(e->T.pos);
 
-            int entChunkX = (int)blockPos.x / CHUNK_DIM;
-            int entChunkY = (int)blockPos.y / CHUNK_DIM;
-            int entChunkZ = (int)blockPos.z / CHUNK_DIM;
+            int entChunkX = roundChunkCoord(blockPos.x / (float)CHUNK_DIM);
+            int entChunkY = roundChunkCoord(blockPos.y / (float)CHUNK_DIM);
+            int entChunkZ = roundChunkCoord(blockPos.z / (float)CHUNK_DIM);
 
             Chunk *oldChunk = chunkInfo.chunk;
 
@@ -776,9 +788,9 @@ void storeEntitiesAfterFrameUpdate(GameState *gameState) {
         Entity *e = &gameState->entitiesToAddAfterFrame[i];
         float3 blockPos = convertRealWorldToBlockCoords(e->T.pos);
 
-        int entChunkX = (int)blockPos.x / CHUNK_DIM;
-        int entChunkY = (int)blockPos.y / CHUNK_DIM;
-        int entChunkZ = (int)blockPos.z / CHUNK_DIM;
+        int entChunkX = roundChunkCoord(blockPos.x / (float)CHUNK_DIM);
+        int entChunkY = roundChunkCoord(blockPos.y / (float)CHUNK_DIM);
+        int entChunkZ = roundChunkCoord(blockPos.z / (float)CHUNK_DIM);
 
         Chunk *newChunk = getChunk(gameState, entChunkX, entChunkY, entChunkZ);
         
@@ -802,9 +814,9 @@ void loadEntitiesForFrameUpdate(GameState *gameState) {
     //NOTE: Clear the entitiy count from last frame
     gameState->entityCount = 0;
 
-    int chunkX = (int)gameState->player.T.pos.x / CHUNK_DIM;
-    int chunkY = (int)gameState->player.T.pos.y / CHUNK_DIM;
-    int chunkZ = (int)gameState->player.T.pos.z / CHUNK_DIM;
+    int chunkX = roundChunkCoord(gameState->player.T.pos.x / (float)CHUNK_DIM);
+    int chunkY = roundChunkCoord(gameState->player.T.pos.y / (float)CHUNK_DIM);
+    int chunkZ = roundChunkCoord(gameState->player.T.pos.z / (float)CHUNK_DIM);
     
     for(int z = -chunkRadiusXZ; z <= chunkRadiusXZ; ++z) {
         for(int x = -chunkRadiusXZ; x <= chunkRadiusXZ; ++x) {
@@ -881,13 +893,17 @@ BlockChunkPartner blockExists(GameState *gameState, int worldx, int worldy, int 
     BlockChunkPartner found = {};
     found.block = 0;
 
-    int chunkX = worldx / CHUNK_DIM;
-    int chunkY = worldy / CHUNK_DIM;
-    int chunkZ = worldz / CHUNK_DIM;
+    int chunkX = roundChunkCoord((float)worldx / (float)CHUNK_DIM);
+    int chunkY = roundChunkCoord((float)worldy / (float)CHUNK_DIM);
+    int chunkZ = roundChunkCoord((float)worldz / (float)CHUNK_DIM);
 
     int localx = worldx - (CHUNK_DIM*chunkX); 
     int localy = worldy - (CHUNK_DIM*chunkY); 
     int localz = worldz - (CHUNK_DIM*chunkZ); 
+
+    assert(localx < CHUNK_DIM);
+    assert(localy < CHUNK_DIM);
+    assert(localz < CHUNK_DIM);
     
     Chunk *c = getChunk(gameState, chunkX, chunkY, chunkZ);
 

@@ -354,8 +354,8 @@ void updateGame(GameState *gameState) {
     int chunkY = roundChunkCoord(worldP.y / (float)CHUNK_DIM);
     int chunkZ = roundChunkCoord(worldP.z / (float)CHUNK_DIM);
     
-    int chunkRadiusY = 1;
-    int chunkRadiusXZ = 3; //TODO: This should be able to get to 64 at 60FPS
+    int chunkRadiusY = 2;
+    int chunkRadiusXZ = 15; //TODO: This should be able to get to 64 at 60FPS
 
     for(int z = -chunkRadiusXZ; z <= chunkRadiusXZ; ++z) {
         for(int x = -chunkRadiusXZ; x <= chunkRadiusXZ; ++x) {
@@ -384,13 +384,13 @@ void updateGame(GameState *gameState) {
     }
 
     // NOTE: Draw the clouds
-    for(int z = -chunkRadiusXZ; z <= chunkRadiusXZ; ++z) {
-        for(int x = -chunkRadiusXZ; x <= chunkRadiusXZ; ++x) {
-            CloudChunk *chunk = getCloudChunk(gameState, chunkX + x, chunkZ + z);
-            assert(chunk);
-            drawCloudChunk(gameState, chunk);
-        }
-    }
+    // for(int z = -chunkRadiusXZ; z <= chunkRadiusXZ; ++z) {
+    //     for(int x = -chunkRadiusXZ; x <= chunkRadiusXZ; ++x) {
+    //         CloudChunk *chunk = getCloudChunk(gameState, chunkX + x, chunkZ + z);
+    //         assert(chunk);
+    //         drawCloudChunk(gameState, chunk);
+    //     }
+    // }
 
     drawHUD(gameState);
     updateAndDrawDebugCode(gameState);

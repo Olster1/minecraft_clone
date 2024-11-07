@@ -453,6 +453,21 @@ void getAOMask_multiThreaded(void *data_) {
     data_ = 0;
 }
 
+void pushQuadIndicies(unsigned int **array, int vertexCount) {
+    u32 a = global_quadIndices[0] + vertexCount;
+    u32 b = global_quadIndices[1] + vertexCount;
+    u32 c = global_quadIndices[2] + vertexCount;
+    u32 d = global_quadIndices[3] + vertexCount;
+    u32 e = global_quadIndices[4] + vertexCount;
+    u32 f = global_quadIndices[5] + vertexCount;
+    pushArrayItem(array, a, u32);
+    pushArrayItem(array, b, u32);
+    pushArrayItem(array, c, u32);
+    pushArrayItem(array, d, u32);
+    pushArrayItem(array, e, u32);
+    pushArrayItem(array, f, u32);
+}
+
 void generateChunkMesh_multiThread(void *data_) {
     GenerateMeshData *data = (GenerateMeshData *)data_;
 
@@ -473,19 +488,58 @@ void generateChunkMesh_multiThread(void *data_) {
                 b->aoMask = 0;
 
                  if(t == BLOCK_WATER) {
+                // if(false) {
                     //NOTE: Only draw the water quad if there isn't any block above it - notice the +1 on the y coord
-                    if(!blockExistsReadOnly(gameState, worldP.x, worldP.y + 1, worldP.z, (BlockFlags)0xFFFFFFFF)) {
+                    if(!blockExistsReadOnly(gameState, worldP.x, worldP.y + 1, worldP.z, (BlockFlags)0xFFFFFFFF)) 
+                    {
                         //NOTE: Draw the water
-                        // pushAtlasQuad_(renderer, plus_float3(worldP, make_float3(0, 0.5f, 0)), make_float3(1, 1, 1), make_float3(90, 0, 0), make_float4(0.25f, 0.5f, 0, 0.25f), color, false);
+                        int vertexCount = getArrayLength(info->triangleData);
+                        for(int i = 0; i < 4; ++i) {
+                            int indexIntoCubeData = i;
+                            const VertexForChunk v = global_cubeDataForChunk[indexIntoCubeData];
+
+                            VertexForChunk vForChunk = v;
+                            vForChunk.pos = plus_float3(worldP, v.pos);
+                            float2 uvAtlas = getUVCoordForBlock(t);
+                            vForChunk.texUV.y = lerp(uvAtlas.x, uvAtlas.y, make_lerpTValue(vForChunk.texUV.y));
+
+                            pushArrayItem(&info->triangleData, vForChunk, VertexForChunk);
+                        }
+                        
+                        pushQuadIndicies(&info->indicesData, vertexCount);
                     }
-                    
                 } else if(t == BLOCK_GRASS_SHORT_ENTITY || t == BLOCK_GRASS_TALL_ENTITY) {
                     float height = 1;
                     if(t == BLOCK_GRASS_TALL_ENTITY) {
                         height = 2;
                     }
-                    // pushAtlasQuad_(renderer, worldP, make_float3(1, height, 1), make_float3(0, 0, 0), make_float4(0, 0.25f, 0, 0.25f), color, false);
-                    // pushAtlasQuad_(renderer, worldP, make_float3(1, height, 1), make_float3(0, 90, 0), make_float4(0, 0.25f, 0, 0.25f), color, false);
+
+                    VertexForChunk *arrays[2] = {global_quadDataChunkDataRotate90AntiClockwise, global_quadDataChunkDataRotate90Clockwise};
+                    for(int k = 0; k < 2; k++) {
+                        //NOTE: Draw the grass
+                        
+                        int vertexCount = getArrayLength(info->triangleData);
+                        for(int i = 0; i < 4; ++i) {
+                            int indexIntoCubeData = i;
+                            const VertexForChunk v = arrays[k][indexIntoCubeData];
+
+                            VertexForChunk vForChunk = v;
+
+                            if(height == 2) {
+                                vForChunk.pos.y *= height;
+                                vForChunk.pos.y += 0.25f;
+                            }
+
+                            
+                            vForChunk.pos = plus_float3(worldP, vForChunk.pos);
+                            float2 uvAtlas = getUVCoordForBlock(t);
+                            vForChunk.texUV.y = lerp(uvAtlas.x, uvAtlas.y, make_lerpTValue(vForChunk.texUV.y));
+
+                            pushArrayItem(&info->triangleData, vForChunk, VertexForChunk);
+                        }
+                        
+                        pushQuadIndicies(&info->indicesData, vertexCount);
+                    }
                 } else {
                     //NOTE: Run Greedy mesh algorithm
                     for(int k = 0; k < arrayCount(gameState->cardinalOffsets); k++) {
@@ -545,18 +599,7 @@ void generateChunkMesh_multiThread(void *data_) {
 
                                 pushArrayItem(&info->triangleData, vForChunk, VertexForChunk);
                             }
-                            u32 a = global_quadIndices[0] + vertexCount;
-                            u32 b = global_quadIndices[1] + vertexCount;
-                            u32 c = global_quadIndices[2] + vertexCount;
-                            u32 d = global_quadIndices[3] + vertexCount;
-                            u32 e = global_quadIndices[4] + vertexCount;
-                            u32 f = global_quadIndices[5] + vertexCount;
-                            pushArrayItem(&info->indicesData, a, u32);
-                            pushArrayItem(&info->indicesData, b, u32);
-                            pushArrayItem(&info->indicesData, c, u32);
-                            pushArrayItem(&info->indicesData, d, u32);
-                            pushArrayItem(&info->indicesData, e, u32);
-                            pushArrayItem(&info->indicesData, f, u32);
+                            pushQuadIndicies(&info->indicesData, vertexCount);
                         }
                     }
                 }
@@ -594,10 +637,10 @@ void processMeshData(ChunkVertexToCreate *info) {
             int indexCount = getArrayLength(info->alphaIndicesData);
             int vertexCount = getArrayLength(info->alphaTriangleData);
             if(indexCount > 0 && vertexCount > 0) {
-                if(c->modelBuffer.handle) {
+                if(c->alphaModelBuffer.handle) {
                     //TODO: Change to just do sub-buffer data and not delete the vao
                     deleteVao(c->alphaModelBuffer.handle);
-                    c->modelBuffer.indexCount = 0;
+                    c->alphaModelBuffer.indexCount = 0;
                 }
                 c->alphaModelBuffer = generateChunkVertexBuffer(info->alphaTriangleData, vertexCount, info->alphaIndicesData, indexCount);
             } 
@@ -662,7 +705,7 @@ void pushCreateMeshToThreads(GameState *gameState, Chunk *chunk) {
 }
 
 void drawChunk(GameState *gameState, Renderer *renderer, Chunk *c) {
-    if((c->generateState & CHUNK_MESH_DIRTY) || (c->generateState & CHUNK_MESH_BUILDING)) 
+    if((c->generateState & CHUNK_MESH_DIRTY) || (c->generateState & CHUNK_MESH_BUILDING) || gameState->drawBlocks) 
     {
         //NOTE: Default to drawing blocks seperately i.e. if user breaks a block, we don't want to wait for the mesh to rebuild for the chunk
         if(c->generateState & CHUNK_MESH_DIRTY) {
@@ -708,6 +751,9 @@ void drawChunk(GameState *gameState, Renderer *renderer, Chunk *c) {
         }
     } else if(c->modelBuffer.indexCount > 0) {
         glDrawElements(GL_TRIANGLES, c->modelBuffer.indexCount, GL_UNSIGNED_INT, 0); 
+        renderCheckError();
+
+        glDrawElements(GL_TRIANGLES, c->alphaModelBuffer.indexCount, GL_UNSIGNED_INT, 0); 
         renderCheckError();
     }
 }

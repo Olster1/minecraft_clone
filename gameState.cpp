@@ -134,6 +134,8 @@ struct GameState {
 
     int DEBUG_BlocksDrawnForFrame;
 
+    bool drawBlocks;
+
     float3 searchOffsets[26];
     float3 searchOffsetsSmall[6];
 
@@ -311,6 +313,7 @@ void initGameState(GameState *gameState) {
 
     gameState->randomStartUpID = rand();
 
+    gameState->drawBlocks = false;
     
     // printf("chunk size: %ld\n", sizeof(Chunk));
     // printf("block size: %ld\n", sizeof(Block));

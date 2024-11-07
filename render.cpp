@@ -22,6 +22,30 @@ static unsigned int global_quadIndices[] = {
     0, 1, 2, 0, 2, 3,
 };
 
+#define HALF_SIN_45 0.3535533906f
+
+static VertexForChunk global_quadDataChunkData[] = {
+    makeVertexForChunk(make_float3(0.5f, -0.5f, 0), make_float2(1, 1), make_float3(0, 0, 1)),
+    makeVertexForChunk(make_float3(-0.5f, -0.5f, 0), make_float2(0, 1), make_float3(0, 0, 1)),
+    makeVertexForChunk(make_float3(-0.5f,  0.5f, 0), make_float2(0, 0), make_float3(0, 0, 1)),
+    makeVertexForChunk(make_float3(0.5f, 0.5f, 0), make_float2(1, 0), make_float3(0, 0, 1)),
+};
+
+static VertexForChunk global_quadDataChunkDataRotate90AntiClockwise[] = {
+    makeVertexForChunk(make_float3(HALF_SIN_45, -0.5f, -HALF_SIN_45), make_float2(0.25f, 1), make_float3(0, 0, 1)),
+    makeVertexForChunk(make_float3(-HALF_SIN_45, -0.5f, HALF_SIN_45), make_float2(0, 1), make_float3(0, 0, 1)),
+    makeVertexForChunk(make_float3(-HALF_SIN_45,  0.5f, HALF_SIN_45), make_float2(0, 0), make_float3(0, 0, 1)),
+    makeVertexForChunk(make_float3(HALF_SIN_45, 0.5f, -HALF_SIN_45), make_float2(0.25f, 0), make_float3(0, 0, 1)),
+};
+
+static VertexForChunk global_quadDataChunkDataRotate90Clockwise[] = {
+    makeVertexForChunk(make_float3(HALF_SIN_45, -0.5f, HALF_SIN_45), make_float2(0.25f, 1), make_float3(0, 0, 1)),
+    makeVertexForChunk(make_float3(-HALF_SIN_45, -0.5f, -HALF_SIN_45), make_float2(0, 1), make_float3(0, 0, 1)),
+    makeVertexForChunk(make_float3(-HALF_SIN_45,  0.5f, -HALF_SIN_45), make_float2(0, 0), make_float3(0, 0, 1)),
+    makeVertexForChunk(make_float3(HALF_SIN_45, 0.5f, HALF_SIN_45), make_float2(0.25f, 0), make_float3(0, 0, 1)),
+};
+
+
 static VertexForChunk global_cubeDataForChunk[] = {
     // Top face (y = 1.0f)
     makeVertexForChunk(make_float3(-0.5f, 0.5f, -0.5f), make_float2(0.25f,1), make_float3(0, 1, 0)),
@@ -271,9 +295,6 @@ float2 getUVCoordForBlock(BlockType type) {
     } else if(type == BLOCK_TREE_WOOD) {
         uv.x = 0.4f;
         uv.y = 0.5f;
-    } else if(type == BLOCK_WATER) {
-        uv.x = 0.3f;
-        uv.y = 0.4f;
     } else if(type == BLOCK_IRON) {
         uv.x = 0.5f;
         uv.y = 0.6f;
@@ -295,12 +316,16 @@ float2 getUVCoordForBlock(BlockType type) {
 }
 
 void pushGrassQuad(Renderer *renderer, float3 worldP, float height, float4 color) {
-    pushAtlasQuad_(renderer, worldP, make_float3(1, height, 1), make_float3(0, 0, 0), make_float4(0, 0.25f, 0, 0.25f), color, false);
-    pushAtlasQuad_(renderer, worldP, make_float3(1, height, 1), make_float3(0, 90, 0), make_float4(0, 0.25f, 0, 0.25f), color, false);
+    if(height == 2) {
+        worldP.y += 0.25f;
+    }
+    
+    pushAtlasQuad_(renderer, worldP, make_float3(1, height, 1), make_float3(0, -45, 0), make_float4(0, 0.25f, 0, 0.25f), color, false);
+    pushAtlasQuad_(renderer, worldP, make_float3(1, height, 1), make_float3(0, 45, 0), make_float4(0, 0.25f, 0, 0.25f), color, false);
 }
 
 void pushWaterQuad(Renderer *renderer, float3 worldP, float4 color) {
-    pushAtlasQuad_(renderer, plus_float3(worldP, make_float3(0, 0.5f, 0)), make_float3(1, 1, 1), make_float3(90, 0, 0), make_float4(0.25f, 0.5f, 0, 0.25f), color, false);
+    pushAtlasQuad_(renderer, plus_float3(worldP, make_float3(0, 0.5f, 0)), make_float3(1, 1, 1), make_float3(-90, 90, 0), make_float4(0.25f, 0.5f, 0, 0.25f), color, false);
 }
 
 void pushGlyph(Renderer *renderer, float3 worldP, float3 scale, float4 uvs, float4 color) {

@@ -466,6 +466,10 @@ void updateGame(GameState *gameState) {
             gameState->cameraRotation = rot;
     } 
 
+    if(gameState->keys.keys[KEY_3] == MOUSE_BUTTON_PRESSED) {
+        gameState->drawBlocks = !gameState->drawBlocks;
+    }
+
     if(gameState->keys.keys[KEY_1] == MOUSE_BUTTON_PRESSED) {
         gameState->camera.followingPlayer = !gameState->camera.followingPlayer;
         if(gameState->camera.followingPlayer) {

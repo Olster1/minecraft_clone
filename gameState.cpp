@@ -25,6 +25,11 @@ struct ChunkVertexToCreate {
     bool ready;
 };
 
+struct ChunkListItem {
+    Chunk *chunk;
+    ChunkListItem *next;
+};
+
 enum BlockFlags {
     BLOCK_FLAGS_NONE = 0,
     BLOCK_EXISTS_COLLISION = 1 << 0,

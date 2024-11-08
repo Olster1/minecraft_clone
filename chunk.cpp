@@ -493,7 +493,7 @@ void generateChunkMesh_multiThread(void *data_) {
                     if(!blockExistsReadOnly(gameState, worldP.x, worldP.y + 1, worldP.z, (BlockFlags)0xFFFFFFFF)) 
                     {
                         //NOTE: Draw the water
-                        int vertexCount = getArrayLength(info->triangleData);
+                        int vertexCount = getArrayLength(info->alphaTriangleData);
                         for(int i = 0; i < 4; ++i) {
                             int indexIntoCubeData = i;
                             const VertexForChunk v = global_cubeDataForChunk[indexIntoCubeData];
@@ -503,10 +503,10 @@ void generateChunkMesh_multiThread(void *data_) {
                             float2 uvAtlas = getUVCoordForBlock(t);
                             vForChunk.texUV.y = lerp(uvAtlas.x, uvAtlas.y, make_lerpTValue(vForChunk.texUV.y));
 
-                            pushArrayItem(&info->triangleData, vForChunk, VertexForChunk);
+                            pushArrayItem(&info->alphaTriangleData, vForChunk, VertexForChunk);
                         }
                         
-                        pushQuadIndicies(&info->indicesData, vertexCount);
+                        pushQuadIndicies(&info->alphaIndicesData, vertexCount);
                     }
                 } else if(t == BLOCK_GRASS_SHORT_ENTITY || t == BLOCK_GRASS_TALL_ENTITY) {
                     float height = 1;
@@ -704,9 +704,11 @@ void pushCreateMeshToThreads(GameState *gameState, Chunk *chunk) {
 
 }
 
-void drawChunk(GameState *gameState, Renderer *renderer, Chunk *c) {
+bool drawChunk(GameState *gameState, Renderer *renderer, Chunk *c) {
+    bool drewMesh = true;
     if((c->generateState & CHUNK_MESH_DIRTY) || (c->generateState & CHUNK_MESH_BUILDING) || gameState->drawBlocks) 
     {
+        drewMesh = false;
         //NOTE: Default to drawing blocks seperately i.e. if user breaks a block, we don't want to wait for the mesh to rebuild for the chunk
         if(c->generateState & CHUNK_MESH_DIRTY) {
             pushCreateMeshToThreads(gameState, c);
@@ -724,7 +726,7 @@ void drawChunk(GameState *gameState, Renderer *renderer, Chunk *c) {
                     //NOTE: Only draw the water quad if there isn't any block above it - notice the +1 on the y coord
                     if(!blockExistsReadOnly(gameState, worldP.x, worldP.y + 1, worldP.z, (BlockFlags)0xFFFFFFFF)) {
                         //NOTE: Draw the water
-                        pushWaterQuad(gameState->renderer, worldP, make_float4(1, 1, 1, 0.6f));
+                        pushWaterQuad(gameState->renderer, worldP, make_float4(1, 1, 1, 0.3f));
                     }
                     
                 } else if(t == BLOCK_GRASS_SHORT_ENTITY || t == BLOCK_GRASS_TALL_ENTITY) {
@@ -752,10 +754,9 @@ void drawChunk(GameState *gameState, Renderer *renderer, Chunk *c) {
     } else if(c->modelBuffer.indexCount > 0) {
         glDrawElements(GL_TRIANGLES, c->modelBuffer.indexCount, GL_UNSIGNED_INT, 0); 
         renderCheckError();
-
-        glDrawElements(GL_TRIANGLES, c->alphaModelBuffer.indexCount, GL_UNSIGNED_INT, 0); 
-        renderCheckError();
+        
     }
+    return drewMesh;
 }
 
 void drawCloudChunk(GameState *gameState, CloudChunk *c) {

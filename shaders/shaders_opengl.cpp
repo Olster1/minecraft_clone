@@ -278,18 +278,13 @@ static char *blockFragShader =
     "float mixValue = max(dot(normal_frag_view_space, sunAngle), 0);"
     "vec4 c = color_frag;"
     "float darkness = 0.95;"
-    "if(color_frag.x == 1) {"
-        // "c = color_frag*1.5;"
-        "c = vec4(1.5f, 1.5f, 1.5f, 1.5f);"
-    "} else {"
-        "c = vec4(1, 1, 1, 1);"
+    "c = vec4(1, 1, 1, 1);"
         // "c = mix(vec4(darkness, darkness, darkness, 1), vec4(1, 1, 1, 1), mixValue);"
-    "}"
     "c = vec4(AOValue*c.xyz, c.w);"
     "vec4 fogFactor = mix(diffSample*c, vec4(fogColor), clamp(((distanceFromEye - fogSeeDistance) / fogFadeDistance), 0.0, 1.0));"
     // "vec4 fogFactor = diffSample*c;"
     
-    "color = vec4((fogFactor).xyz, 1);"//fogFactor
+    "color = vec4((fogFactor).xyz, diffSample.w);"//fogFactor
 "}";
 
 static char *blockColorShader = 

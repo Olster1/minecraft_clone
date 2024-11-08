@@ -354,8 +354,10 @@ void updateGame(GameState *gameState) {
     int chunkY = roundChunkCoord(worldP.y / (float)CHUNK_DIM);
     int chunkZ = roundChunkCoord(worldP.z / (float)CHUNK_DIM);
     
-    int chunkRadiusY = 2;
-    int chunkRadiusXZ = 15; //TODO: This should be able to get to 64 at 60FPS
+    int chunkRadiusY = 3;
+    int chunkRadiusXZ = 10; //TODO: This should be able to get to 64 at 60FPS
+
+    ChunkListItem *chunkList = 0;
 
     for(int z = -chunkRadiusXZ; z <= chunkRadiusXZ; ++z) {
         for(int x = -chunkRadiusXZ; x <= chunkRadiusXZ; ++x) {
@@ -369,7 +371,14 @@ void updateGame(GameState *gameState) {
                             prepareChunkRender(&chunk->modelBuffer, &gameState->renderer->blockGreedyShader, gameState->renderer->terrainTextureHandle, screenT, cameraT, lookingAxis, gameState->renderer->underWater);
                         }
 
-                        drawChunk(gameState, gameState->renderer, chunk);
+                        bool drewMesh = drawChunk(gameState, gameState->renderer, chunk);
+
+                        if(chunk->alphaModelBuffer.indexCount > 0 && drewMesh) {
+                            ChunkListItem *c = pushStruct(&globalPerFrameArena, ChunkListItem);
+                            c->next = chunkList;
+                            c->chunk = chunk;
+                            chunkList = c;
+                        }
 
                         if(chunk->modelBuffer.indexCount > 0) {
                             endChunkRender();
@@ -381,6 +390,19 @@ void updateGame(GameState *gameState) {
                 }
             }
         }
+    }
+
+    //NOTE: Alpha blocks
+    while(chunkList) {
+        Chunk *chunk = chunkList->chunk;
+        prepareChunkRender(&chunk->alphaModelBuffer, &gameState->renderer->blockGreedyShader, gameState->renderer->terrainTextureHandle, screenT, cameraT, lookingAxis, gameState->renderer->underWater);
+
+        glDrawElements(GL_TRIANGLES, chunk->alphaModelBuffer.indexCount, GL_UNSIGNED_INT, 0); 
+        renderCheckError();
+
+        endChunkRender();
+
+        chunkList = chunkList->next;
     }
 
     // NOTE: Draw the clouds
